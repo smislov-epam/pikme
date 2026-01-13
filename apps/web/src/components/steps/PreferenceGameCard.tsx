@@ -15,6 +15,7 @@ import ThumbDownOffAltIcon from '@mui/icons-material/ThumbDownOffAlt'
 import ThumbDownAltIcon from '@mui/icons-material/ThumbDownAlt'
 import type { GameRecord } from '../../db/types'
 import { colors } from '../../theme/theme'
+import { GameTile, type GameTileVariant } from './GameTile'
 
 export interface GameCardProps {
   game: GameRecord
@@ -43,26 +44,11 @@ export function GameCard({
   isDraggable,
   dragHandleProps,
 }: GameCardProps) {
-  return (
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 1.5,
-        p: 1.5,
-        bgcolor: isDisliked ? 'action.selected' : isTopPick ? colors.sand + '20' : 'background.default',
-        borderRadius: 2,
-        border: '1px solid',
-        borderColor: isDisliked ? 'error.light' : isTopPick ? colors.sand : 'divider',
-        transition: 'all 0.2s',
-        '&:hover': {
-          borderColor: 'primary.light',
-          bgcolor: 'action.hover',
-        },
-      }}
-    >
-      {/* Drag Handle */}
-      {isDraggable && (
+  const variant: GameTileVariant = isDisliked ? 'disliked' : isTopPick ? 'topPick' : 'default'
+
+  const leading = (
+    <Stack direction="row" spacing={1} alignItems="center">
+      {isDraggable ? (
         <Box
           {...dragHandleProps}
           sx={{
@@ -76,68 +62,20 @@ export function GameCard({
         >
           <DragIndicatorIcon fontSize="small" />
         </Box>
-      )}
+      ) : null}
 
-      {rank !== undefined && (
-        <Chip
-          label={rank}
-          size="small"
-          color="primary"
-          sx={{ minWidth: 32, fontWeight: 700 }}
-        />
-      )}
+      {rank !== undefined ? (
+        <Chip label={rank} size="small" color="primary" sx={{ minWidth: 32, fontWeight: 700 }} />
+      ) : null}
+    </Stack>
+  )
 
-      {/* Game Thumbnail */}
-      <Box
-        component="img"
-        src={game.thumbnail || '/vite.svg'}
-        alt={game.name}
-        sx={{
-          width: 48,
-          height: 48,
-          borderRadius: 1.5,
-          objectFit: 'cover',
-          bgcolor: 'grey.200',
-          flexShrink: 0,
-        }}
-        onError={(e) => {
-          (e.target as HTMLImageElement).src = '/vite.svg'
-        }}
-      />
-
-      <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography fontWeight={500} noWrap>
-          {game.name}
-        </Typography>
-        <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-          {game.minPlayers && game.maxPlayers && (
-            <Typography variant="caption" color="text.secondary">
-              👥 {game.minPlayers}–{game.maxPlayers}
-            </Typography>
-          )}
-          {game.playingTimeMinutes && (
-            <Typography variant="caption" color="text.secondary">
-              ⏱️ {game.playingTimeMinutes}min
-            </Typography>
-          )}
-          {userRating && (
-            <Chip
-              label={`★ ${userRating.toFixed(1)}`}
-              size="small"
-              sx={{
-                height: 20,
-                fontSize: '0.7rem',
-                bgcolor: 'primary.light',
-                color: 'primary.dark',
-              }}
-            />
-          )}
-        </Stack>
-      </Box>
-
+  const actions = (
+    <>
       <IconButton
         size="small"
         onClick={onToggleTopPick}
+        aria-label={isTopPick ? 'Unstar top pick' : 'Star as top pick'}
         sx={{
           color: isTopPick ? colors.sand : 'text.disabled',
           '&:hover': { color: colors.sand },
@@ -146,10 +84,11 @@ export function GameCard({
         {isTopPick ? <StarIcon /> : <StarBorderIcon />}
       </IconButton>
 
-      {onToggleDisliked && (
+      {onToggleDisliked ? (
         <IconButton
           size="small"
           onClick={onToggleDisliked}
+          aria-label={isDisliked ? 'Remove dislike' : 'Mark disliked'}
           sx={{
             color: isDisliked ? 'error.main' : 'text.disabled',
             '&:hover': { color: 'error.main' },
@@ -157,19 +96,58 @@ export function GameCard({
         >
           {isDisliked ? <ThumbDownAltIcon /> : <ThumbDownOffAltIcon />}
         </IconButton>
-      )}
+      ) : null}
+    </>
+  )
 
-      {onRank && nextRank && (
-        <Button
-          size="small"
-          variant="text"
-          onClick={() => onRank(nextRank)}
-          sx={{ minWidth: 'auto' }}
-        >
-          #{nextRank}
-        </Button>
-      )}
-    </Box>
+  return (
+    <GameTile
+      game={game}
+      variant={variant}
+      leading={leading}
+      actions={actions}
+    >
+      {(userRating || (onRank && nextRank)) ? (
+        <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
+          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+            {userRating ? (
+              <Chip
+                label={`You ★ ${userRating.toFixed(1)}`}
+                size="small"
+                sx={{
+                  height: 20,
+                  fontSize: '0.7rem',
+                  bgcolor: 'secondary.light',
+                  color: 'text.primary',
+                }}
+              />
+            ) : null}
+          </Stack>
+
+          {onRank && nextRank ? (
+            <Button
+              size="small"
+              variant="text"
+              onClick={() => onRank(nextRank)}
+              sx={{ minWidth: 'auto' }}
+            >
+              #{nextRank}
+            </Button>
+          ) : null}
+        </Stack>
+      ) : null}
+
+      {isTopPick ? (
+        <Typography variant="caption" color="text.secondary">
+          Top pick
+        </Typography>
+      ) : null}
+      {isDisliked ? (
+        <Typography variant="caption" color="text.secondary">
+          Disliked
+        </Typography>
+      ) : null}
+    </GameTile>
   )
 }
 

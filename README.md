@@ -8,7 +8,13 @@ The product scope and UX flow live in:
 - Requirements/Solution Architecture Guidelines.md
 
 ## Deploy to production
-- See deploy-to-prod.md (GitHub Pages + `pikme.online`)
+- GitHub Pages deploy is driven by `.github/workflows/deploy-pages.yml`.
+- Custom domain is configured via `apps/web/public/CNAME`.
+
+## Data & storage (local-first)
+- All app data is stored locally in your browser using IndexedDB (Dexie).
+- Data is **not shared** between different people/devices unless you add an export/import or a backend sync.
+- IndexedDB is scoped per-origin, so `https://pikme.online` and `https://www.pikme.online` are treated as different “apps” with different local data.
 
 ## Frontend (React + Vite)
 Implementation lives in `apps/web`.

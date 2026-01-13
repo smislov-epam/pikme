@@ -43,7 +43,7 @@ export function GameTile(props: {
         p: 1.5,
         pr: actions ? 6.5 : 1.5,
         bgcolor: background,
-        borderRadius: 1.5,
+        borderRadius: '8px',
         border: '1px solid',
         borderColor,
         overflow: 'hidden',
@@ -84,7 +84,7 @@ export function GameTile(props: {
           sx={{
             width: 48,
             height: 48,
-            borderRadius: 1,
+            borderRadius: '6px',
             objectFit: 'cover',
             bgcolor: 'grey.200',
             flexShrink: 0,
@@ -111,7 +111,7 @@ export function GameTile(props: {
             ) : null}
             {game.averageRating ? (
               <Chip
-                label={`★ ${game.averageRating.toFixed(1)}`}
+                label={`BGG ★ ${game.averageRating.toFixed(1)}`}
                 size="small"
                 sx={{
                   height: 20,

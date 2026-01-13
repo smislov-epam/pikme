@@ -6,10 +6,10 @@ import { createTheme, alpha } from '@mui/material/styles'
 // - Off-white base for calmness
 
 const colors = {
-  sand: '#F5E1A4',      // Warm yellow/sand - accent
-  skyBlue: '#A8C8E4',   // Light blue - secondary
-  oceanBlue: '#5A89B0', // Medium blue - primary
-  navyBlue: '#2B4A70',  // Dark navy - primary dark
+  sand: '#F2C94C',      // Warm sand accent (more pronounced)
+  skyBlue: '#A7D1FF',   // Light blue highlight
+  oceanBlue: '#2F6FB2', // Primary blue (more pronounced)
+  navyBlue: '#1F3A5F',  // Dark navy for text/contrast
   offWhite: '#FAFBFC',  // Soft off-white background
   warmWhite: '#FFFEF9', // Warm white for cards
 }
@@ -30,7 +30,7 @@ export const theme = createTheme({
     secondary: {
       main: colors.sand,
       light: alpha(colors.sand, 0.4),
-      dark: '#D4C48A',
+      dark: '#D4A72C',
       contrastText: colors.navyBlue,
     },
     text: {

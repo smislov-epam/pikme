@@ -1,6 +1,7 @@
 import { CssBaseline } from '@mui/material'
 import { ThemeProvider } from '@mui/material/styles'
 import WizardPage from './pages/WizardPage'
+import { DbGate } from './components/DbGate'
 import { theme } from './theme/theme'
 import { ToastProvider } from './services/toast'
 
@@ -9,7 +10,9 @@ export default function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <ToastProvider>
-        <WizardPage />
+        <DbGate>
+          <WizardPage />
+        </DbGate>
       </ToastProvider>
     </ThemeProvider>
   )

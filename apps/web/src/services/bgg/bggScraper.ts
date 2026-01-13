@@ -12,8 +12,64 @@ import { parseThingXml } from './parseThingXml'
 import { fetchQueuedXml, hasBggApiKey } from './bggClient'
 import type { PartialGameInfo } from './partialGameInfo'
 import { extractFromHtml } from './bggHtmlExtractors'
+import { sleep } from '../http/sleep'
 
 const BGG_URL_REGEX = /boardgamegeek\.com\/boardgame\/(\d+)/i
+
+const HTML_FETCH_TIMEOUT_MS = 30_000
+const HTML_FETCH_MAX_ATTEMPTS = 2
+
+function isRetriableStatus(status: number): boolean {
+  return status === 408 || status === 429 || status === 502 || status === 503 || status === 504
+}
+
+function isAbortError(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false
+  if (err instanceof DOMException) return err.name === 'AbortError'
+  if (err instanceof Error) return err.name === 'AbortError'
+  return false
+}
+
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController()
+
+  const timer = window.setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    return await fetch(url, {
+      ...init,
+      signal: controller.signal,
+    })
+  } finally {
+    window.clearTimeout(timer)
+  }
+}
+
+async function fetchWithRetry(
+  url: string,
+  init: RequestInit,
+  options: { timeoutMs: number; maxAttempts: number; retryDelayMs: number },
+): Promise<Response> {
+  const { timeoutMs, maxAttempts, retryDelayMs } = options
+
+  let lastError: unknown = undefined
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const response = await fetchWithTimeout(url, init, timeoutMs)
+
+      if (response.ok) return response
+      if (!isRetriableStatus(response.status) || attempt === maxAttempts) return response
+
+      await sleep(retryDelayMs * attempt)
+    } catch (err) {
+      lastError = err
+      if (!isAbortError(err) || attempt === maxAttempts) throw err
+      await sleep(retryDelayMs * attempt)
+    }
+  }
+
+  // Should be unreachable, but keep types happy.
+  throw lastError instanceof Error ? lastError : new Error('HTML fetch failed after retries.')
+}
 
 export function extractBggIdFromUrl(url: string): number | null {
   const match = url.match(BGG_URL_REGEX)
@@ -126,9 +182,11 @@ async function fetchFromHtmlPage(bggId: number): Promise<PartialGameInfo> {
   // Try our proxy first
   try {
     const proxyUrl = `/bgg-api/boardgame/${bggId}`
-    const response = await fetch(proxyUrl, {
-      headers: { 'Accept': 'text/html' },
-    })
+    const response = await fetchWithRetry(
+      proxyUrl,
+      { headers: { 'Accept': 'text/html' } },
+      { timeoutMs: HTML_FETCH_TIMEOUT_MS, maxAttempts: HTML_FETCH_MAX_ATTEMPTS, retryDelayMs: 500 },
+    )
 
     console.log(`[BGG] HTML page response status: ${response.status}`)
 
@@ -147,7 +205,11 @@ async function fetchFromHtmlPage(bggId: number): Promise<PartialGameInfo> {
     const corsProxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(bggUrl)}`
     
     console.log('[BGG] Trying public CORS proxy...')
-    const response = await fetch(corsProxyUrl)
+    const response = await fetchWithRetry(
+      corsProxyUrl,
+      { headers: { 'Accept': 'text/html' } },
+      { timeoutMs: HTML_FETCH_TIMEOUT_MS, maxAttempts: HTML_FETCH_MAX_ATTEMPTS, retryDelayMs: 750 },
+    )
 
     if (response.ok) {
       const html = await response.text()

@@ -50,7 +50,7 @@ export function GameRow({
       sx={{
         position: 'relative',
         bgcolor: 'background.default',
-        borderRadius: 1.5,
+        borderRadius: '8px',
         border: '1px solid',
         borderColor: 'divider',
         overflow: 'hidden',
@@ -72,7 +72,7 @@ export function GameRow({
           component="img"
           src={game.thumbnail || '/vite.svg'}
           alt={game.name}
-          sx={{ width: 36, height: 36, borderRadius: 1, objectFit: 'cover', bgcolor: 'grey.200', flexShrink: 0 }}
+          sx={{ width: 36, height: 36, borderRadius: '6px', objectFit: 'cover', bgcolor: 'grey.200', flexShrink: 0 }}
           onError={(e) => { (e.target as HTMLImageElement).src = '/vite.svg' }}
         />
         <Box sx={{ flex: 1, minWidth: 0 }}>

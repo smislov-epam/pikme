@@ -37,6 +37,8 @@ jobs:
         env:
           # For custom domain hosting (pikme.online) the site is served at the domain root.
           VITE_BASE_PATH: /
+          # IndexedDB is per-origin. Keep a single canonical hostname to avoid users "losing" data.
+          VITE_CANONICAL_HOST: pikme.online
         run: npm run build
 
       - name: Setup Pages
