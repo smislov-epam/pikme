@@ -1,0 +1,232 @@
+import type { ReactNode } from 'react'
+import {
+  Box,
+  Card,
+  CardContent,
+  Stack,
+  Typography,
+  alpha,
+} from '@mui/material'
+import StarIcon from '@mui/icons-material/Star'
+import { useDroppable } from '@dnd-kit/core'
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import type { GameRecord } from '../../../db/types'
+import { colors } from '../../../theme/theme'
+import { SortableGameCard } from '../PreferenceGameCard'
+import { DraggableGameCard } from '../DraggableGameCard'
+
+export interface PreferenceGameRow {
+  game: GameRecord
+  userRating?: number
+  isTopPick?: boolean
+  isDisliked?: boolean
+}
+
+const LIST_SCROLL_SX = {
+  maxHeight: { xs: 260, sm: 360 },
+  overflowY: 'auto',
+  overflowX: 'hidden',
+  scrollbarGutter: 'stable',
+  direction: 'ltr',
+} as const
+
+function DroppableList(props: {
+  droppableId: string
+  children: ReactNode
+  minHeight?: number
+  highlightColor?: string
+}) {
+  const { droppableId, children, minHeight, highlightColor } = props
+  const { setNodeRef, isOver } = useDroppable({ id: droppableId })
+  const outline = highlightColor ?? colors.oceanBlue
+
+  return (
+    <Box
+      ref={setNodeRef}
+      sx={{
+        ...LIST_SCROLL_SX,
+        minHeight: minHeight ?? 48,
+        borderRadius: 2,
+        border: '2px dashed',
+        borderColor: isOver ? outline : 'transparent',
+        bgcolor: isOver ? alpha(outline, 0.08) : 'transparent',
+        transition: 'border-color 120ms ease, background-color 120ms ease',
+      }}
+    >
+      {children}
+    </Box>
+  )
+}
+
+export function TopPicksSection(props: {
+  topPicks: PreferenceGameRow[]
+  droppableId: string
+  onToggleTopPick: (bggId: number, currentlyTopPick: boolean) => void
+  onToggleDisliked: (bggId: number, currentlyDisliked: boolean) => void
+}) {
+  const { topPicks, droppableId, onToggleTopPick, onToggleDisliked } = props
+
+  return (
+    <Card sx={{ bgcolor: colors.sand + '30', border: `2px dashed ${colors.sand}` }}>
+      <CardContent>
+        <Stack direction="row" alignItems="center" gap={1} mb={2}>
+          <StarIcon sx={{ color: colors.sand }} />
+          <Typography variant="subtitle1" fontWeight={600}>
+            Top Picks ({topPicks.length})
+          </Typography>
+        </Stack>
+
+        <DroppableList droppableId={droppableId} minHeight={120} highlightColor={colors.sand}>
+          {topPicks.length === 0 ? (
+            <Typography color="text.secondary" variant="body2" sx={{ mt: 0.5 }}>
+              Drag games here or tap the star to pin favorites (max 3)
+            </Typography>
+          ) : (
+            <Stack spacing={1}>
+              {topPicks.map(({ game, userRating }) => (
+                <DraggableGameCard
+                  key={game.bggId}
+                  id={game.bggId}
+                  game={game}
+                  userRating={userRating}
+                  isTopPick
+                  isDisliked={false}
+                  onToggleTopPick={() => onToggleTopPick(game.bggId, true)}
+                  onToggleDisliked={() => onToggleDisliked(game.bggId, false)}
+                />
+              ))}
+            </Stack>
+          )}
+        </DroppableList>
+      </CardContent>
+    </Card>
+  )
+}
+
+export function DislikedSection(props: {
+  disliked: PreferenceGameRow[]
+  droppableId: string
+  onToggleTopPick: (bggId: number, currentlyTopPick: boolean) => void
+  onToggleDisliked: (bggId: number, currentlyDisliked: boolean) => void
+}) {
+  const { disliked, droppableId, onToggleTopPick, onToggleDisliked } = props
+
+  return (
+    <Card sx={{ border: '1px solid', borderColor: 'error.light' }}>
+      <CardContent>
+        <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+          Disliked ({disliked.length})
+        </Typography>
+        <DroppableList droppableId={droppableId} minHeight={120} highlightColor={'#ef5350'}>
+          {disliked.length === 0 ? (
+            <Typography color="text.secondary" variant="body2" sx={{ mt: 0.5 }}>
+              Drag games here to veto them
+            </Typography>
+          ) : (
+            <Stack spacing={1}>
+              {disliked.map(({ game, userRating }) => (
+                <DraggableGameCard
+                  key={game.bggId}
+                  id={game.bggId}
+                  game={game}
+                  isDisliked
+                  userRating={userRating}
+                  onToggleTopPick={() => onToggleTopPick(game.bggId, false)}
+                  onToggleDisliked={() => onToggleDisliked(game.bggId, true)}
+                />
+              ))}
+            </Stack>
+          )}
+        </DroppableList>
+      </CardContent>
+    </Card>
+  )
+}
+
+export function RankedSection(props: {
+  ranked: PreferenceGameRow[]
+  droppableId: string
+  onToggleTopPick: (bggId: number, currentlyTopPick: boolean) => void
+  onToggleDisliked: (bggId: number, currentlyDisliked: boolean) => void
+}) {
+  const { ranked, droppableId, onToggleTopPick, onToggleDisliked } = props
+  const ids = ranked.map((g) => g.game.bggId)
+
+  return (
+    <Card>
+      <CardContent>
+        <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+          Ranked ({ranked.length}) - drag to reorder
+        </Typography>
+        <DroppableList droppableId={droppableId} minHeight={160} highlightColor={colors.oceanBlue}>
+          {ranked.length === 0 ? (
+            <Typography color="text.secondary" variant="body2" sx={{ mt: 0.5 }}>
+              Drag games here to rank them
+            </Typography>
+          ) : (
+            <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+              <Stack spacing={1}>
+                {ranked.map(({ game, userRating }, index) => (
+                  <SortableGameCard
+                    key={game.bggId}
+                    id={game.bggId}
+                    game={game}
+                    rank={index + 1}
+                    userRating={userRating}
+                    isTopPick={false}
+                    isDisliked={false}
+                    onToggleTopPick={() => onToggleTopPick(game.bggId, false)}
+                    onToggleDisliked={() => onToggleDisliked(game.bggId, false)}
+                  />
+                ))}
+              </Stack>
+            </SortableContext>
+          )}
+        </DroppableList>
+      </CardContent>
+    </Card>
+  )
+}
+
+export function NeutralSection(props: {
+  neutral: PreferenceGameRow[]
+  nextRank: number
+  droppableId: string
+  onToggleTopPick: (bggId: number, currentlyTopPick: boolean) => void
+  onToggleDisliked: (bggId: number, currentlyDisliked: boolean) => void
+  onSetRank: (bggId: number, rank: number) => void
+}) {
+  const { neutral, nextRank, droppableId, onToggleTopPick, onToggleDisliked, onSetRank } = props
+
+  return (
+    <Card>
+      <CardContent>
+        <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+          Available Games ({neutral.length})
+        </Typography>
+        <Typography variant="body2" color="text.secondary" gutterBottom>
+          Tap games to rank them, star favorites, or dislike to veto
+        </Typography>
+
+        <DroppableList droppableId={droppableId} minHeight={120} highlightColor={alpha(colors.oceanBlue, 0.35)}>
+          <Stack spacing={1} sx={{ mt: 2 }}>
+            {neutral.map(({ game, userRating, isDisliked, isTopPick }) => (
+              <DraggableGameCard
+                key={game.bggId}
+                id={game.bggId}
+                game={game}
+                userRating={userRating}
+                isTopPick={isTopPick}
+                isDisliked={isDisliked}
+                onToggleTopPick={() => onToggleTopPick(game.bggId, !!isTopPick)}
+                onToggleDisliked={() => onToggleDisliked(game.bggId, !!isDisliked)}
+                onRank={(rank) => onSetRank(game.bggId, rank)}
+                nextRank={nextRank}
+              />
+            ))}
+          </Stack>
+        </DroppableList>
+      </CardContent>
+    </Card>
+  )
+}

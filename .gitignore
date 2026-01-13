@@ -1,0 +1,31 @@
+# Root gitignore for the PIKME repo
+
+# --- OS / Editor ---
+.DS_Store
+Thumbs.db
+
+.vscode/
+.idea/
+
+# Cursor / local tooling
+.cursorrules
+
+# --- Python ---
+.venv/
+__pycache__/
+*.pyc
+
+# --- Node / Vite ---
+**/node_modules/
+**/dist/
+**/dist-ssr/
+**/.vite/
+coverage/
+
+# --- Local env files ---
+.env
+.env.*
+
+# --- Docs you asked not to publish ---
+Requirements/
+deploy-to-prod.md
