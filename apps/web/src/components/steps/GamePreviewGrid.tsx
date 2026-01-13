@@ -18,6 +18,7 @@ import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd'
 import type { GameRecord, UserRecord } from '../../db/types'
 import { GameRow } from './GameRow'
 import { GameEditDialog } from '../GameEditDialog'
+import { GameDetailsDialog } from '../gameDetails/GameDetailsDialog'
 
 interface GamePreviewGridProps {
   games: GameRecord[]
@@ -28,7 +29,6 @@ interface GamePreviewGridProps {
   onRemoveOwner?: (username: string, bggId: number) => Promise<void>
   onAddOwner?: (username: string, bggId: number) => Promise<void>
   onAddToSession?: (bggId: number) => void
-  onRemoveFromSession?: (bggId: number) => void
   onExcludeFromSession?: (game: GameRecord) => void
   onEditGame?: (game: GameRecord) => Promise<void>
   onRefreshGameFromBgg?: (bggId: number, options: { keepNotes: boolean }) => Promise<GameRecord>
@@ -43,16 +43,15 @@ export function GamePreviewGrid({
   onRemoveOwner,
   onAddOwner,
   onAddToSession,
-  onRemoveFromSession,
   onExcludeFromSession,
   onEditGame,
   onRefreshGameFromBgg,
 }: GamePreviewGridProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [filterPlayers, setFilterPlayers] = useState<number | null>(null)
-  const [expandedGame, setExpandedGame] = useState<number | null>(null)
   const [showCollectionGames, setShowCollectionGames] = useState(false)
   const [editingGame, setEditingGame] = useState<GameRecord | null>(null)
+  const [detailsGame, setDetailsGame] = useState<GameRecord | null>(null)
 
   const sessionGameIds = useMemo(() => new Set(sessionGames.map(g => g.bggId)), [sessionGames])
   const collectionOnlyGames = useMemo(() => games.filter(g => !sessionGameIds.has(g.bggId)), [games, sessionGameIds])
@@ -129,15 +128,8 @@ export function GamePreviewGrid({
                 key={game.bggId}
                 game={game}
                 owners={gameOwners[game.bggId] ?? []}
-                users={users}
-                isExpanded={expandedGame === game.bggId}
-                isInSession={true}
-                onToggle={() => setExpandedGame(expandedGame === game.bggId ? null : game.bggId)}
-                onRemoveOwner={onRemoveOwner}
-                onAddOwner={onAddOwner}
-                onRemoveFromSession={onRemoveFromSession}
                 onExcludeFromSession={onExcludeFromSession ? () => onExcludeFromSession(game) : undefined}
-                onEdit={onEditGame ? () => setEditingGame(game) : undefined}
+                onOpenDetails={() => setDetailsGame(game)}
               />
             ))
           )}
@@ -185,6 +177,32 @@ export function GamePreviewGrid({
           onRefreshFromBgg={onRefreshGameFromBgg}
         />
       )}
+
+      <GameDetailsDialog
+        open={!!detailsGame}
+        game={detailsGame}
+        owners={detailsGame ? (gameOwners[detailsGame.bggId] ?? []) : []}
+        users={users}
+        onClose={() => setDetailsGame(null)}
+        onAddOwner={onAddOwner}
+        onRemoveOwner={onRemoveOwner}
+        onExcludeFromSession={
+          detailsGame && onExcludeFromSession
+            ? () => {
+                onExcludeFromSession(detailsGame)
+                setDetailsGame(null)
+              }
+            : undefined
+        }
+        onEdit={
+          detailsGame && onEditGame
+            ? () => {
+                setDetailsGame(null)
+                setEditingGame(detailsGame)
+              }
+            : undefined
+        }
+      />
     </Card>
   )
 }

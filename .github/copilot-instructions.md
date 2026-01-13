@@ -11,6 +11,8 @@
 - Architecture expectations: `Requirements/Solution Architecture Guidelines.md`
   - Target stack called out in-doc: React 19 + MUI + Dexie + `fast-xml-parser` + `dnd-kit`.
   - Key constraints: BGG 202 polling, local-first persistence, possible BGG CORS limitations.
+- UI/UX consistency guidelines: `ui-ux-guidelines.md`
+  - Treat this as the canonical source for visual/interaction consistency rules.
 
 ## Requirements sources
 - The original inputs are stored as DOCX in `Requirements/`.
@@ -47,6 +49,7 @@
   - Same terminology and labels (avoid synonyms for the same concept).
   - Same interaction rules (e.g., Undo patterns, confirmation patterns, loading/error states).
 - Prefer reusing existing components/styles over creating near-duplicates.
+- When making UI changes, ensure they align with `ui-ux-guidelines.md`.
 - When introducing import/export or other file formats:
   - Version the format and keep filenames/headers stable.
   - Define deterministic merge/replace rules.

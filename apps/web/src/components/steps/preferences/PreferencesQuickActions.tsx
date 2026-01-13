@@ -15,6 +15,7 @@ export function PreferencesQuickActions(props: {
         size="small"
         startIcon={<SortIcon />}
         onClick={() => onAutoSort(selectedUser)}
+        sx={{ height: 32 }}
       >
         Auto-sort by my rating
       </Button>
@@ -22,6 +23,7 @@ export function PreferencesQuickActions(props: {
         variant="outlined"
         size="small"
         onClick={() => onMarkRestNeutral(selectedUser)}
+        sx={{ height: 32 }}
       >
         Mark rest neutral
       </Button>

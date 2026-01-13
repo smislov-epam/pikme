@@ -1,6 +1,7 @@
 import Dexie, { type Table } from 'dexie'
 import type {
   GameRecord,
+  GameNoteRecord,
   SavedNightRecord,
   UserGameRecord,
   UserPreferenceRecord,
@@ -10,6 +11,7 @@ import type {
 
 export class PikmeDb extends Dexie {
   games!: Table<GameRecord, number>
+  gameNotes!: Table<GameNoteRecord, number>
   users!: Table<UserRecord, string>
   userGames!: Table<UserGameRecord, number>
   userPreferences!: Table<UserPreferenceRecord, number>
@@ -75,6 +77,36 @@ export class PikmeDb extends Dexie {
             if (pref.isTopPick === undefined) pref.isTopPick = false
           })
       })
+
+    this.version(4)
+      .stores({
+        games: 'bggId, name, lastFetchedAt',
+        gameNotes: '++id, bggId, createdAt',
+        users: 'username, isBggUser, lastSyncAt',
+        userGames: '++id, [username+bggId], username, bggId, source, addedAt',
+        userPreferences: '++id, [username+bggId], username, bggId, updatedAt',
+        wizardState: 'id, updatedAt',
+        savedNights: '++id, createdAt',
+      })
+      .upgrade(async (tx) => {
+        // Migrate legacy single-string notes into timestamped notes.
+        const now = new Date().toISOString()
+        const games = await tx.table('games').toArray()
+
+        for (const game of games) {
+          const legacy = typeof game.userNotes === 'string' ? game.userNotes.trim() : ''
+          if (!legacy) continue
+
+          await tx.table('gameNotes').add({
+            bggId: game.bggId,
+            text: legacy,
+            createdAt: now,
+          })
+
+          // Clear legacy field so UI doesn't show duplicate sources.
+          await tx.table('games').update(game.bggId, { userNotes: undefined })
+        }
+      })
   }
 }
 
@@ -85,6 +117,7 @@ export const db = new PikmeDb()
  */
 export async function clearAllData(): Promise<void> {
   await db.games.clear()
+  await db.gameNotes.clear()
   await db.users.clear()
   await db.userGames.clear()
   await db.userPreferences.clear()

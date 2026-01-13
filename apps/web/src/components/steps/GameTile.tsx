@@ -14,10 +14,12 @@ export function GameTile(props: {
   game: GameRecord
   variant?: GameTileVariant
   leading?: ReactNode
+  trailing?: ReactNode
   actions?: ReactNode
+  onClick?: () => void
   children?: ReactNode
 }) {
-  const { game, variant = 'default', leading, actions, children } = props
+  const { game, variant = 'default', leading, trailing, actions, onClick, children } = props
 
   const borderColor =
     variant === 'disliked'
@@ -35,6 +37,19 @@ export function GameTile(props: {
 
   return (
     <Box
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                onClick()
+              }
+            }
+          : undefined
+      }
       sx={{
         position: 'relative',
         display: 'flex',
@@ -43,11 +58,12 @@ export function GameTile(props: {
         p: 1.5,
         pr: actions ? 6.5 : 1.5,
         bgcolor: background,
-        borderRadius: '8px',
+        borderRadius: '6px',
         border: '1px solid',
         borderColor,
         overflow: 'hidden',
         transition: 'border-color 140ms ease, background-color 140ms ease',
+        cursor: onClick ? 'pointer' : 'default',
         '&:hover': {
           borderColor: 'primary.light',
           bgcolor: 'action.hover',
@@ -56,6 +72,7 @@ export function GameTile(props: {
     >
       {actions ? (
         <Box
+          onClick={(e) => e.stopPropagation()}
           sx={{
             position: 'absolute',
             top: 6,
@@ -65,8 +82,8 @@ export function GameTile(props: {
             gap: 0.5,
             zIndex: 2,
             '& .MuiIconButton-root': {
-              width: 40,
-              height: 40,
+              width: 36,
+              height: 36,
             },
           }}
         >
@@ -123,6 +140,15 @@ export function GameTile(props: {
             ) : null}
           </Stack>
         </Box>
+
+        {trailing ? (
+          <Box
+            onClick={(e) => e.stopPropagation()}
+            sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}
+          >
+            {trailing}
+          </Box>
+        ) : null}
       </Stack>
 
       {children}

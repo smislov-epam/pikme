@@ -6,12 +6,14 @@ import {
   Stack,
   Typography,
 } from '@mui/material'
-import type { GameRecord } from '../../db/types'
+import { useState } from 'react'
+import type { GameRecord, UserRecord } from '../../db/types'
 import { colors } from '../../theme/theme'
 import type { WizardFilters } from '../../store/wizardTypes'
 import { TonightsPickCard } from './result/TonightsPickCard'
 import { AlternativesSection } from './result/AlternativesSection'
 import { useToast } from '../../services/toast'
+import { GameDetailsDialog } from '../gameDetails/GameDetailsDialog'
 
 export interface GameWithScore {
   game: GameRecord
@@ -24,6 +26,8 @@ export interface ResultStepProps {
   alternatives: GameWithScore[]
   vetoed?: Array<{ game: GameRecord; vetoedBy: string[] }>
   filters: WizardFilters
+  users: UserRecord[]
+  gameOwners: Record<number, string[]>
   onSaveNight: () => void
   onExcludeGameFromSession: (bggId: number) => void
   onUndoExcludeGameFromSession: (bggId: number) => void
@@ -34,10 +38,13 @@ export function ResultStep({
   alternatives,
   vetoed = [],
   filters,
+  users,
+  gameOwners,
   onExcludeGameFromSession,
   onUndoExcludeGameFromSession,
 }: ResultStepProps) {
   const toast = useToast()
+  const [detailsGame, setDetailsGame] = useState<GameRecord | null>(null)
   const maxScore = Math.max(
     topPick?.score ?? 0,
     ...alternatives.map((a) => a.score)
@@ -96,6 +103,7 @@ export function ResultStep({
       <TonightsPickCard
         topPick={topPick}
         filters={filters}
+        onOpenDetails={() => setDetailsGame(topPick.game)}
         onExcludeFromSession={() => {
           onExcludeGameFromSession(topPick.game.bggId)
           toast.info(`Excluded “${topPick.game.name}” from this session`, {
@@ -116,6 +124,7 @@ export function ResultStep({
       <AlternativesSection
         alternatives={alternatives}
         maxScore={maxScore}
+        onOpenDetails={(game) => setDetailsGame(game)}
         onExcludeGame={(game) => {
           onExcludeGameFromSession(game.bggId)
           toast.info(`Excluded “${game.name}” from this session`, {
@@ -124,6 +133,27 @@ export function ResultStep({
             onAction: () => onUndoExcludeGameFromSession(game.bggId),
           })
         }}
+      />
+
+      <GameDetailsDialog
+        open={!!detailsGame}
+        game={detailsGame}
+        owners={detailsGame ? (gameOwners[detailsGame.bggId] ?? []) : []}
+        users={users}
+        onClose={() => setDetailsGame(null)}
+        onExcludeFromSession={
+          detailsGame
+            ? () => {
+                onExcludeGameFromSession(detailsGame.bggId)
+                toast.info(`Excluded “${detailsGame.name}” from this session`, {
+                  autoHideMs: 5500,
+                  actionLabel: 'Undo',
+                  onAction: () => onUndoExcludeGameFromSession(detailsGame.bggId),
+                })
+                setDetailsGame(null)
+              }
+            : undefined
+        }
       />
 
       {/* Save reminder */}

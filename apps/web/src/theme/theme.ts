@@ -44,7 +44,7 @@ export const theme = createTheme({
     },
   },
   shape: {
-    borderRadius: 16,
+    borderRadius: 8,
   },
   typography: {
     fontFamily: [
@@ -77,12 +77,37 @@ export const theme = createTheme({
     MuiCssBaseline: {
       styleOverrides: `
         @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700&display=swap');
+
+        * {
+          scrollbar-width: thin;
+          scrollbar-color: ${alpha(colors.oceanBlue, 0.35)} transparent;
+        }
+
+        *::-webkit-scrollbar {
+          width: 10px;
+          height: 10px;
+        }
+
+        *::-webkit-scrollbar-track {
+          background: transparent;
+        }
+
+        *::-webkit-scrollbar-thumb {
+          background-color: ${alpha(colors.oceanBlue, 0.28)};
+          border-radius: 10px;
+          border: 2px solid transparent;
+          background-clip: content-box;
+        }
+
+        *::-webkit-scrollbar-thumb:hover {
+          background-color: ${alpha(colors.oceanBlue, 0.4)};
+        }
       `,
     },
     MuiCard: {
       styleOverrides: {
         root: {
-          borderRadius: 20,
+          borderRadius: 10,
           boxShadow: `0 4px 20px ${alpha(colors.navyBlue, 0.08)}`,
         },
       },
@@ -160,17 +185,80 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           '& .MuiOutlinedInput-root': {
-            borderRadius: 12,
+            borderRadius: 8,
           },
+        },
+      },
+    },
+    MuiOutlinedInput: {
+      styleOverrides: {
+        root: {
+          borderRadius: 8,
+          backgroundColor: colors.warmWhite,
+          '& .MuiOutlinedInput-notchedOutline': {
+            borderColor: alpha(colors.oceanBlue, 0.28),
+          },
+          '&:hover .MuiOutlinedInput-notchedOutline': {
+            borderColor: alpha(colors.oceanBlue, 0.5),
+          },
+          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+            borderColor: colors.oceanBlue,
+            borderWidth: 2,
+          },
+        },
+      },
+    },
+    MuiSelect: {
+      styleOverrides: {
+        icon: {
+          color: alpha(colors.navyBlue, 0.7),
         },
       },
     },
     MuiToggleButton: {
       styleOverrides: {
         root: {
-          borderRadius: 12,
+          borderRadius: 8,
           textTransform: 'none',
           fontWeight: 500,
+          borderColor: alpha(colors.oceanBlue, 0.28),
+          color: alpha(colors.navyBlue, 0.75),
+          '&:hover': {
+            borderColor: alpha(colors.oceanBlue, 0.5),
+            backgroundColor: alpha(colors.skyBlue, 0.12),
+          },
+          '&.Mui-selected': {
+            backgroundColor: colors.sand,
+            color: colors.navyBlue,
+            borderColor: alpha(colors.sand, 0.9),
+            '&:hover': {
+              backgroundColor: alpha(colors.sand, 0.85),
+            },
+          },
+        },
+      },
+    },
+    MuiTabs: {
+      styleOverrides: {
+        root: {
+          borderRadius: 8,
+        },
+        indicator: {
+          height: 3,
+          borderRadius: 3,
+          backgroundColor: colors.sand,
+        },
+      },
+    },
+    MuiTab: {
+      styleOverrides: {
+        root: {
+          textTransform: 'none',
+          fontWeight: 600,
+          minHeight: 40,
+          '&.Mui-selected': {
+            color: colors.navyBlue,
+          },
         },
       },
     },

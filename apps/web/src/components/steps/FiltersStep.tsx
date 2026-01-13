@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Accordion,
   AccordionDetails,
@@ -20,13 +20,17 @@ import CloseIcon from '@mui/icons-material/Close'
 import GroupsIcon from '@mui/icons-material/Groups'
 import ScheduleIcon from '@mui/icons-material/Schedule'
 import PsychologyIcon from '@mui/icons-material/Psychology'
-import type { GameRecord } from '../../db/types'
+import type { GameRecord, UserRecord } from '../../db/types'
 import { AdvancedFiltersAccordion } from './AdvancedFiltersAccordion'
 import { GameTile } from './GameTile'
+import { GameDetailsDialog } from '../gameDetails/GameDetailsDialog'
 import { useToast } from '../../services/toast'
 
 export interface FiltersStepProps {
   games: GameRecord[]
+  users: UserRecord[]
+  gameOwners: Record<number, string[]>
+  sessionUserCount: number
   playerCount: number
   onPlayerCountChange: (count: number) => void
   timeRange: { min: number; max: number }
@@ -53,10 +57,13 @@ const TIME_PRESETS = [
   { label: 'Any', value: { min: 0, max: 300 }, description: 'No limit' },
 ]
 
-const PLAYER_COUNTS = [2, 3, 4, 5, 6, 7, 8, 9, 10]
+const FALLBACK_PLAYER_COUNTS = [2, 3, 4, 5, 6, 7, 8, 9, 10]
 
 export function FiltersStep({
   games,
+  users,
+  gameOwners,
+  sessionUserCount,
   playerCount,
   onPlayerCountChange,
   timeRange,
@@ -76,6 +83,19 @@ export function FiltersStep({
   onUndoExcludeGameFromSession,
 }: FiltersStepProps) {
   const toast = useToast()
+  const [detailsGame, setDetailsGame] = useState<GameRecord | null>(null)
+
+  const playerCountOptions = useMemo(() => {
+    if (sessionUserCount > 0) return Array.from({ length: sessionUserCount }, (_, i) => i + 1)
+    return FALLBACK_PLAYER_COUNTS
+  }, [sessionUserCount])
+
+  // Player count should reflect the session roster (Players step).
+  useEffect(() => {
+    if (sessionUserCount <= 0) return
+    if (playerCount !== sessionUserCount) onPlayerCountChange(sessionUserCount)
+  }, [onPlayerCountChange, playerCount, sessionUserCount])
+
   const activeTimePreset = useMemo(() => {
     const preset = TIME_PRESETS.find(
       (p) => p.value.min === timeRange.min && p.value.max === timeRange.max
@@ -107,18 +127,26 @@ export function FiltersStep({
             </Typography>
           </Stack>
 
+          {sessionUserCount > 0 ? (
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              Based on your Players step ({sessionUserCount} in the session).
+            </Typography>
+          ) : null}
+
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-            {PLAYER_COUNTS.map((count) => (
+            {playerCountOptions.map((count) => (
               <Chip
                 key={count}
                 label={count}
                 onClick={() => onPlayerCountChange(count)}
                 variant={playerCount === count ? 'filled' : 'outlined'}
                 color={playerCount === count ? 'primary' : 'default'}
+                disabled={sessionUserCount > 0 && count !== sessionUserCount}
                 sx={{
-                  minWidth: 44,
+                  height: 28,
+                  minWidth: 38,
                   fontWeight: 600,
-                  fontSize: '1rem',
+                  fontSize: '0.9rem',
                 }}
               />
             ))}
@@ -144,7 +172,7 @@ export function FiltersStep({
               if (preset) onTimeRangeChange(preset.value)
             }}
             fullWidth
-            sx={{ mb: 2 }}
+            sx={{ mb: 2, '& .MuiToggleButton-root': { py: 1, minHeight: 40 } }}
           >
             {TIME_PRESETS.map((preset) => (
               <ToggleButton key={preset.label} value={preset.label}>
@@ -195,6 +223,7 @@ export function FiltersStep({
             exclusive
             onChange={(_, v) => v && onModeChange(v)}
             fullWidth
+            sx={{ '& .MuiToggleButton-root': { py: 1, minHeight: 40 } }}
           >
             <ToggleButton value="coop">
               <Box sx={{ textAlign: 'center', py: 0.5 }}>
@@ -280,6 +309,7 @@ export function FiltersStep({
                   <FilteredGameCard
                     key={game.bggId}
                     game={game}
+                    onOpenDetails={() => setDetailsGame(game)}
                     onExclude={() => {
                       onExcludeGameFromSession(game.bggId)
                       toast.info(`Excluded “${game.name}” from this session`, {
@@ -298,24 +328,42 @@ export function FiltersStep({
               </Stack>
             </AccordionDetails>
           </Accordion>
+
+          <GameDetailsDialog
+            open={!!detailsGame}
+            game={detailsGame}
+            owners={detailsGame ? (gameOwners[detailsGame.bggId] ?? []) : []}
+            users={users}
+            onClose={() => setDetailsGame(null)}
+            onExcludeFromSession={
+              detailsGame
+                ? () => {
+                    onExcludeGameFromSession(detailsGame.bggId)
+                    toast.info(`Excluded “${detailsGame.name}” from this session`, {
+                      autoHideMs: 5500,
+                      actionLabel: 'Undo',
+                      onAction: () => onUndoExcludeGameFromSession(detailsGame.bggId),
+                    })
+                    setDetailsGame(null)
+                  }
+                : undefined
+            }
+          />
         </>
       )}
     </Stack>
   )
 }
 
-function FilteredGameCard(props: { game: GameRecord; onExclude: () => void }) {
-  const { game, onExclude } = props
+function FilteredGameCard(props: { game: GameRecord; onExclude: () => void; onOpenDetails: () => void }) {
+  const { game, onExclude, onOpenDetails } = props
 
   return (
     <GameTile
       game={game}
+      onClick={onOpenDetails}
       actions={
-        <IconButton
-          size="small"
-          onClick={onExclude}
-          aria-label="Exclude from session"
-        >
+        <IconButton size="small" onClick={onExclude} aria-label="Exclude from session">
           <CloseIcon fontSize="small" />
         </IconButton>
       }

@@ -6,9 +6,10 @@ import { AlternativeCard } from './AlternativeCard'
 export function AlternativesSection(props: {
   alternatives: GameWithScore[]
   maxScore: number
+  onOpenDetails?: (game: GameWithScore['game']) => void
   onExcludeGame: (game: GameWithScore['game']) => void
 }) {
-  const { alternatives, maxScore, onExcludeGame } = props
+  const { alternatives, maxScore, onOpenDetails, onExcludeGame } = props
 
   if (alternatives.length === 0) return null
 
@@ -31,6 +32,7 @@ export function AlternativesSection(props: {
               score={alt.score}
               maxScore={maxScore}
               matchReasons={alt.matchReasons}
+              onOpenDetails={onOpenDetails ? () => onOpenDetails(alt.game) : undefined}
               onExclude={() => onExcludeGame(alt.game)}
             />
           ))}

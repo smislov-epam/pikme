@@ -699,8 +699,12 @@ export function useWizardState(): WizardState & WizardActions {
     const updated: GameRecord = {
       ...existing,
       ...canonical,
-      userNotes: options.keepNotes ? existing.userNotes : undefined,
+      userNotes: undefined,
       lastFetchedAt: new Date().toISOString(),
+    }
+
+    if (!options.keepNotes) {
+      await dbService.clearGameNotes(bggId)
     }
 
     await dbService.updateGame(updated)

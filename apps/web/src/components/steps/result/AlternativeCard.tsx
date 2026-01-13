@@ -15,14 +15,16 @@ export function AlternativeCard(props: {
   score: number
   maxScore: number
   matchReasons: string[]
+  onOpenDetails?: () => void
   onExclude: () => void
 }) {
-  const { rank, game, score, maxScore, matchReasons, onExclude } = props
+  const { rank, game, score, maxScore, matchReasons, onOpenDetails, onExclude } = props
   const percentage = maxScore > 0 ? (score / maxScore) * 100 : 0
 
   return (
     <GameTile
       game={game}
+      onClick={onOpenDetails}
       leading={
         <Chip
           label={`#${rank}`}

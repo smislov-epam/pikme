@@ -8,6 +8,7 @@ import {
   LinearProgress,
   Stack,
   Typography,
+  alpha,
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import TrophyIcon from '@mui/icons-material/EmojiEvents'
@@ -21,9 +22,11 @@ import type { GameWithScore } from '../ResultStep'
 export function TonightsPickCard(props: {
   topPick: GameWithScore
   filters: WizardFilters
+  onOpenDetails?: () => void
   onExcludeFromSession?: () => void
 }) {
-  const { topPick, filters, onExcludeFromSession } = props
+  const { topPick, filters, onOpenDetails, onExcludeFromSession } = props
+  const bgImage = topPick.game.thumbnail
 
   return (
     <Card
@@ -32,8 +35,56 @@ export function TonightsPickCard(props: {
         color: 'white',
         position: 'relative',
         overflow: 'visible',
+        cursor: onOpenDetails ? 'pointer' : 'default',
+      }}
+      role={onOpenDetails ? 'button' : undefined}
+      tabIndex={onOpenDetails ? 0 : undefined}
+      onClick={onOpenDetails}
+      onKeyDown={(e) => {
+        if (!onOpenDetails) return
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onOpenDetails()
+        }
       }}
     >
+      {/* Keep image + overlay clipped, but let the badge overflow */}
+      <Box
+        aria-hidden
+        sx={{
+          position: 'absolute',
+          inset: 0,
+          overflow: 'hidden',
+          borderRadius: 'inherit',
+          zIndex: 0,
+        }}
+      >
+        {bgImage ? (
+          <Box
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              backgroundImage: `url(${bgImage})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              opacity: 0.42,
+              transform: 'scale(1.05)',
+              filter: 'saturate(1.15) contrast(1.1)',
+            }}
+          />
+        ) : null}
+
+        {/* Material / liquid overlay for text readability */}
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            background: `linear-gradient(135deg, ${alpha(colors.oceanBlue, 0.72)} 0%, ${alpha(colors.navyBlue, 0.78)} 55%, rgba(0,0,0,0.22) 100%)`,
+            backdropFilter: 'blur(3px)',
+          }}
+        />
+      </Box>
+
       {onExcludeFromSession ? (
         <Box
           sx={{
@@ -45,7 +96,10 @@ export function TonightsPickCard(props: {
         >
           <IconButton
             aria-label="Exclude from session"
-            onClick={onExcludeFromSession}
+            onClick={(e) => {
+              e.stopPropagation()
+              onExcludeFromSession()
+            }}
             sx={{
               width: 44,
               height: 44,
@@ -61,8 +115,9 @@ export function TonightsPickCard(props: {
       <Box
         sx={{
           position: 'absolute',
-          top: -16,
+          top: 0,
           left: 24,
+          zIndex: 2,
           bgcolor: colors.sand,
           color: colors.navyBlue,
           px: 2,
@@ -73,13 +128,15 @@ export function TonightsPickCard(props: {
           display: 'flex',
           alignItems: 'center',
           gap: 0.5,
+          boxShadow: `0 8px 18px ${alpha(colors.navyBlue, 0.22)}`,
+          transform: 'translateY(-50%)',
         }}
       >
         <TrophyIcon fontSize="small" />
         TONIGHT'S PICK
       </Box>
 
-      <CardContent sx={{ pt: 4, pb: 3 }}>
+      <CardContent sx={{ pt: 4, pb: 3, position: 'relative', zIndex: 1 }}>
         <Typography variant="h4" fontWeight={700} gutterBottom>
           {topPick.game.name}
         </Typography>

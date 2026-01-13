@@ -9,13 +9,23 @@ import {
 } from '@mui/material'
 import SettingsIcon from '@mui/icons-material/Settings'
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever'
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import { colors } from '../../theme/theme'
 
 export function WizardHeader(props: {
   onOpenClearDialog: () => void
   onOpenSettings: () => void
+  onOpenHelp: () => void
 }) {
-  const { onOpenClearDialog, onOpenSettings } = props
+  const { onOpenClearDialog, onOpenSettings, onOpenHelp } = props
+
+  const iconButtonSx = {
+    width: 40,
+    height: 40,
+    borderRadius: 2,
+    color: 'text.secondary',
+    '&:hover': { bgcolor: 'action.hover' },
+  } as const
 
   return (
     <AppBar
@@ -60,14 +70,20 @@ export function WizardHeader(props: {
         <Box sx={{ flexGrow: 1 }} />
 
         <Tooltip title="Clear all data">
-          <IconButton onClick={onOpenClearDialog} sx={{ color: 'error.main' }}>
-            <DeleteForeverIcon />
+          <IconButton onClick={onOpenClearDialog} sx={{ ...iconButtonSx, color: 'error.main' }}>
+            <DeleteForeverIcon fontSize="small" />
           </IconButton>
         </Tooltip>
 
         <Tooltip title="Settings">
-          <IconButton onClick={onOpenSettings} sx={{ color: 'primary.main' }}>
-            <SettingsIcon />
+          <IconButton onClick={onOpenSettings} sx={{ ...iconButtonSx, color: 'primary.main' }}>
+            <SettingsIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+
+        <Tooltip title="Help">
+          <IconButton aria-label="Help" onClick={onOpenHelp} sx={{ ...iconButtonSx, color: 'info.main' }}>
+            <InfoOutlinedIcon fontSize="small" />
           </IconButton>
         </Tooltip>
       </Toolbar>

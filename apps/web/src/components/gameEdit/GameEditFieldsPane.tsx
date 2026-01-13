@@ -1,6 +1,5 @@
 import {
   Box,
-  Divider,
   Stack,
   TextField,
   Typography,
@@ -69,22 +68,6 @@ export function GameEditFieldsPane(props: {
             />
           </Stack>
         </Stack>
-      </Box>
-
-      <Divider />
-
-      <Box>
-        <Typography variant="subtitle2" gutterBottom>
-          Your Notes
-        </Typography>
-        <TextField
-          multiline
-          rows={4}
-          fullWidth
-          placeholder="Add your personal notes (house rules, tips, memorable moments...)"
-          value={game.userNotes ?? ''}
-          onChange={(e) => onChange('userNotes', e.target.value || undefined)}
-        />
       </Box>
     </Stack>
   )

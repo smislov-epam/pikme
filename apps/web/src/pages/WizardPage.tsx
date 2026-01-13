@@ -12,6 +12,7 @@ import { wizardSteps } from './wizard/wizardSteps'
 import { WizardStepContent } from './wizard/WizardStepContent'
 import { BggApiKeyDialog } from '../components/BggApiKeyDialog'
 import { SaveNightDialog } from '../components/SaveNightDialog'
+import { HelpWalkthroughDialog } from '../components/HelpWalkthroughDialog'
 import { useWizardState } from '../hooks/useWizardState'
 import { clearAllData } from '../db/db'
 import { colors } from '../theme/theme'
@@ -23,6 +24,7 @@ export default function WizardPage() {
   const [showApiKeyDialog, setShowApiKeyDialog] = useState(false)
   const [showSaveDialog, setShowSaveDialog] = useState(false)
   const [showClearDialog, setShowClearDialog] = useState(false)
+  const [showHelpDialog, setShowHelpDialog] = useState(false)
 
   const wizard = useWizardState()
   const toast = useToast()
@@ -85,6 +87,22 @@ export default function WizardPage() {
   const onStartOver = () => { wizard.reset(); setActiveStep(0); setCompletedSteps(wizardSteps.map(() => false)) }
   const canJumpTo = (stepIndex: number) => stepIndex <= activeStep || completedSteps[stepIndex - 1]
 
+  const stepSubtitles = useMemo(() => {
+    const sessionCount = wizard.sessionGameIds.length
+    const eligibleCount = wizard.filteredGames.length
+    const hasResult = wizard.recommendation.topPick !== null
+    const alternativesCount = wizard.recommendation.alternatives.length
+
+    const resultGamesCount = hasResult ? 1 + alternativesCount : 0
+
+    return [
+      `${sessionCount} game${sessionCount === 1 ? '' : 's'}`,
+      `${eligibleCount} game${eligibleCount === 1 ? '' : 's'}`,
+      `${eligibleCount} game${eligibleCount === 1 ? '' : 's'}`,
+      `${resultGamesCount} game${resultGamesCount === 1 ? '' : 's'}`,
+    ]
+  }, [wizard.filteredGames.length, wizard.recommendation, wizard.sessionGameIds.length])
+
   return (
     <Box
       sx={{
@@ -96,6 +114,7 @@ export default function WizardPage() {
       <WizardHeader
         onOpenClearDialog={() => setShowClearDialog(true)}
         onOpenSettings={() => setShowApiKeyDialog(true)}
+        onOpenHelp={() => setShowHelpDialog(true)}
       />
 
       <ClearAllDataDialog
@@ -116,14 +135,32 @@ export default function WizardPage() {
         }}
       />
 
+      <HelpWalkthroughDialog
+        open={showHelpDialog}
+        onClose={() => {
+          setShowHelpDialog(false)
+        }}
+      />
+
       {/* Main Content */}
-      <Container maxWidth="sm" sx={{ pb: 12, pt: 3 }}>
-        <WizardStepperNav
-          activeStep={activeStep}
-          completedSteps={completedSteps}
-          canJumpTo={canJumpTo}
-          onSelectStep={setActiveStep}
-        />
+      <Container maxWidth="md" sx={{ pb: 12, pt: 3, maxWidth: { lg: 1120 } }}>
+        <Box
+          sx={{
+            position: 'sticky',
+            top: { xs: 62, sm: 66 },
+            zIndex: 5,
+            mt: { xs: -1.25, sm: -1.75 },
+            mb: 3,
+          }}
+        >
+          <WizardStepperNav
+            activeStep={activeStep}
+            completedSteps={completedSteps}
+            stepSubtitles={stepSubtitles}
+            canJumpTo={canJumpTo}
+            onSelectStep={setActiveStep}
+          />
+        </Box>
 
         <WizardStepContent
           activeStep={activeStep}

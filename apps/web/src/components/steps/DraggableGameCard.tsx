@@ -11,6 +11,7 @@ export interface DraggableGameCardProps {
   userRating?: number
   isTopPick?: boolean
   isDisliked?: boolean
+  onOpenDetails?: () => void
   onToggleTopPick: () => void
   onToggleDisliked?: () => void
   onRank?: (rank: number) => void
@@ -24,6 +25,7 @@ export function DraggableGameCard({
   userRating,
   isTopPick,
   isDisliked,
+  onOpenDetails,
   onToggleTopPick,
   onToggleDisliked,
   onRank,
@@ -46,6 +48,7 @@ export function DraggableGameCard({
         userRating={userRating}
         isTopPick={isTopPick}
         isDisliked={isDisliked}
+        onOpenDetails={onOpenDetails}
         onToggleTopPick={onToggleTopPick}
         onToggleDisliked={onToggleDisliked}
         onRank={onRank}

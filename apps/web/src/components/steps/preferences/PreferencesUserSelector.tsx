@@ -21,9 +21,10 @@ export function PreferencesUserSelector(props: {
     return (
       <FormControl fullWidth>
         <Select
+          size="small"
           value={selectedUser}
           onChange={(e) => onChange(String(e.target.value))}
-          sx={{ bgcolor: 'background.paper' }}
+          sx={{ bgcolor: 'background.paper', height: 40 }}
         >
           {users.map((user) => (
             <MenuItem key={user.username} value={user.username}>
@@ -43,11 +44,16 @@ export function PreferencesUserSelector(props: {
       scrollButtons="auto"
       sx={{
         bgcolor: 'background.paper',
-        borderRadius: 3,
+        borderRadius: '8px',
+        border: '1px solid',
+        borderColor: 'divider',
         '& .MuiTab-root': {
           textTransform: 'none',
           fontWeight: 500,
-          minHeight: 48,
+          minHeight: 40,
+        },
+        '& .MuiTab-root.Mui-selected': {
+          bgcolor: 'secondary.light',
         },
       }}
     >

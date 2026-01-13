@@ -13,6 +13,7 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime'
 import StarIcon from '@mui/icons-material/Star'
 import type { GameRecord } from '../../db/types'
 import { formatPlayTime, getComplexityColor, getComplexityLabel } from './gameEditUtils'
+import { GameNotesPanel } from '../gameNotes/GameNotesPanel'
 
 export function GameEditSummaryPane(props: {
   game: GameRecord
@@ -89,11 +90,12 @@ export function GameEditSummaryPane(props: {
                   sx={{ bgcolor: getComplexityColor(game.weight), color: 'white' }}
                 />
               ) : null}
-              {game.userNotes ? <Chip label="Has notes" color="secondary" size="small" /> : null}
             </Stack>
           </Stack>
         </CardContent>
       </Card>
+
+      <GameNotesPanel bggId={game.bggId} height={200} />
     </Stack>
   )
 }

@@ -15,8 +15,15 @@ export interface GameRecord {
   description?: string
   averageRating?: number
   weight?: number // BGG complexity 1-5
-  userNotes?: string // User's personal notes about the game
+  userNotes?: string // Legacy free-text notes (migrated to gameNotes)
   lastFetchedAt: string
+}
+
+export interface GameNoteRecord {
+  id?: number
+  bggId: number
+  text: string
+  createdAt: string
 }
 
 export interface UserRecord {

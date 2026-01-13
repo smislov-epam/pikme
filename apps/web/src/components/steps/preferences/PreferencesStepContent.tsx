@@ -26,6 +26,7 @@ import { PreferencesUserSelector } from './PreferencesUserSelector'
 import { GameCard } from '../PreferenceGameCard'
 import { DislikedSection, NeutralSection, RankedSection, type PreferenceGameRow, TopPicksSection } from './PreferencesSections'
 import { useToast } from '../../../services/toast'
+import { GameDetailsDialog } from '../../gameDetails/GameDetailsDialog'
 
 const TOP_PICKS_LIMIT = 3
 
@@ -41,6 +42,7 @@ type PreferenceBucket = keyof typeof DROPPABLE
 export interface PreferencesStepProps {
   users: UserRecord[]
   games: GameRecord[]
+  gameOwners: Record<number, string[]>
   preferences: Record<string, UserPreferenceRecord[]>
   userRatings: Record<string, Record<number, number | undefined>>
   onUpdatePreference: (
@@ -57,6 +59,7 @@ export interface PreferencesStepProps {
 export function PreferencesStepContent({
   users,
   games,
+  gameOwners,
   preferences,
   userRatings,
   onUpdatePreference,
@@ -70,6 +73,7 @@ export function PreferencesStepContent({
   const toast = useToast()
   const [selectedUserState, setSelectedUserState] = useState(users[0]?.username ?? '')
   const [activeDragId, setActiveDragId] = useState<number | null>(null)
+  const [detailsGame, setDetailsGame] = useState<GameRecord | null>(null)
 
   const selectedUser = useMemo(() => {
     if (users.some((u) => u.username === selectedUserState)) return selectedUserState
@@ -325,18 +329,21 @@ export function PreferencesStepContent({
         <TopPicksSection
           topPicks={topPicksForRender}
           droppableId={DROPPABLE.top}
+          onOpenDetails={(game) => setDetailsGame(game)}
           onToggleTopPick={handleToggleTopPick}
           onToggleDisliked={handleToggleDisliked}
         />
         <DislikedSection
           disliked={dislikedForRender}
           droppableId={DROPPABLE.disliked}
+          onOpenDetails={(game) => setDetailsGame(game)}
           onToggleTopPick={handleToggleTopPick}
           onToggleDisliked={handleToggleDisliked}
         />
         <RankedSection
           ranked={ranked}
           droppableId={DROPPABLE.ranked}
+          onOpenDetails={(game) => setDetailsGame(game)}
           onToggleTopPick={handleToggleTopPick}
           onToggleDisliked={handleToggleDisliked}
         />
@@ -344,6 +351,7 @@ export function PreferencesStepContent({
           neutral={neutralForRender}
           nextRank={ranked.length + 1}
           droppableId={DROPPABLE.neutral}
+          onOpenDetails={(game) => setDetailsGame(game)}
           onToggleTopPick={handleToggleTopPick}
           onToggleDisliked={handleToggleDisliked}
           onSetRank={handleSetRank}
@@ -363,6 +371,14 @@ export function PreferencesStepContent({
           ) : null}
         </DragOverlay>
       </DndContext>
+
+      <GameDetailsDialog
+        open={!!detailsGame}
+        game={detailsGame}
+        owners={detailsGame ? (gameOwners[detailsGame.bggId] ?? []) : []}
+        users={users}
+        onClose={() => setDetailsGame(null)}
+      />
     </Stack>
   )
 }

@@ -5,10 +5,8 @@ import {
   Button,
   Card,
   CardContent,
-  Chip,
   CircularProgress,
   Collapse,
-  IconButton,
   InputAdornment,
   Stack,
   TextField,
@@ -18,15 +16,13 @@ import {
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import HistoryIcon from '@mui/icons-material/History'
-import LinkIcon from '@mui/icons-material/Link'
 import PersonIcon from '@mui/icons-material/Person'
 import RefreshIcon from '@mui/icons-material/Refresh'
-import SearchIcon from '@mui/icons-material/Search'
-import StarIcon from '@mui/icons-material/Star'
 import type { GameRecord, UserRecord, SavedNightRecord } from '../../db/types'
-import { colors } from '../../theme/theme'
 import { DeleteUserDialog, ManualGameDialog, type ManualGameData } from './PlayerDialogs'
 import { GamePreviewGrid } from './GamePreviewGrid'
+import { PlayersListCard } from './PlayersListCard'
+import { LocalPlayersGamesCard } from './LocalPlayersGamesCard'
 import { normalizePlayTime } from '../../services/bgg/normalizePlayTime'
 import { useToast } from '../../services/toast'
 
@@ -67,7 +63,6 @@ export function PlayersStep({
   users, games, sessionGames, gameOwners, existingLocalUsers, savedNights,
   onAddBggUser, onAddLocalUser, onRemoveUser, onDeleteUser, onSetOrganizer, onSearchGame,
   onAddGameToUser, onRemoveGameFromUser, onAddGameToSession, onRemoveGameFromSession,
-  onExcludeGameFromSession, onUndoExcludeGameFromSession,
   onAddOwnerToGame, onLoadSavedNight, onFetchGameInfo, onAddGameManually, onEditGame,
   onRefreshGameFromBgg,
   isLoading,
@@ -154,27 +149,17 @@ export function PlayersStep({
 
       // The dialog edits min/max playtime, but extraction may only provide an average playingTimeMinutes.
       // Populate min/max from average when missing so fields show up for the user.
-      const normalizedTime = normalizePlayTime({
-        playingTimeMinutes: gameInfo.playingTimeMinutes,
-        minPlayTimeMinutes: gameInfo.minPlayTimeMinutes,
-        maxPlayTimeMinutes: gameInfo.maxPlayTimeMinutes,
-      })
+      const normalizedTime = normalizePlayTime({ playingTimeMinutes: gameInfo.playingTimeMinutes, minPlayTimeMinutes: gameInfo.minPlayTimeMinutes, maxPlayTimeMinutes: gameInfo.maxPlayTimeMinutes })
 
       setManualGame({
         bggId: gameInfo.bggId,
         name: gameInfo.name || '',
         thumbnail: gameInfo.thumbnail,
-        minPlayers: gameInfo.minPlayers,
-        maxPlayers: gameInfo.maxPlayers,
-        bestWith: gameInfo.bestWith,
+        minPlayers: gameInfo.minPlayers, maxPlayers: gameInfo.maxPlayers, bestWith: gameInfo.bestWith,
         playingTimeMinutes: normalizedTime.playingTimeMinutes,
-        minPlayTimeMinutes: normalizedTime.minPlayTimeMinutes,
-        maxPlayTimeMinutes: normalizedTime.maxPlayTimeMinutes,
-        minAge: gameInfo.minAge,
-        averageRating: gameInfo.averageRating,
-        weight: gameInfo.weight,
-        categories: gameInfo.categories,
-        mechanics: gameInfo.mechanics,
+        minPlayTimeMinutes: normalizedTime.minPlayTimeMinutes, maxPlayTimeMinutes: normalizedTime.maxPlayTimeMinutes,
+        minAge: gameInfo.minAge, averageRating: gameInfo.averageRating, weight: gameInfo.weight,
+        categories: gameInfo.categories, mechanics: gameInfo.mechanics,
         description: gameInfo.description,
       })
     } catch {
@@ -255,13 +240,37 @@ export function PlayersStep({
         />
       )}
 
-      <ToggleButtonGroup value={mode} exclusive onChange={(_, v) => v && setMode(v)} fullWidth sx={{ bgcolor: 'background.paper', borderRadius: 3 }}>
-        <ToggleButton value="bgg" sx={{ py: 1.5 }}><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><RefreshIcon fontSize="small" />BGG Username</Box></ToggleButton>
-        <ToggleButton value="local" sx={{ py: 1.5 }}><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><PersonIcon fontSize="small" />Local Player</Box></ToggleButton>
+      <ToggleButtonGroup value={mode} exclusive onChange={(_, v) => v && setMode(v)} fullWidth sx={{ bgcolor: 'background.paper', borderRadius: 2 }}>
+        <ToggleButton value="bgg" sx={{ py: 1, minHeight: 40 }}><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><RefreshIcon fontSize="small" />BGG Username</Box></ToggleButton>
+        <ToggleButton value="local" sx={{ py: 1, minHeight: 40 }}><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><PersonIcon fontSize="small" />Local Player</Box></ToggleButton>
       </ToggleButtonGroup>
 
       {mode === 'bgg' ? (
-        <TextField fullWidth placeholder="Enter BGG username" value={inputValue} onChange={(e) => setInputValue(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') handleAddUser() }} disabled={isLoading} InputProps={{ endAdornment: (<InputAdornment position="end"><Button variant="contained" size="small" onClick={() => handleAddUser()} disabled={!inputValue.trim() || isLoading} startIcon={isLoading ? <CircularProgress size={16} /> : <AddIcon />}>Add</Button></InputAdornment>) }} />
+        <TextField
+          fullWidth
+          size="small"
+          placeholder="Enter BGG username"
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') handleAddUser() }}
+          disabled={isLoading}
+          InputProps={{
+            endAdornment: (
+              <InputAdornment position="end">
+                <Button
+                  variant="contained"
+                  size="small"
+                  onClick={() => handleAddUser()}
+                  disabled={!inputValue.trim() || isLoading}
+                  startIcon={isLoading ? <CircularProgress size={16} /> : <AddIcon />}
+                  sx={{ height: 32 }}
+                >
+                  Add
+                </Button>
+              </InputAdornment>
+            ),
+          }}
+        />
       ) : (
         <Autocomplete
           freeSolo
@@ -291,13 +300,23 @@ export function PlayersStep({
             <TextField
               {...params}
               fullWidth
+              size="small"
               placeholder={autocompleteOptions.length > 0 ? "Enter name or select existing player" : "Enter player name"}
               onKeyDown={(e) => { if (e.key === 'Enter' && inputValue.trim()) { e.preventDefault(); handleAddUser() } }}
               InputProps={{
                 ...params.InputProps,
                 endAdornment: (
                   <InputAdornment position="end">
-                    <Button variant="contained" size="small" onClick={() => handleAddUser()} disabled={!inputValue.trim() || isLoading} startIcon={isLoading ? <CircularProgress size={16} /> : <AddIcon />}>Add</Button>
+                    <Button
+                      variant="contained"
+                      size="small"
+                      onClick={() => handleAddUser()}
+                      disabled={!inputValue.trim() || isLoading}
+                      startIcon={isLoading ? <CircularProgress size={16} /> : <AddIcon />}
+                      sx={{ height: 32 }}
+                    >
+                      Add
+                    </Button>
                   </InputAdornment>
                 )
               }}
@@ -312,31 +331,32 @@ export function PlayersStep({
       <DeleteUserDialog open={!!deleteDialogUser} username={deleteDialogUser} onClose={() => setDeleteDialogUser(null)} onRemoveFromSession={() => { if (deleteDialogUser) { onRemoveUser(deleteDialogUser); setSelectedLocalUsers((prev) => prev.filter((u) => u !== deleteDialogUser)) } setDeleteDialogUser(null) }} onDeletePermanently={async () => { if (deleteDialogUser) { await onDeleteUser(deleteDialogUser); setSelectedLocalUsers((prev) => prev.filter((u) => u !== deleteDialogUser)) } setDeleteDialogUser(null) }} />
       <ManualGameDialog open={showManualEntry} game={manualGame} isLoading={isFetchingGame} onGameChange={setManualGame} onClose={() => { setShowManualEntry(false); setIsFetchingGame(false) }} onSubmit={handleManualGameSubmit} />
 
-      {users.length > 0 && (
-        <Card><CardContent>
-          <Typography variant="subtitle2" color="text.secondary" gutterBottom>Players ({users.length}) {sortedUsers.find(u => u.isOrganizer) && '• Host pinned first'}</Typography>
-          <Stack direction="row" flexWrap="wrap" gap={1}>
-            {sortedUsers.map((user) => {
-              const userGameCount = Object.values(gameOwners).filter((owners) => owners.includes(user.username)).length
-              return (<Chip key={user.username} label={<Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>{user.isOrganizer && <StarIcon sx={{ fontSize: 16, color: '#B8860B' }} />}{user.displayName || user.username}{user.isOrganizer && <Typography variant="caption" sx={{ opacity: 0.8, fontWeight: 600 }}>(Host)</Typography>}{userGameCount > 0 && <Typography variant="caption" sx={{ opacity: 0.7 }}>({userGameCount} games)</Typography>}</Box>} icon={user.isBggUser ? <RefreshIcon /> : <PersonIcon />} onClick={() => !user.isOrganizer && onSetOrganizer(user.username)} onDelete={() => setDeleteDialogUser(user.username)} title={user.isOrganizer ? 'Host - games belong to them' : 'Click to make host'} sx={{ bgcolor: user.isOrganizer ? colors.sand : user.isBggUser ? 'primary.light' : 'secondary.main', color: 'primary.dark', cursor: user.isOrganizer ? 'default' : 'pointer', fontWeight: user.isOrganizer ? 600 : 400, '& .MuiChip-deleteIcon': { color: 'primary.dark', opacity: 0.6, '&:hover': { opacity: 1 } } }} />)
-            })}
-          </Stack>
-        </CardContent></Card>
-      )}
+      {users.length > 0 ? (
+        <PlayersListCard
+          users={sortedUsers}
+          gameOwners={gameOwners}
+          onSetOrganizer={onSetOrganizer}
+          onRequestDelete={(username) => setDeleteDialogUser(username)}
+        />
+      ) : null}
 
       <Collapse in={localUsers.length > 0}>
-        <Card sx={{ bgcolor: colors.sand + '20' }}><CardContent>
-          <Typography variant="subtitle2" gutterBottom>Add games for local players</Typography>
-          <Box sx={{ mb: 2 }}>
-            <Stack direction="row" alignItems="center" gap={1} mb={1}><Typography variant="caption" color="text.secondary">Select users to add games to:</Typography>{localUsers.length > 1 && <Button size="small" onClick={selectAllLocalUsers} sx={{ fontSize: '0.7rem', py: 0 }}>Select all</Button>}</Stack>
-            <Stack direction="row" flexWrap="wrap" gap={1}>{localUsers.map((user) => (<Chip key={user.username} label={user.displayName || user.username} onClick={() => toggleUserSelection(user.username)} variant={selectedLocalUsers.includes(user.username) ? 'filled' : 'outlined'} color={selectedLocalUsers.includes(user.username) ? 'primary' : 'default'} icon={user.isOrganizer ? <StarIcon sx={{ fontSize: 16 }} /> : undefined} />))}</Stack>
-            {selectedLocalUsers.length > 0 && <Typography variant="caption" color="primary" sx={{ mt: 0.5, display: 'block' }}>✓ Games will be added to: {selectedLocalUsers.join(', ')}</Typography>}
-          </Box>
-          <TextField fullWidth size="small" placeholder="Paste BGG link (e.g. boardgamegeek.com/boardgame/123/game)" value={gameUrlInput} onChange={(e) => setGameUrlInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAddGameFromUrl()} InputProps={{ startAdornment: <InputAdornment position="start"><LinkIcon fontSize="small" /></InputAdornment>, endAdornment: <InputAdornment position="end"><Button size="small" onClick={handleAddGameFromUrl} disabled={!gameUrlInput.trim() || selectedLocalUsers.length === 0 || isLoading}>Add</Button></InputAdornment> }} />
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', my: 1 }}>— or search (requires API key) —</Typography>
-          <TextField fullWidth size="small" placeholder="Search BoardGameGeek..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSearch()} InputProps={{ endAdornment: <InputAdornment position="end"><IconButton onClick={handleSearch} disabled={isSearching}>{isSearching ? <CircularProgress size={20} /> : <SearchIcon />}</IconButton></InputAdornment> }} />
-          {searchResults.length > 0 && (<Stack spacing={1} sx={{ mt: 2 }}>{searchResults.map((game) => (<Box key={game.bggId} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 1.5, bgcolor: 'background.paper', borderRadius: 2 }}><Box><Typography fontWeight={500}>{game.name}</Typography>{game.yearPublished && <Typography variant="caption" color="text.secondary">({game.yearPublished})</Typography>}</Box><Button size="small" variant="outlined" onClick={() => handleAddGame(game.bggId)} disabled={selectedLocalUsers.length === 0}>Add</Button></Box>))}</Stack>)}
-        </CardContent></Card>
+        <LocalPlayersGamesCard
+          localUsers={localUsers}
+          selectedLocalUsers={selectedLocalUsers}
+          onToggleUser={toggleUserSelection}
+          onSelectAll={selectAllLocalUsers}
+          gameUrlInput={gameUrlInput}
+          onGameUrlInputChange={setGameUrlInput}
+          onAddGameFromUrl={handleAddGameFromUrl}
+          isLoading={isLoading}
+          searchQuery={searchQuery}
+          onSearchQueryChange={setSearchQuery}
+          onSearch={handleSearch}
+          isSearching={isSearching}
+          searchResults={searchResults}
+          onAddGame={handleAddGame}
+        />
       </Collapse>
 
       <GamePreviewGrid
@@ -348,13 +368,12 @@ export function PlayersStep({
         onRemoveOwner={onRemoveGameFromUser}
         onAddOwner={onAddOwnerToGame}
         onAddToSession={onAddGameToSession}
-        onRemoveFromSession={onRemoveGameFromSession}
         onExcludeFromSession={(game) => {
-          onExcludeGameFromSession(game.bggId)
-          toast.info(`Excluded “${game.name}” from this session`, {
+          onRemoveGameFromSession(game.bggId)
+          toast.info(`Removed “${game.name}” from this session`, {
             autoHideMs: 5500,
             actionLabel: 'Undo',
-            onAction: () => onUndoExcludeGameFromSession(game.bggId),
+            onAction: () => onAddGameToSession(game.bggId),
           })
         }}
         onEditGame={onEditGame}

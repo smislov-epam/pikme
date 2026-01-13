@@ -44,6 +44,9 @@ export function WizardStepContent(props: {
       return (
         <FiltersStep
           games={wizard.sessionGames}
+          users={wizard.users}
+          gameOwners={wizard.gameOwners}
+          sessionUserCount={wizard.users.length}
           playerCount={wizard.filters.playerCount}
           onPlayerCountChange={wizard.setPlayerCount}
           timeRange={wizard.filters.timeRange}
@@ -68,6 +71,7 @@ export function WizardStepContent(props: {
         <PreferencesStep
           users={wizard.users}
           games={wizard.filteredGames}
+          gameOwners={wizard.gameOwners}
           preferences={wizard.preferences}
           userRatings={wizard.userRatings}
           onUpdatePreference={wizard.updatePreference}
@@ -84,6 +88,8 @@ export function WizardStepContent(props: {
           alternatives={wizard.recommendation.alternatives}
           vetoed={wizard.recommendation.vetoed}
           filters={wizard.filters}
+          users={wizard.users}
+          gameOwners={wizard.gameOwners}
           onSaveNight={onOpenSaveDialog}
           onExcludeGameFromSession={wizard.excludeGameFromSession}
           onUndoExcludeGameFromSession={wizard.undoExcludeGameFromSession}

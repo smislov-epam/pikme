@@ -23,6 +23,7 @@ export interface GameCardProps {
   isDisliked?: boolean
   rank?: number
   userRating?: number
+  onOpenDetails?: () => void
   onToggleTopPick: () => void
   onToggleDisliked?: () => void
   onRank?: (rank: number) => void
@@ -37,6 +38,7 @@ export function GameCard({
   isDisliked,
   rank,
   userRating,
+  onOpenDetails,
   onToggleTopPick,
   onToggleDisliked,
   onRank,
@@ -46,11 +48,34 @@ export function GameCard({
 }: GameCardProps) {
   const variant: GameTileVariant = isDisliked ? 'disliked' : isTopPick ? 'topPick' : 'default'
 
+  const {
+    onPointerDown: dragOnPointerDown,
+    onMouseDown: dragOnMouseDown,
+    onTouchStart: dragOnTouchStart,
+    onKeyDown: dragOnKeyDown,
+    ...dragHandleRest
+  } = dragHandleProps ?? {}
+
   const leading = (
     <Stack direction="row" spacing={1} alignItems="center">
       {isDraggable ? (
         <Box
-          {...dragHandleProps}
+          {...dragHandleRest}
+          onPointerDown={(e) => {
+            dragOnPointerDown?.(e)
+            e.stopPropagation()
+          }}
+          onMouseDown={(e) => {
+            dragOnMouseDown?.(e)
+            e.stopPropagation()
+          }}
+          onTouchStart={(e) => {
+            dragOnTouchStart?.(e)
+            e.stopPropagation()
+          }}
+          onKeyDown={(e) => {
+            dragOnKeyDown?.(e)
+          }}
           sx={{
             display: 'flex',
             alignItems: 'center',
@@ -63,18 +88,42 @@ export function GameCard({
           <DragIndicatorIcon fontSize="small" />
         </Box>
       ) : null}
-
-      {rank !== undefined ? (
-        <Chip label={rank} size="small" color="primary" sx={{ minWidth: 32, fontWeight: 700 }} />
-      ) : null}
     </Stack>
   )
 
-  const actions = (
-    <>
+  const trailing = rank !== undefined ? (
+    <Chip
+      label={`#${rank}`}
+      size="small"
+      color="primary"
+      sx={{ height: 20, minWidth: 44, fontWeight: 800 }}
+    />
+  ) : null
+
+  const trailingContent = (
+    <Stack direction="row" spacing={0.5} alignItems="center">
+      {trailing}
+
+      {onRank && nextRank ? (
+        <Button
+          size="small"
+          variant="text"
+          onClick={(e) => {
+            e.stopPropagation()
+            onRank(nextRank)
+          }}
+          sx={{ minWidth: 'auto', height: 32, px: 1 }}
+        >
+          #{nextRank}
+        </Button>
+      ) : null}
+
       <IconButton
         size="small"
-        onClick={onToggleTopPick}
+        onClick={(e) => {
+          e.stopPropagation()
+          onToggleTopPick()
+        }}
         aria-label={isTopPick ? 'Unstar top pick' : 'Star as top pick'}
         sx={{
           color: isTopPick ? colors.sand : 'text.disabled',
@@ -87,7 +136,10 @@ export function GameCard({
       {onToggleDisliked ? (
         <IconButton
           size="small"
-          onClick={onToggleDisliked}
+          onClick={(e) => {
+            e.stopPropagation()
+            onToggleDisliked()
+          }}
           aria-label={isDisliked ? 'Remove dislike' : 'Mark disliked'}
           sx={{
             color: isDisliked ? 'error.main' : 'text.disabled',
@@ -97,7 +149,7 @@ export function GameCard({
           {isDisliked ? <ThumbDownAltIcon /> : <ThumbDownOffAltIcon />}
         </IconButton>
       ) : null}
-    </>
+    </Stack>
   )
 
   return (
@@ -105,36 +157,20 @@ export function GameCard({
       game={game}
       variant={variant}
       leading={leading}
-      actions={actions}
+      trailing={trailingContent}
+      onClick={onOpenDetails}
     >
-      {(userRating || (onRank && nextRank)) ? (
-        <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
-          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-            {userRating ? (
-              <Chip
-                label={`You ★ ${userRating.toFixed(1)}`}
-                size="small"
-                sx={{
-                  height: 20,
-                  fontSize: '0.7rem',
-                  bgcolor: 'secondary.light',
-                  color: 'text.primary',
-                }}
-              />
-            ) : null}
-          </Stack>
-
-          {onRank && nextRank ? (
-            <Button
-              size="small"
-              variant="text"
-              onClick={() => onRank(nextRank)}
-              sx={{ minWidth: 'auto' }}
-            >
-              #{nextRank}
-            </Button>
-          ) : null}
-        </Stack>
+      {userRating ? (
+        <Chip
+          label={`You ★ ${userRating.toFixed(1)}`}
+          size="small"
+          sx={{
+            height: 20,
+            fontSize: '0.7rem',
+            bgcolor: 'secondary.light',
+            color: 'text.primary',
+          }}
+        />
       ) : null}
 
       {isTopPick ? (
@@ -159,6 +195,7 @@ export interface SortableGameCardProps {
   userRating?: number
   isTopPick?: boolean
   isDisliked?: boolean
+  onOpenDetails?: () => void
   onToggleTopPick: () => void
   onToggleDisliked?: () => void
   onRank?: (rank: number) => void
@@ -172,6 +209,7 @@ export function SortableGameCard({
   userRating,
   isTopPick,
   isDisliked,
+  onOpenDetails,
   onToggleTopPick,
   onToggleDisliked,
   onRank,
@@ -192,6 +230,7 @@ export function SortableGameCard({
         game={game}
         rank={rank}
         userRating={userRating}
+        onOpenDetails={onOpenDetails}
         onToggleTopPick={onToggleTopPick}
         isTopPick={isTopPick}
         isDisliked={isDisliked}

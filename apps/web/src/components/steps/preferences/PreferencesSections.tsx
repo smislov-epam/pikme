@@ -46,7 +46,7 @@ function DroppableList(props: {
       sx={{
         ...LIST_SCROLL_SX,
         minHeight: minHeight ?? 48,
-        borderRadius: 2,
+        borderRadius: '8px',
         border: '2px dashed',
         borderColor: isOver ? outline : 'transparent',
         bgcolor: isOver ? alpha(outline, 0.08) : 'transparent',
@@ -61,10 +61,11 @@ function DroppableList(props: {
 export function TopPicksSection(props: {
   topPicks: PreferenceGameRow[]
   droppableId: string
+  onOpenDetails?: (game: GameRecord) => void
   onToggleTopPick: (bggId: number, currentlyTopPick: boolean) => void
   onToggleDisliked: (bggId: number, currentlyDisliked: boolean) => void
 }) {
-  const { topPicks, droppableId, onToggleTopPick, onToggleDisliked } = props
+  const { topPicks, droppableId, onOpenDetails, onToggleTopPick, onToggleDisliked } = props
 
   return (
     <Card sx={{ bgcolor: colors.sand + '30', border: `2px dashed ${colors.sand}` }}>
@@ -91,6 +92,7 @@ export function TopPicksSection(props: {
                   userRating={userRating}
                   isTopPick
                   isDisliked={false}
+                  onOpenDetails={onOpenDetails ? () => onOpenDetails(game) : undefined}
                   onToggleTopPick={() => onToggleTopPick(game.bggId, true)}
                   onToggleDisliked={() => onToggleDisliked(game.bggId, false)}
                 />
@@ -106,10 +108,11 @@ export function TopPicksSection(props: {
 export function DislikedSection(props: {
   disliked: PreferenceGameRow[]
   droppableId: string
+  onOpenDetails?: (game: GameRecord) => void
   onToggleTopPick: (bggId: number, currentlyTopPick: boolean) => void
   onToggleDisliked: (bggId: number, currentlyDisliked: boolean) => void
 }) {
-  const { disliked, droppableId, onToggleTopPick, onToggleDisliked } = props
+  const { disliked, droppableId, onOpenDetails, onToggleTopPick, onToggleDisliked } = props
 
   return (
     <Card sx={{ border: '1px solid', borderColor: 'error.light' }}>
@@ -131,6 +134,7 @@ export function DislikedSection(props: {
                   game={game}
                   isDisliked
                   userRating={userRating}
+                  onOpenDetails={onOpenDetails ? () => onOpenDetails(game) : undefined}
                   onToggleTopPick={() => onToggleTopPick(game.bggId, false)}
                   onToggleDisliked={() => onToggleDisliked(game.bggId, true)}
                 />
@@ -146,10 +150,11 @@ export function DislikedSection(props: {
 export function RankedSection(props: {
   ranked: PreferenceGameRow[]
   droppableId: string
+  onOpenDetails?: (game: GameRecord) => void
   onToggleTopPick: (bggId: number, currentlyTopPick: boolean) => void
   onToggleDisliked: (bggId: number, currentlyDisliked: boolean) => void
 }) {
-  const { ranked, droppableId, onToggleTopPick, onToggleDisliked } = props
+  const { ranked, droppableId, onOpenDetails, onToggleTopPick, onToggleDisliked } = props
   const ids = ranked.map((g) => g.game.bggId)
 
   return (
@@ -175,6 +180,7 @@ export function RankedSection(props: {
                     userRating={userRating}
                     isTopPick={false}
                     isDisliked={false}
+                    onOpenDetails={onOpenDetails ? () => onOpenDetails(game) : undefined}
                     onToggleTopPick={() => onToggleTopPick(game.bggId, false)}
                     onToggleDisliked={() => onToggleDisliked(game.bggId, false)}
                   />
@@ -192,11 +198,12 @@ export function NeutralSection(props: {
   neutral: PreferenceGameRow[]
   nextRank: number
   droppableId: string
+  onOpenDetails?: (game: GameRecord) => void
   onToggleTopPick: (bggId: number, currentlyTopPick: boolean) => void
   onToggleDisliked: (bggId: number, currentlyDisliked: boolean) => void
   onSetRank: (bggId: number, rank: number) => void
 }) {
-  const { neutral, nextRank, droppableId, onToggleTopPick, onToggleDisliked, onSetRank } = props
+  const { neutral, nextRank, droppableId, onOpenDetails, onToggleTopPick, onToggleDisliked, onSetRank } = props
 
   return (
     <Card>
@@ -205,7 +212,7 @@ export function NeutralSection(props: {
           Available Games ({neutral.length})
         </Typography>
         <Typography variant="body2" color="text.secondary" gutterBottom>
-          Tap games to rank them, star favorites, or dislike to veto
+          Tap a game for details. Use ★ / 👎 and the # button to set preferences.
         </Typography>
 
         <DroppableList droppableId={droppableId} minHeight={120} highlightColor={alpha(colors.oceanBlue, 0.35)}>
@@ -218,6 +225,7 @@ export function NeutralSection(props: {
                 userRating={userRating}
                 isTopPick={isTopPick}
                 isDisliked={isDisliked}
+                onOpenDetails={onOpenDetails ? () => onOpenDetails(game) : undefined}
                 onToggleTopPick={() => onToggleTopPick(game.bggId, !!isTopPick)}
                 onToggleDisliked={() => onToggleDisliked(game.bggId, !!isDisliked)}
                 onRank={(rank) => onSetRank(game.bggId, rank)}

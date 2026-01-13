@@ -63,3 +63,11 @@ export {
   getSavedNights,
   saveNight,
 } from './savedNightsService'
+
+// Game notes service
+export {
+  addGameNote,
+  clearGameNotes,
+  deleteGameNote,
+  listGameNotes,
+} from './gameNotesService'

@@ -1,5 +1,7 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { ThemeProvider } from '@mui/material/styles'
+import { describe, expect, it, vi } from 'vitest'
+import '@testing-library/jest-dom/vitest'
 import { theme } from '../theme/theme'
 import WizardPage from './WizardPage'
 import { ToastProvider } from '../services/toast'
@@ -66,5 +68,12 @@ describe('WizardPage', () => {
     // Check navigation buttons
     expect(screen.getByRole('button', { name: 'Back' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled() // Disabled until users are added
+  })
+
+  it('opens the walkthrough dialog from the header Help icon', () => {
+    renderWithTheme(<WizardPage />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Help' }))
+    expect(screen.getByText('PIKME walkthrough')).toBeInTheDocument()
   })
 })
