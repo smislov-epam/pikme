@@ -831,12 +831,16 @@ export function useWizardState(): WizardState & WizardActions {
 
       const rankedPrefs = gamesWithRatings.map((game, index) => ({
         bggId: game.bggId,
-        rank: index + 1,
-        isTopPick: index < 3, // Top 3 become top picks
+        // Top picks and ranking are mutually exclusive.
+        rank: index < 3 ? undefined : index - 2,
+        isTopPick: index < 3,
+        isDisliked: false,
       }))
 
       const dislikedPrefs = [...dislikedIds].map((bggId) => ({
         bggId,
+        rank: undefined,
+        isTopPick: false,
         isDisliked: true,
       }))
 
@@ -850,8 +854,8 @@ export function useWizardState(): WizardState & WizardActions {
           username,
           bggId: p.bggId,
           rank: p.rank,
-          isTopPick: p.isTopPick ?? false,
-          isDisliked: (p as { isDisliked?: boolean }).isDisliked ?? false,
+          isTopPick: p.isTopPick,
+          isDisliked: p.isDisliked,
           updatedAt: new Date().toISOString(),
         })),
       }))

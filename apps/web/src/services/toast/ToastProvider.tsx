@@ -26,7 +26,14 @@ function defaultAutoHideMs(severity: ToastSeverity) {
   }
 }
 
-type QueuedToast = Required<ToastOptions> & { id: number }
+type QueuedToast = {
+  id: number
+  message: string
+  severity: ToastSeverity
+  autoHideMs: number
+  actionLabel?: string
+  onAction?: () => void
+}
 
 export function ToastProvider({
   children,
@@ -44,8 +51,6 @@ export function ToastProvider({
       message: '',
       severity: 'info',
       autoHideMs: defaultAutoHideMs('info'),
-      actionLabel: undefined,
-      onAction: undefined,
     } satisfies QueuedToast)
 
   const showNext = useCallback(() => {

@@ -8,8 +8,10 @@ export function extractFromHtml(html: string, bggId: number): PartialGameInfo {
 
   const jsonLd = extractJsonLd(html)
   if (jsonLd) {
-    if (!info.name && typeof jsonLd.name === 'string') info.name = jsonLd.name
-    if (!info.thumbnail && typeof jsonLd.image === 'string') info.thumbnail = jsonLd.image
+    const jsonName = jsonLd['name']
+    const jsonImage = jsonLd['image']
+    if (!info.name && typeof jsonName === 'string') info.name = jsonName
+    if (!info.thumbnail && typeof jsonImage === 'string') info.thumbnail = jsonImage
   }
 
   const og = extractOpenGraph(html)
@@ -189,12 +191,17 @@ function extractGeekPreload(html: string): Partial<PartialGameInfo> | null {
   }
 }
 
-function extractJsonLd(html: string): unknown | null {
+function extractJsonLd(html: string): Record<string, unknown> | null {
   const match = html.match(/<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/i)
   if (!match) return null
 
   try {
-    return JSON.parse(match[1]) as unknown
+    const parsed = JSON.parse(match[1]) as unknown
+    if (Array.isArray(parsed)) {
+      const first = parsed.find(isRecord)
+      return first ?? null
+    }
+    return isRecord(parsed) ? parsed : null
   } catch {
     return null
   }
