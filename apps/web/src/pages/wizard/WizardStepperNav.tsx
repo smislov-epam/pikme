@@ -1,4 +1,4 @@
-import { Box, ButtonBase, Paper, Stack, Typography, alpha } from '@mui/material'
+import { Box, ButtonBase, Paper, Stack, Typography, alpha, useMediaQuery, useTheme } from '@mui/material'
 import { colors } from '../../theme/theme'
 import { wizardSteps } from './wizardSteps'
 
@@ -6,10 +6,90 @@ export function WizardStepperNav(props: {
   activeStep: number
   completedSteps: boolean[]
   stepSubtitles?: string[]
+  compactBadgeCount?: number
   canJumpTo: (stepIndex: number) => boolean
   onSelectStep: (stepIndex: number) => void
 }) {
-  const { activeStep, completedSteps, stepSubtitles, canJumpTo, onSelectStep } = props
+  const { activeStep, completedSteps, stepSubtitles, compactBadgeCount, canJumpTo, onSelectStep } = props
+
+  const theme = useTheme()
+  const isNarrow = useMediaQuery(theme.breakpoints.down('sm'))
+
+  if (isNarrow) {
+    const label = wizardSteps[activeStep] ?? 'Step'
+    const badgeCount = compactBadgeCount ?? 0
+
+    return (
+      <Paper
+        elevation={10}
+        sx={{
+          mb: 3,
+          px: 1.5,
+          py: 1,
+          borderRadius: 999,
+          bgcolor: alpha(colors.warmWhite, 0.92),
+          border: '1px solid',
+          borderColor: alpha(colors.oceanBlue, 0.18),
+          backdropFilter: 'blur(10px)',
+          boxShadow: `0 10px 28px ${alpha(colors.navyBlue, 0.15)}`,
+        }}
+      >
+        <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1}>
+          <Stack direction="row" alignItems="center" gap={1}>
+            <Box
+              sx={{
+                width: 22,
+                height: 22,
+                borderRadius: 999,
+                display: 'grid',
+                placeItems: 'center',
+                bgcolor: colors.sand,
+                color: colors.navyBlue,
+                fontSize: '0.78rem',
+                fontWeight: 900,
+                flexShrink: 0,
+              }}
+            >
+              {activeStep + 1}
+            </Box>
+
+            <Typography
+              component="span"
+              sx={{
+                fontWeight: 900,
+                letterSpacing: '-0.01em',
+                fontSize: '0.95rem',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {label}
+            </Typography>
+          </Stack>
+
+          <Box
+            role="status"
+            aria-label="Games count"
+            sx={{
+              width: 28,
+              height: 28,
+              borderRadius: 999,
+              display: 'grid',
+              placeItems: 'center',
+              bgcolor: alpha(colors.oceanBlue, 0.12),
+              border: '1px solid',
+              borderColor: alpha(colors.oceanBlue, 0.28),
+              color: colors.navyBlue,
+              fontWeight: 900,
+              fontSize: '0.8rem',
+              flexShrink: 0,
+            }}
+          >
+            {badgeCount}
+          </Box>
+        </Stack>
+      </Paper>
+    )
+  }
 
   return (
     <Paper
@@ -18,11 +98,13 @@ export function WizardStepperNav(props: {
         mb: 3,
         p: 1,
         borderRadius: 999,
-        bgcolor: alpha(colors.warmWhite, 0.92),
+        bgcolor: colors.warmWhite,
         border: '1px solid',
         borderColor: alpha(colors.oceanBlue, 0.18),
-        backdropFilter: 'blur(10px)',
-        boxShadow: `0 10px 28px ${alpha(colors.navyBlue, 0.15)}`,
+        boxShadow: `0 8px 20px ${alpha(colors.navyBlue, 0.12)}`,
+        isolation: 'isolate',
+        position: 'static',
+        overflow: 'visible',
       }}
     >
       <Stack
@@ -31,7 +113,7 @@ export function WizardStepperNav(props: {
         alignItems="center"
         sx={{
           flexWrap: 'nowrap',
-          overflowX: { xs: 'auto', sm: 'visible' },
+          overflowX: { xs: 'visible', sm: 'visible' },
           overflowY: 'hidden',
           scrollbarGutter: 'stable',
         }}
@@ -48,31 +130,45 @@ export function WizardStepperNav(props: {
                 disabled={disabled}
                 onClick={() => onSelectStep(index)}
                 sx={{
+                  display: 'flex',
+                  justifyContent: 'flex-start',
+                  alignItems: 'center',
                   width: { xs: 150, sm: '100%' },
                   borderRadius: 999,
                   px: 1.25,
                   py: 0.75,
                   minHeight: 44,
-                  border: '1px solid',
-                  borderColor: isActive
-                    ? alpha(colors.oceanBlue, 0.55)
-                    : isCompleted
-                      ? alpha(colors.sand, 0.95)
-                      : alpha(colors.oceanBlue, 0.22),
+                  border: 'none',
+                  boxShadow:
+                    isActive
+                      ? `inset 0 0 0 2px ${colors.oceanBlue}`
+                      : isCompleted
+                        ? `inset 0 0 0 2px ${colors.sand}`
+                        : `inset 0 0 0 1px ${alpha(colors.oceanBlue, 0.25)}`,
                   bgcolor: isActive ? colors.oceanBlue : 'transparent',
                   color: isActive ? 'white' : 'text.primary',
-                  transition: 'background-color 140ms ease, border-color 140ms ease, transform 140ms ease',
+                  transition: 'background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease',
+                  transform: 'translateZ(0)',
                   '&:hover': {
                     bgcolor: isActive ? colors.oceanBlue : alpha(colors.oceanBlue, 0.08),
-                    transform: disabled ? 'none' : 'translateY(-1px)',
-                  },
-                  '&:active': {
-                    transform: disabled ? 'none' : 'translateY(0px)',
+                    boxShadow: disabled
+                      ? 'none'
+                      : isActive
+                        ? `inset 0 0 0 2px ${colors.oceanBlue}`
+                        : isCompleted
+                          ? `inset 0 0 0 2px ${colors.sand}`
+                          : `inset 0 0 0 1px ${alpha(colors.oceanBlue, 0.35)}`,
                   },
                   opacity: disabled ? 0.45 : 1,
                 }}
               >
-                <Stack direction="row" spacing={1} alignItems="center" sx={{ lineHeight: 1, width: '100%' }}>
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  alignItems="center"
+                  justifyContent="flex-start"
+                  sx={{ lineHeight: 1, width: '100%', textAlign: 'left' }}
+                >
                   <Box
                     sx={{
                       width: 22,
@@ -98,6 +194,7 @@ export function WizardStepperNav(props: {
                       fontSize: { xs: '0.9rem', sm: '0.95rem' },
                       whiteSpace: 'nowrap',
                       flexShrink: 0,
+                      textAlign: 'left',
                     }}
                   >
                     {label}
@@ -112,7 +209,7 @@ export function WizardStepperNav(props: {
                         fontWeight: 700,
                         color: isActive ? 'rgba(255,255,255,0.92)' : alpha(colors.navyBlue, 0.72),
                         whiteSpace: 'nowrap',
-                        ml: 'auto',
+                        textAlign: 'left',
                       }}
                     >
                       {stepSubtitles[index]}
@@ -125,12 +222,12 @@ export function WizardStepperNav(props: {
                 <Box
                   aria-hidden
                   sx={{
-                    height: 3,
+                    height: 4,
                     borderRadius: 999,
                     mx: 1,
                     flex: 1,
-                    minWidth: { xs: 16, sm: 24 },
-                    bgcolor: connectorIsDone ? alpha(colors.sand, 0.95) : alpha(colors.oceanBlue, 0.18),
+                    minWidth: { xs: 20, sm: 28 },
+                    bgcolor: connectorIsDone ? colors.sand : alpha(colors.oceanBlue, 0.18),
                   }}
                 />
               ) : null}

@@ -1,4 +1,3 @@
-import { describe, expect, it } from 'vitest'
 import { normalizePreferenceUpdate } from './preferenceRules'
 
 describe('preferenceRules.normalizePreferenceUpdate', () => {

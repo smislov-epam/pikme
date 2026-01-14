@@ -28,11 +28,19 @@ function getValue(value: unknown, key: string): unknown {
 }
 
 export function parseCollectionXml(xml: string): BggCollectionItem[] {
+  return parseCollectionXmlResponse(xml).items
+}
+
+export function parseCollectionXmlResponse(xml: string): { items: BggCollectionItem[]; message?: string } {
   const parsed = parser.parse(xml) as unknown
   const itemsRoot = getRecord(parsed, 'items')
+  const messageNode = getValue(itemsRoot, 'message')
+  const messageText =
+    (isRecord(messageNode) ? messageNode['#text'] : undefined) ?? messageNode
+  const message = typeof messageText === 'string' ? messageText.trim() : undefined
   const items = toArray(getValue(itemsRoot, 'item') as unknown)
 
-  return items
+  const parsedItems = items
     .map((item): BggCollectionItem | null => {
       const id = Number(getValue(item, 'objectid'))
       if (!Number.isFinite(id)) return null
@@ -60,4 +68,6 @@ export function parseCollectionXml(xml: string): BggCollectionItem[] {
       }
     })
     .filter((x: BggCollectionItem | null): x is BggCollectionItem => x !== null)
+
+  return { items: parsedItems, message: message || undefined }
 }

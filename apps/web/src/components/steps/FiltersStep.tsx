@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   Accordion,
   AccordionDetails,
@@ -7,7 +7,6 @@ import {
   Box,
   Card,
   CardContent,
-  Chip,
   IconButton,
   Slider,
   Stack,
@@ -17,19 +16,24 @@ import {
 } from '@mui/material'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import CloseIcon from '@mui/icons-material/Close'
-import GroupsIcon from '@mui/icons-material/Groups'
 import ScheduleIcon from '@mui/icons-material/Schedule'
-import PsychologyIcon from '@mui/icons-material/Psychology'
 import type { GameRecord, UserRecord } from '../../db/types'
 import { AdvancedFiltersAccordion } from './AdvancedFiltersAccordion'
 import { GameTile } from './GameTile'
+import { GameRow } from './GameRow'
 import { GameDetailsDialog } from '../gameDetails/GameDetailsDialog'
 import { useToast } from '../../services/toast'
+import { PlayerCountCard } from './filters/PlayerCountCard'
+import { VibeCard } from './filters/VibeCard'
+import { LayoutToggle } from '../LayoutToggle'
+import type { LayoutMode } from '../../services/storage/uiPreferences'
 
 export interface FiltersStepProps {
   games: GameRecord[]
   users: UserRecord[]
   gameOwners: Record<number, string[]>
+  layoutMode: LayoutMode
+  onLayoutModeChange: (mode: LayoutMode) => void
   sessionUserCount: number
   playerCount: number
   onPlayerCountChange: (count: number) => void
@@ -53,16 +57,16 @@ export interface FiltersStepProps {
 const TIME_PRESETS = [
   { label: 'Short', value: { min: 0, max: 30 }, description: '< 30 min' },
   { label: 'Medium', value: { min: 30, max: 90 }, description: '30-90 min' },
-  { label: 'Long', value: { min: 90, max: 300 }, description: '90+ min' },
+  { label: 'Long', value: { min: 90, max: 180 }, description: '90-180 min' },
   { label: 'Any', value: { min: 0, max: 300 }, description: 'No limit' },
 ]
-
-const FALLBACK_PLAYER_COUNTS = [2, 3, 4, 5, 6, 7, 8, 9, 10]
 
 export function FiltersStep({
   games,
   users,
   gameOwners,
+  layoutMode,
+  onLayoutModeChange,
   sessionUserCount,
   playerCount,
   onPlayerCountChange,
@@ -84,17 +88,6 @@ export function FiltersStep({
 }: FiltersStepProps) {
   const toast = useToast()
   const [detailsGame, setDetailsGame] = useState<GameRecord | null>(null)
-
-  const playerCountOptions = useMemo(() => {
-    if (sessionUserCount > 0) return Array.from({ length: sessionUserCount }, (_, i) => i + 1)
-    return FALLBACK_PLAYER_COUNTS
-  }, [sessionUserCount])
-
-  // Player count should reflect the session roster (Players step).
-  useEffect(() => {
-    if (sessionUserCount <= 0) return
-    if (playerCount !== sessionUserCount) onPlayerCountChange(sessionUserCount)
-  }, [onPlayerCountChange, playerCount, sessionUserCount])
 
   const activeTimePreset = useMemo(() => {
     const preset = TIME_PRESETS.find(
@@ -118,41 +111,11 @@ export function FiltersStep({
       </Box>
 
       {/* Player Count */}
-      <Card>
-        <CardContent>
-          <Stack direction="row" alignItems="center" gap={1} mb={2}>
-            <GroupsIcon color="primary" />
-            <Typography variant="subtitle1" fontWeight={600}>
-              How many players?
-            </Typography>
-          </Stack>
-
-          {sessionUserCount > 0 ? (
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-              Based on your Players step ({sessionUserCount} in the session).
-            </Typography>
-          ) : null}
-
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-            {playerCountOptions.map((count) => (
-              <Chip
-                key={count}
-                label={count}
-                onClick={() => onPlayerCountChange(count)}
-                variant={playerCount === count ? 'filled' : 'outlined'}
-                color={playerCount === count ? 'primary' : 'default'}
-                disabled={sessionUserCount > 0 && count !== sessionUserCount}
-                sx={{
-                  height: 28,
-                  minWidth: 38,
-                  fontWeight: 600,
-                  fontSize: '0.9rem',
-                }}
-              />
-            ))}
-          </Box>
-        </CardContent>
-      </Card>
+      <PlayerCountCard
+        sessionUserCount={sessionUserCount}
+        playerCount={playerCount}
+        onPlayerCountChange={onPlayerCountChange}
+      />
 
       {/* Time Range */}
       <Card>
@@ -209,49 +172,7 @@ export function FiltersStep({
       </Card>
 
       {/* Game Mode */}
-      <Card>
-        <CardContent>
-          <Stack direction="row" alignItems="center" gap={1} mb={2}>
-            <PsychologyIcon color="primary" />
-            <Typography variant="subtitle1" fontWeight={600}>
-              What's the vibe?
-            </Typography>
-          </Stack>
-
-          <ToggleButtonGroup
-            value={mode}
-            exclusive
-            onChange={(_, v) => v && onModeChange(v)}
-            fullWidth
-            sx={{ '& .MuiToggleButton-root': { py: 1, minHeight: 40 } }}
-          >
-            <ToggleButton value="coop">
-              <Box sx={{ textAlign: 'center', py: 0.5 }}>
-                <Typography fontWeight={600}>🤝 Coop</Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Work together
-                </Typography>
-              </Box>
-            </ToggleButton>
-            <ToggleButton value="competitive">
-              <Box sx={{ textAlign: 'center', py: 0.5 }}>
-                <Typography fontWeight={600}>⚔️ Competitive</Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Every player for themselves
-                </Typography>
-              </Box>
-            </ToggleButton>
-            <ToggleButton value="any">
-              <Box sx={{ textAlign: 'center', py: 0.5 }}>
-                <Typography fontWeight={600}>🎲 Any</Typography>
-                <Typography variant="caption" color="text.secondary">
-                  No preference
-                </Typography>
-              </Box>
-            </ToggleButton>
-          </ToggleButtonGroup>
-        </CardContent>
-      </Card>
+      <VibeCard mode={mode} onModeChange={onModeChange} />
 
       <AdvancedFiltersAccordion
         excludeLowRatedThreshold={excludeLowRatedThreshold}
@@ -300,26 +221,49 @@ export function FiltersStep({
               boxShadow: (theme) => theme.shadows[1],
             }}
           >
-            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-              <Typography fontWeight={500}>Preview matching games</Typography>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />} component="div" sx={{ pr: 1 }}>
+              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ width: '100%' }}>
+                <Typography fontWeight={500}>Preview matching games</Typography>
+                <Box onClick={(e) => e.stopPropagation()} sx={{ mr: 1 }}>
+                  <LayoutToggle layoutMode={layoutMode} onChange={onLayoutModeChange} variant="icon" />
+                </Box>
+              </Stack>
             </AccordionSummary>
             <AccordionDetails>
               <Stack spacing={1}>
-                {filteredGames.slice(0, 10).map((game) => (
-                  <FilteredGameCard
-                    key={game.bggId}
-                    game={game}
-                    onOpenDetails={() => setDetailsGame(game)}
-                    onExclude={() => {
-                      onExcludeGameFromSession(game.bggId)
-                      toast.info(`Excluded “${game.name}” from this session`, {
-                        autoHideMs: 5500,
-                        actionLabel: 'Undo',
-                        onAction: () => onUndoExcludeGameFromSession(game.bggId),
-                      })
-                    }}
-                  />
-                ))}
+                {filteredGames.slice(0, 10).map((game) => {
+                  const onExclude = () => {
+                    onExcludeGameFromSession(game.bggId)
+                    toast.info(`Excluded “${game.name}” from this session`, {
+                      autoHideMs: 5500,
+                      actionLabel: 'Undo',
+                      onAction: () => onUndoExcludeGameFromSession(game.bggId),
+                    })
+                  }
+
+                  if (layoutMode === 'simplified') {
+                    return (
+                      <GameRow
+                        key={game.bggId}
+                        game={game}
+                        owners={[]}
+                        variant="compact"
+                        hidePlayerCount
+                        onExcludeFromSession={onExclude}
+                        onOpenDetails={() => setDetailsGame(game)}
+                      />
+                    )
+                  }
+
+                  return (
+                    <FilteredGameCard
+                      key={game.bggId}
+                      game={game}
+                      onOpenDetails={() => setDetailsGame(game)}
+                      onExclude={onExclude}
+                    />
+                  )
+                })}
                 {filteredGames.length > 10 && (
                   <Typography variant="caption" color="text.secondary" sx={{ pt: 1, textAlign: 'center' }}>
                     +{filteredGames.length - 10} more games
@@ -363,7 +307,12 @@ function FilteredGameCard(props: { game: GameRecord; onExclude: () => void; onOp
       game={game}
       onClick={onOpenDetails}
       actions={
-        <IconButton size="small" onClick={onExclude} aria-label="Exclude from session">
+        <IconButton
+          size="small"
+          onClick={onExclude}
+          aria-label="Exclude from session"
+          sx={{ color: 'error.main' }}
+        >
           <CloseIcon fontSize="small" />
         </IconButton>
       }

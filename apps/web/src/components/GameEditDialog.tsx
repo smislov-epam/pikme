@@ -90,7 +90,7 @@ export function GameEditDialog({ open, game, onClose, onSave, onRefreshFromBgg }
         >
           <OpenInNewIcon fontSize="small" />
         </IconButton>
-        <IconButton onClick={onClose} sx={{ position: 'absolute', right: 8, top: 8 }}>
+        <IconButton onClick={onClose} sx={{ position: 'absolute', right: 8, top: 8, color: 'error.main' }}>
           <CloseIcon />
         </IconButton>
       </DialogTitle>

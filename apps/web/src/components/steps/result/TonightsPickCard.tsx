@@ -7,14 +7,15 @@ import {
   IconButton,
   LinearProgress,
   Stack,
+  Tooltip,
   Typography,
   alpha,
 } from '@mui/material'
-import CloseIcon from '@mui/icons-material/Close'
 import TrophyIcon from '@mui/icons-material/EmojiEvents'
 import GroupsIcon from '@mui/icons-material/Groups'
 import ScheduleIcon from '@mui/icons-material/Schedule'
 import PsychologyIcon from '@mui/icons-material/Psychology'
+import CloseIcon from '@mui/icons-material/Close'
 import { colors } from '../../../theme/theme'
 import type { WizardFilters } from '../../../store/wizardTypes'
 import type { GameWithScore } from '../ResultStep'
@@ -85,33 +86,6 @@ export function TonightsPickCard(props: {
         />
       </Box>
 
-      {onExcludeFromSession ? (
-        <Box
-          sx={{
-            position: 'absolute',
-            top: 8,
-            right: 8,
-            zIndex: 2,
-          }}
-        >
-          <IconButton
-            aria-label="Exclude from session"
-            onClick={(e) => {
-              e.stopPropagation()
-              onExcludeFromSession()
-            }}
-            sx={{
-              width: 44,
-              height: 44,
-              color: 'rgba(255,255,255,0.92)',
-              bgcolor: 'rgba(0,0,0,0.18)',
-              '&:hover': { bgcolor: 'rgba(0,0,0,0.28)' },
-            }}
-          >
-            <CloseIcon fontSize="small" />
-          </IconButton>
-        </Box>
-      ) : null}
       <Box
         sx={{
           position: 'absolute',
@@ -137,15 +111,50 @@ export function TonightsPickCard(props: {
       </Box>
 
       <CardContent sx={{ pt: 4, pb: 3, position: 'relative', zIndex: 1 }}>
-        <Typography variant="h4" fontWeight={700} gutterBottom>
-          {topPick.game.name}
-        </Typography>
+        <Stack direction="row" alignItems="flex-start" justifyContent="space-between" spacing={2}>
+          <Box>
+            <Typography variant="h4" fontWeight={700} gutterBottom>
+              {topPick.game.name}
+            </Typography>
 
-        {topPick.game.yearPublished && (
-          <Typography variant="body2" sx={{ opacity: 0.8, mb: 2 }}>
-            ({topPick.game.yearPublished})
-          </Typography>
-        )}
+            {topPick.game.yearPublished && (
+              <Typography variant="body2" sx={{ opacity: 0.8, mb: 2 }}>
+                ({topPick.game.yearPublished})
+              </Typography>
+            )}
+          </Box>
+
+          <Chip
+            label={`${topPick.score} pts`}
+            color="secondary"
+            size="small"
+            sx={{ fontWeight: 700, alignSelf: 'flex-start', bgcolor: colors.sand, color: colors.navyBlue }}
+          />
+        </Stack>
+
+        {onExcludeFromSession ? (
+          <Box sx={{ position: 'absolute', top: 12, right: 12, zIndex: 2 }}>
+            <Tooltip title="Remove from session">
+              <IconButton
+                size="small"
+                aria-label="Remove from session"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onExcludeFromSession()
+                }}
+                sx={{
+                  width: 44,
+                  height: 44,
+                  color: 'white',
+                  bgcolor: 'rgba(0,0,0,0.18)',
+                  '&:hover': { bgcolor: 'rgba(0,0,0,0.28)' },
+                }}
+              >
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </Box>
+        ) : null}
 
         <Stack direction="row" flexWrap="wrap" gap={1} mb={3}>
           {topPick.matchReasons.map((reason, i) => (

@@ -1,30 +1,24 @@
 import { useState, useCallback, useMemo } from 'react'
 import {
-  Autocomplete,
   Box,
-  Button,
   Card,
   CardContent,
   CircularProgress,
   Collapse,
-  InputAdornment,
   Stack,
-  TextField,
-  ToggleButton,
-  ToggleButtonGroup,
   Typography,
 } from '@mui/material'
-import AddIcon from '@mui/icons-material/Add'
-import HistoryIcon from '@mui/icons-material/History'
-import PersonIcon from '@mui/icons-material/Person'
-import RefreshIcon from '@mui/icons-material/Refresh'
 import type { GameRecord, UserRecord, SavedNightRecord } from '../../db/types'
 import { DeleteUserDialog, ManualGameDialog, type ManualGameData } from './PlayerDialogs'
 import { GamePreviewGrid } from './GamePreviewGrid'
 import { PlayersListCard } from './PlayersListCard'
-import { LocalPlayersGamesCard } from './LocalPlayersGamesCard'
+import { LocalAddGamesPanel } from './players/LocalAddGamesPanel'
+import { SavedNightPicker } from './players/SavedNightPicker'
+import { PlayersStepDialogs } from './players/PlayersStepDialogs'
+import { PlayersAddUserControls, type UserMode } from './players/PlayersAddUserControls.tsx'
 import { normalizePlayTime } from '../../services/bgg/normalizePlayTime'
 import { useToast } from '../../services/toast'
+import type { LayoutMode } from '../../services/storage/uiPreferences'
 
 export type { ManualGameData }
 
@@ -33,8 +27,16 @@ export interface PlayersStepProps {
   games: GameRecord[]
   sessionGames: GameRecord[]
   gameOwners: Record<number, string[]>
+  layoutMode: LayoutMode
+  onLayoutModeChange: (mode: LayoutMode) => void
   existingLocalUsers: UserRecord[]  // All local users from DB for autocomplete
   savedNights: SavedNightRecord[]
+  pendingBggUserNotFoundUsername: string | null
+  onConfirmAddBggUserAnyway: () => Promise<void>
+  onCancelAddBggUserAnyway: () => void
+  pendingReuseGamesNight: { id: number; name: string; gameCount: number } | null
+  onConfirmReuseGamesFromNight: () => Promise<void>
+  onDismissReuseGamesPrompt: () => void
   onAddBggUser: (username: string) => Promise<void>
   onAddLocalUser: (name: string, isOrganizer?: boolean) => Promise<void>
   onRemoveUser: (username: string) => void
@@ -57,10 +59,16 @@ export interface PlayersStepProps {
   error: string | null
 }
 
-type UserMode = 'bgg' | 'local'
-
 export function PlayersStep({
   users, games, sessionGames, gameOwners, existingLocalUsers, savedNights,
+  layoutMode,
+  onLayoutModeChange,
+  pendingBggUserNotFoundUsername,
+  onConfirmAddBggUserAnyway,
+  onCancelAddBggUserAnyway,
+  pendingReuseGamesNight,
+  onConfirmReuseGamesFromNight,
+  onDismissReuseGamesPrompt,
   onAddBggUser, onAddLocalUser, onRemoveUser, onDeleteUser, onSetOrganizer, onSearchGame,
   onAddGameToUser, onRemoveGameFromUser, onAddGameToSession, onRemoveGameFromSession,
   onAddOwnerToGame, onLoadSavedNight, onFetchGameInfo, onAddGameManually, onEditGame,
@@ -77,6 +85,7 @@ export function PlayersStep({
   const [isSearching, setIsSearching] = useState(false)
   const [deleteDialogUser, setDeleteDialogUser] = useState<string | null>(null)
   const [showManualEntry, setShowManualEntry] = useState(false)
+  const [showAddGamesPanel, setShowAddGamesPanel] = useState(false)
   const [isFetchingGame, setIsFetchingGame] = useState(false)
   const [manualGame, setManualGame] = useState<ManualGameData>({ name: '', bggId: 0 })
 
@@ -190,140 +199,45 @@ export function PlayersStep({
     setSearchResults((prev) => prev.filter((r) => r.bggId !== bggId))
   }
 
-  // Format saved night for display
-  const savedNightOptions = useMemo(() => savedNights.map((night) => ({
-    id: night.id!,
-    label: night.data.name,
-    description: night.data.description,
-    date: new Date(night.createdAt).toLocaleDateString(),
-    playerCount: night.data.usernames.length,
-    gameCount: night.data.gameIds?.length ?? 0,
-  })), [savedNights])
-
   return (
     <Stack spacing={3}>
+      <PlayersStepDialogs
+        pendingBggUserNotFoundUsername={pendingBggUserNotFoundUsername}
+        onConfirmAddBggUserAnyway={() => void onConfirmAddBggUserAnyway()}
+        onCancelAddBggUserAnyway={onCancelAddBggUserAnyway}
+        pendingReuseGamesNight={pendingReuseGamesNight}
+        onConfirmReuseGamesFromNight={() => void onConfirmReuseGamesFromNight()}
+        onDismissReuseGamesPrompt={onDismissReuseGamesPrompt}
+        isLoading={isLoading}
+      />
+
       <Box>
         <Typography variant="h5" gutterBottom sx={{ color: 'primary.dark' }}>Who's playing tonight?</Typography>
-        <Typography color="text.secondary">Add players by their BoardGameGeek username or create local profiles</Typography>
+        <Typography color="text.secondary">
+          {savedNights.length > 0
+            ? 'Start from a previous game night, or add players to begin'
+            : 'Add players by their BoardGameGeek username or create local profiles'}
+        </Typography>
       </Box>
 
       {/* Errors are surfaced via global toast in WizardPage; keep step UI clean. */}
 
       {/* Load previous night */}
-      {savedNightOptions.length > 0 && (
-        <Autocomplete
-          options={savedNightOptions}
-          getOptionLabel={(opt) => `${opt.label} (${opt.date})`}
-          onChange={(_, opt) => { if (opt) onLoadSavedNight(opt.id) }}
-          renderOption={(props, opt) => (
-            <Box component="li" {...props} key={opt.id}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
-                <HistoryIcon fontSize="small" color="action" />
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="body2" fontWeight={500}>{opt.label}</Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {opt.date} • {opt.playerCount} players • {opt.gameCount} games
-                    {opt.description && ` • ${opt.description.slice(0, 40)}${opt.description.length > 40 ? '...' : ''}`}
-                  </Typography>
-                </Box>
-              </Box>
-            </Box>
-          )}
-          renderInput={(params) => (
-            <TextField
-              {...params}
-              placeholder="Load a previous game night..."
-              size="small"
-              InputProps={{ ...params.InputProps, startAdornment: <HistoryIcon fontSize="small" color="action" sx={{ ml: 1, mr: 0.5 }} /> }}
-            />
-          )}
-        />
-      )}
+      <SavedNightPicker
+        savedNights={savedNights}
+        onLoadSavedNight={onLoadSavedNight}
+        onAfterLoad={() => setShowAddGamesPanel(false)}
+      />
 
-      <ToggleButtonGroup value={mode} exclusive onChange={(_, v) => v && setMode(v)} fullWidth sx={{ bgcolor: 'background.paper', borderRadius: 2 }}>
-        <ToggleButton value="bgg" sx={{ py: 1, minHeight: 40 }}><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><RefreshIcon fontSize="small" />BGG Username</Box></ToggleButton>
-        <ToggleButton value="local" sx={{ py: 1, minHeight: 40 }}><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><PersonIcon fontSize="small" />Local Player</Box></ToggleButton>
-      </ToggleButtonGroup>
-
-      {mode === 'bgg' ? (
-        <TextField
-          fullWidth
-          size="small"
-          placeholder="Enter BGG username"
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') handleAddUser() }}
-          disabled={isLoading}
-          InputProps={{
-            endAdornment: (
-              <InputAdornment position="end">
-                <Button
-                  variant="contained"
-                  size="small"
-                  onClick={() => handleAddUser()}
-                  disabled={!inputValue.trim() || isLoading}
-                  startIcon={isLoading ? <CircularProgress size={16} /> : <AddIcon />}
-                  sx={{ height: 32 }}
-                >
-                  Add
-                </Button>
-              </InputAdornment>
-            ),
-          }}
-        />
-      ) : (
-        <Autocomplete
-          freeSolo
-          disableClearable
-          options={autocompleteOptions}
-          getOptionLabel={(opt) => typeof opt === 'string' ? opt : opt.label}
-          inputValue={inputValue}
-          onInputChange={(_, v) => setInputValue(v)}
-          onChange={(_, v) => {
-            if (v && typeof v !== 'string') {
-              // Selected an existing user - use their username
-              setInputValue(v.username)
-            } else if (typeof v === 'string') {
-              setInputValue(v)
-            }
-          }}
-          disabled={isLoading}
-          renderOption={(props, option) => (
-            <Box component="li" {...props} key={option.username}>
-              <Stack direction="row" spacing={1} alignItems="center">
-                <PersonIcon fontSize="small" color="action" />
-                <Typography variant="body2">{option.label}</Typography>
-              </Stack>
-            </Box>
-          )}
-          renderInput={(params) => (
-            <TextField
-              {...params}
-              fullWidth
-              size="small"
-              placeholder={autocompleteOptions.length > 0 ? "Enter name or select existing player" : "Enter player name"}
-              onKeyDown={(e) => { if (e.key === 'Enter' && inputValue.trim()) { e.preventDefault(); handleAddUser() } }}
-              InputProps={{
-                ...params.InputProps,
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <Button
-                      variant="contained"
-                      size="small"
-                      onClick={() => handleAddUser()}
-                      disabled={!inputValue.trim() || isLoading}
-                      startIcon={isLoading ? <CircularProgress size={16} /> : <AddIcon />}
-                      sx={{ height: 32 }}
-                    >
-                      Add
-                    </Button>
-                  </InputAdornment>
-                )
-              }}
-            />
-          )}
-        />
-      )}
+      <PlayersAddUserControls
+        mode={mode}
+        onModeChange={setMode}
+        inputValue={inputValue}
+        onInputValueChange={setInputValue}
+        autocompleteOptions={autocompleteOptions}
+        isLoading={isLoading}
+        onAdd={() => void handleAddUser()}
+      />
 
 
       <Collapse in={isLoading}><Card sx={{ bgcolor: 'secondary.light', border: 'none' }}><CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2 }}><CircularProgress size={24} /><Box><Typography fontWeight={500}>BGG is preparing data…</Typography><Typography variant="body2" color="text.secondary">This may take a moment for large collections</Typography></Box></CardContent></Card></Collapse>
@@ -340,31 +254,14 @@ export function PlayersStep({
         />
       ) : null}
 
-      <Collapse in={localUsers.length > 0}>
-        <LocalPlayersGamesCard
-          localUsers={localUsers}
-          selectedLocalUsers={selectedLocalUsers}
-          onToggleUser={toggleUserSelection}
-          onSelectAll={selectAllLocalUsers}
-          gameUrlInput={gameUrlInput}
-          onGameUrlInputChange={setGameUrlInput}
-          onAddGameFromUrl={handleAddGameFromUrl}
-          isLoading={isLoading}
-          searchQuery={searchQuery}
-          onSearchQueryChange={setSearchQuery}
-          onSearch={handleSearch}
-          isSearching={isSearching}
-          searchResults={searchResults}
-          onAddGame={handleAddGame}
-        />
-      </Collapse>
-
       <GamePreviewGrid
         games={games}
         sessionGames={sessionGames}
         gameOwners={gameOwners}
         totalGames={games.length}
         users={users}
+        layoutMode={layoutMode}
+        onLayoutModeChange={onLayoutModeChange}
         onRemoveOwner={onRemoveGameFromUser}
         onAddOwner={onAddOwnerToGame}
         onAddToSession={onAddGameToSession}
@@ -378,6 +275,29 @@ export function PlayersStep({
         }}
         onEditGame={onEditGame}
         onRefreshGameFromBgg={onRefreshGameFromBgg}
+
+        showAddNewGamesAction={localUsers.length > 0}
+        addNewGamesPanelOpen={showAddGamesPanel}
+        onToggleAddNewGamesPanel={() => setShowAddGamesPanel((v) => !v)}
+      />
+
+      <LocalAddGamesPanel
+        open={localUsers.length > 0 && showAddGamesPanel}
+        localUsers={localUsers}
+        selectedLocalUsers={selectedLocalUsers}
+        onToggleUser={toggleUserSelection}
+        onSelectAll={selectAllLocalUsers}
+        gameUrlInput={gameUrlInput}
+        onGameUrlInputChange={setGameUrlInput}
+        onAddGameFromUrl={handleAddGameFromUrl}
+        isLoading={isLoading}
+        searchQuery={searchQuery}
+        onSearchQueryChange={setSearchQuery}
+        onSearch={handleSearch}
+        isSearching={isSearching}
+        searchResults={searchResults}
+        onAddGame={handleAddGame}
+        onClose={() => setShowAddGamesPanel(false)}
       />
     </Stack>
   )

@@ -1,5 +1,4 @@
-import { describe, expect, it } from 'vitest'
-import { parseCollectionXml } from './parseCollectionXml'
+import { parseCollectionXml, parseCollectionXmlResponse } from './parseCollectionXml'
 
 describe('parseCollectionXml', () => {
   it('parses basic collection items', () => {
@@ -17,5 +16,14 @@ describe('parseCollectionXml', () => {
     expect(parseCollectionXml(xml)).toEqual([
       { bggId: 123, name: 'Catan', yearPublished: 1995, userRating: 7 },
     ])
+  })
+
+  it('extracts a BGG message when present', () => {
+    const xml = `<?xml version="1.0" encoding="utf-8"?>
+<items totalitems="0" termsofuse="https://boardgamegeek.com/xmlapi/termsofuse">
+  <message>Invalid username specified</message>
+</items>`
+
+    expect(parseCollectionXmlResponse(xml)).toEqual({ items: [], message: 'Invalid username specified' })
   })
 })

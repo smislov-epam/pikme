@@ -51,7 +51,7 @@ export function GameDetailsDialog({
         }}
       >
         Game details
-        <IconButton aria-label="Close" onClick={onClose} size="small">
+        <IconButton aria-label="Close" onClick={onClose} size="small" sx={{ color: 'error.main' }}>
           <CloseIcon fontSize="small" />
         </IconButton>
       </DialogTitle>

@@ -10,6 +10,7 @@ import {
   Typography,
 } from '@mui/material'
 import type { GameRecord } from '../db/types'
+import { colors } from '../theme/theme'
 
 export interface SaveNightDialogProps {
   open: boolean
@@ -54,10 +55,34 @@ export function SaveNightDialog({
   }
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Save Game Night</DialogTitle>
-      <DialogContent>
-        <Stack spacing={2.5} sx={{ mt: 1 }}>
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      maxWidth="sm"
+      fullWidth
+      PaperProps={{
+        sx: {
+          overflow: 'hidden',
+        },
+      }}
+    >
+      <DialogTitle
+        sx={{
+          m: 0,
+          px: 2.5,
+          py: 1.75,
+          bgcolor: colors.oceanBlue,
+          color: 'white',
+          borderBottom: 'none',
+          borderTopLeftRadius: (theme) => theme.shape.borderRadius,
+          borderTopRightRadius: (theme) => theme.shape.borderRadius,
+          overflow: 'hidden',
+        }}
+      >
+        Save Game Night
+      </DialogTitle>
+      <DialogContent sx={{ overflowX: 'hidden' }}>
+        <Stack spacing={2.5} sx={{ mt: 2.5, width: '100%' }}>
           <TextField
             label="Name"
             placeholder="e.g., Friday Board Game Night"
@@ -67,6 +92,11 @@ export function SaveNightDialog({
             required
             autoFocus
             disabled={isSaving}
+            sx={{
+              '& .MuiInputBase-input': {
+                overflowX: 'hidden',
+              },
+            }}
           />
           <TextField
             label="Description (optional)"
@@ -77,6 +107,13 @@ export function SaveNightDialog({
             multiline
             rows={2}
             disabled={isSaving}
+            sx={{
+              '& .MuiInputBase-inputMultiline': {
+                overflowX: 'hidden',
+                wordBreak: 'break-word',
+                whiteSpace: 'pre-wrap',
+              },
+            }}
           />
           <Stack
             spacing={0.5}

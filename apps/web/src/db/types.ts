@@ -63,6 +63,7 @@ export interface WizardStateRecord {
 export interface SavedNightData {
   name: string // User-provided name for the game night
   description?: string // Optional description
+  organizerUsername?: string // Starred (host/organizer) player at time of save
   usernames: string[]
   gameIds: number[] // BGG IDs of games in this session
   filters: {

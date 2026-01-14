@@ -5,6 +5,8 @@ import {
   CardContent,
   Stack,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material'
 import { useState } from 'react'
 import type { GameRecord, UserRecord } from '../../db/types'
@@ -14,6 +16,7 @@ import { TonightsPickCard } from './result/TonightsPickCard'
 import { AlternativesSection } from './result/AlternativesSection'
 import { useToast } from '../../services/toast'
 import { GameDetailsDialog } from '../gameDetails/GameDetailsDialog'
+import type { LayoutMode } from '../../services/storage/uiPreferences'
 
 export interface GameWithScore {
   game: GameRecord
@@ -28,6 +31,9 @@ export interface ResultStepProps {
   filters: WizardFilters
   users: UserRecord[]
   gameOwners: Record<number, string[]>
+  layoutMode: LayoutMode
+  onLayoutModeChange: (mode: LayoutMode) => void
+  onPromoteAlternative: (bggId: number) => void
   onSaveNight: () => void
   onExcludeGameFromSession: (bggId: number) => void
   onUndoExcludeGameFromSession: (bggId: number) => void
@@ -40,9 +46,14 @@ export function ResultStep({
   filters,
   users,
   gameOwners,
+  layoutMode,
+  onLayoutModeChange,
+  onPromoteAlternative,
   onExcludeGameFromSession,
   onUndoExcludeGameFromSession,
 }: ResultStepProps) {
+  const theme = useTheme()
+  const isNarrow = useMediaQuery(theme.breakpoints.down('sm'))
   const toast = useToast()
   const [detailsGame, setDetailsGame] = useState<GameRecord | null>(null)
   const maxScore = Math.max(
@@ -91,14 +102,16 @@ export function ResultStep({
   return (
     <Stack spacing={3}>
       {/* Header */}
-      <Box>
-        <Typography variant="h5" gutterBottom sx={{ color: 'primary.dark' }}>
-          Your recommendation is ready!
-        </Typography>
-        <Typography color="text.secondary">
-          Based on your group's preferences and filters
-        </Typography>
-      </Box>
+      {!isNarrow ? (
+        <Box>
+          <Typography variant="h5" gutterBottom sx={{ color: 'primary.dark' }}>
+            Your recommendation is ready!
+          </Typography>
+          <Typography color="text.secondary">
+            Based on your group's preferences and filters
+          </Typography>
+        </Box>
+      ) : null}
 
       <TonightsPickCard
         topPick={topPick}
@@ -124,6 +137,9 @@ export function ResultStep({
       <AlternativesSection
         alternatives={alternatives}
         maxScore={maxScore}
+        layoutMode={layoutMode}
+        onLayoutModeChange={onLayoutModeChange}
+        onPromoteAlternative={onPromoteAlternative}
         onOpenDetails={(game) => setDetailsGame(game)}
         onExcludeGame={(game) => {
           onExcludeGameFromSession(game.bggId)

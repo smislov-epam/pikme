@@ -14,6 +14,8 @@ import type { GameRecord } from '../../../db/types'
 import { colors } from '../../../theme/theme'
 import { SortableGameCard } from '../PreferenceGameCard'
 import { DraggableGameCard } from '../DraggableGameCard'
+import { DraggablePreferenceRowCard, SortablePreferenceRowCard } from './PreferenceRowCard'
+import type { LayoutMode } from '../../../services/storage/uiPreferences'
 
 export interface PreferenceGameRow {
   game: GameRecord
@@ -61,11 +63,12 @@ function DroppableList(props: {
 export function TopPicksSection(props: {
   topPicks: PreferenceGameRow[]
   droppableId: string
+  layoutMode: LayoutMode
   onOpenDetails?: (game: GameRecord) => void
   onToggleTopPick: (bggId: number, currentlyTopPick: boolean) => void
   onToggleDisliked: (bggId: number, currentlyDisliked: boolean) => void
 }) {
-  const { topPicks, droppableId, onOpenDetails, onToggleTopPick, onToggleDisliked } = props
+  const { topPicks, droppableId, layoutMode, onOpenDetails, onToggleTopPick, onToggleDisliked } = props
 
   return (
     <Card sx={{ bgcolor: colors.sand + '30', border: `2px dashed ${colors.sand}` }}>
@@ -85,17 +88,31 @@ export function TopPicksSection(props: {
           ) : (
             <Stack spacing={1}>
               {topPicks.map(({ game, userRating }) => (
-                <DraggableGameCard
-                  key={game.bggId}
-                  id={game.bggId}
-                  game={game}
-                  userRating={userRating}
-                  isTopPick
-                  isDisliked={false}
-                  onOpenDetails={onOpenDetails ? () => onOpenDetails(game) : undefined}
-                  onToggleTopPick={() => onToggleTopPick(game.bggId, true)}
-                  onToggleDisliked={() => onToggleDisliked(game.bggId, false)}
-                />
+                layoutMode === 'simplified' ? (
+                  <DraggablePreferenceRowCard
+                    key={game.bggId}
+                    id={game.bggId}
+                    game={game}
+                    userRating={userRating}
+                    isTopPick
+                    isDisliked={false}
+                    onOpenDetails={onOpenDetails ? () => onOpenDetails(game) : undefined}
+                    onToggleTopPick={() => onToggleTopPick(game.bggId, true)}
+                    onToggleDisliked={() => onToggleDisliked(game.bggId, false)}
+                  />
+                ) : (
+                  <DraggableGameCard
+                    key={game.bggId}
+                    id={game.bggId}
+                    game={game}
+                    userRating={userRating}
+                    isTopPick
+                    isDisliked={false}
+                    onOpenDetails={onOpenDetails ? () => onOpenDetails(game) : undefined}
+                    onToggleTopPick={() => onToggleTopPick(game.bggId, true)}
+                    onToggleDisliked={() => onToggleDisliked(game.bggId, false)}
+                  />
+                )
               ))}
             </Stack>
           )}
@@ -108,11 +125,12 @@ export function TopPicksSection(props: {
 export function DislikedSection(props: {
   disliked: PreferenceGameRow[]
   droppableId: string
+  layoutMode: LayoutMode
   onOpenDetails?: (game: GameRecord) => void
   onToggleTopPick: (bggId: number, currentlyTopPick: boolean) => void
   onToggleDisliked: (bggId: number, currentlyDisliked: boolean) => void
 }) {
-  const { disliked, droppableId, onOpenDetails, onToggleTopPick, onToggleDisliked } = props
+  const { disliked, droppableId, layoutMode, onOpenDetails, onToggleTopPick, onToggleDisliked } = props
 
   return (
     <Card sx={{ border: '1px solid', borderColor: 'error.light' }}>
@@ -128,16 +146,29 @@ export function DislikedSection(props: {
           ) : (
             <Stack spacing={1}>
               {disliked.map(({ game, userRating }) => (
-                <DraggableGameCard
-                  key={game.bggId}
-                  id={game.bggId}
-                  game={game}
-                  isDisliked
-                  userRating={userRating}
-                  onOpenDetails={onOpenDetails ? () => onOpenDetails(game) : undefined}
-                  onToggleTopPick={() => onToggleTopPick(game.bggId, false)}
-                  onToggleDisliked={() => onToggleDisliked(game.bggId, true)}
-                />
+                layoutMode === 'simplified' ? (
+                  <DraggablePreferenceRowCard
+                    key={game.bggId}
+                    id={game.bggId}
+                    game={game}
+                    isDisliked
+                    userRating={userRating}
+                    onOpenDetails={onOpenDetails ? () => onOpenDetails(game) : undefined}
+                    onToggleTopPick={() => onToggleTopPick(game.bggId, false)}
+                    onToggleDisliked={() => onToggleDisliked(game.bggId, true)}
+                  />
+                ) : (
+                  <DraggableGameCard
+                    key={game.bggId}
+                    id={game.bggId}
+                    game={game}
+                    isDisliked
+                    userRating={userRating}
+                    onOpenDetails={onOpenDetails ? () => onOpenDetails(game) : undefined}
+                    onToggleTopPick={() => onToggleTopPick(game.bggId, false)}
+                    onToggleDisliked={() => onToggleDisliked(game.bggId, true)}
+                  />
+                )
               ))}
             </Stack>
           )}
@@ -150,11 +181,12 @@ export function DislikedSection(props: {
 export function RankedSection(props: {
   ranked: PreferenceGameRow[]
   droppableId: string
+  layoutMode: LayoutMode
   onOpenDetails?: (game: GameRecord) => void
   onToggleTopPick: (bggId: number, currentlyTopPick: boolean) => void
   onToggleDisliked: (bggId: number, currentlyDisliked: boolean) => void
 }) {
-  const { ranked, droppableId, onOpenDetails, onToggleTopPick, onToggleDisliked } = props
+  const { ranked, droppableId, layoutMode, onOpenDetails, onToggleTopPick, onToggleDisliked } = props
   const ids = ranked.map((g) => g.game.bggId)
 
   return (
@@ -172,18 +204,33 @@ export function RankedSection(props: {
             <SortableContext items={ids} strategy={verticalListSortingStrategy}>
               <Stack spacing={1}>
                 {ranked.map(({ game, userRating }, index) => (
-                  <SortableGameCard
-                    key={game.bggId}
-                    id={game.bggId}
-                    game={game}
-                    rank={index + 1}
-                    userRating={userRating}
-                    isTopPick={false}
-                    isDisliked={false}
-                    onOpenDetails={onOpenDetails ? () => onOpenDetails(game) : undefined}
-                    onToggleTopPick={() => onToggleTopPick(game.bggId, false)}
-                    onToggleDisliked={() => onToggleDisliked(game.bggId, false)}
-                  />
+                  layoutMode === 'simplified' ? (
+                    <SortablePreferenceRowCard
+                      key={game.bggId}
+                      id={game.bggId}
+                      game={game}
+                      rank={index + 1}
+                      userRating={userRating}
+                      isTopPick={false}
+                      isDisliked={false}
+                      onOpenDetails={onOpenDetails ? () => onOpenDetails(game) : undefined}
+                      onToggleTopPick={() => onToggleTopPick(game.bggId, false)}
+                      onToggleDisliked={() => onToggleDisliked(game.bggId, false)}
+                    />
+                  ) : (
+                    <SortableGameCard
+                      key={game.bggId}
+                      id={game.bggId}
+                      game={game}
+                      rank={index + 1}
+                      userRating={userRating}
+                      isTopPick={false}
+                      isDisliked={false}
+                      onOpenDetails={onOpenDetails ? () => onOpenDetails(game) : undefined}
+                      onToggleTopPick={() => onToggleTopPick(game.bggId, false)}
+                      onToggleDisliked={() => onToggleDisliked(game.bggId, false)}
+                    />
+                  )
                 ))}
               </Stack>
             </SortableContext>
@@ -198,12 +245,13 @@ export function NeutralSection(props: {
   neutral: PreferenceGameRow[]
   nextRank: number
   droppableId: string
+  layoutMode: LayoutMode
   onOpenDetails?: (game: GameRecord) => void
   onToggleTopPick: (bggId: number, currentlyTopPick: boolean) => void
   onToggleDisliked: (bggId: number, currentlyDisliked: boolean) => void
   onSetRank: (bggId: number, rank: number) => void
 }) {
-  const { neutral, nextRank, droppableId, onOpenDetails, onToggleTopPick, onToggleDisliked, onSetRank } = props
+  const { neutral, nextRank, droppableId, layoutMode, onOpenDetails, onToggleTopPick, onToggleDisliked, onSetRank } = props
 
   return (
     <Card>
@@ -218,19 +266,35 @@ export function NeutralSection(props: {
         <DroppableList droppableId={droppableId} minHeight={120} highlightColor={alpha(colors.oceanBlue, 0.35)}>
           <Stack spacing={1} sx={{ mt: 2 }}>
             {neutral.map(({ game, userRating, isDisliked, isTopPick }) => (
-              <DraggableGameCard
-                key={game.bggId}
-                id={game.bggId}
-                game={game}
-                userRating={userRating}
-                isTopPick={isTopPick}
-                isDisliked={isDisliked}
-                onOpenDetails={onOpenDetails ? () => onOpenDetails(game) : undefined}
-                onToggleTopPick={() => onToggleTopPick(game.bggId, !!isTopPick)}
-                onToggleDisliked={() => onToggleDisliked(game.bggId, !!isDisliked)}
-                onRank={(rank) => onSetRank(game.bggId, rank)}
-                nextRank={nextRank}
-              />
+              layoutMode === 'simplified' ? (
+                <DraggablePreferenceRowCard
+                  key={game.bggId}
+                  id={game.bggId}
+                  game={game}
+                  userRating={userRating}
+                  isTopPick={isTopPick}
+                  isDisliked={isDisliked}
+                  onOpenDetails={onOpenDetails ? () => onOpenDetails(game) : undefined}
+                  onToggleTopPick={() => onToggleTopPick(game.bggId, !!isTopPick)}
+                  onToggleDisliked={() => onToggleDisliked(game.bggId, !!isDisliked)}
+                  onRank={(rank) => onSetRank(game.bggId, rank)}
+                  nextRank={nextRank}
+                />
+              ) : (
+                <DraggableGameCard
+                  key={game.bggId}
+                  id={game.bggId}
+                  game={game}
+                  userRating={userRating}
+                  isTopPick={isTopPick}
+                  isDisliked={isDisliked}
+                  onOpenDetails={onOpenDetails ? () => onOpenDetails(game) : undefined}
+                  onToggleTopPick={() => onToggleTopPick(game.bggId, !!isTopPick)}
+                  onToggleDisliked={() => onToggleDisliked(game.bggId, !!isDisliked)}
+                  onRank={(rank) => onSetRank(game.bggId, rank)}
+                  nextRank={nextRank}
+                />
+              )
             ))}
           </Stack>
         </DroppableList>

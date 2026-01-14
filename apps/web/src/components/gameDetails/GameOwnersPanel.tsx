@@ -50,7 +50,7 @@ export function GameOwnersPanel(props: {
               size="small"
               label={owner}
               onDelete={onRemoveOwner ? () => onRemoveOwner(owner, game.bggId) : undefined}
-              deleteIcon={<DeleteIcon sx={{ fontSize: 16 }} />}
+              deleteIcon={<DeleteIcon sx={{ fontSize: 16, color: 'white' }} />}
               sx={{ height: 26 }}
             />
           ))

@@ -4,12 +4,14 @@ import {
   Button,
   CircularProgress,
   IconButton,
+  InputAdornment,
   Stack,
   TextField,
   Typography,
 } from '@mui/material'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import AddIcon from '@mui/icons-material/Add'
+import { colors } from '../../theme/theme'
 import type { GameNoteRecord } from '../../db/types'
 import * as notesService from '../../services/db/gameNotesService'
 
@@ -81,38 +83,56 @@ export function GameNotesPanel(props: {
         <Typography variant="subtitle2" fontWeight={700}>
           Notes
         </Typography>
-        <Typography variant="caption" color="text.secondary">
+        <Box
+          sx={{
+            minWidth: 26,
+            height: 26,
+            borderRadius: '50%',
+            bgcolor: colors.oceanBlue,
+            color: 'white',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '0.75rem',
+            fontWeight: 700,
+          }}
+        >
           {notes.length}
-        </Typography>
+        </Box>
       </Stack>
 
-      <Stack direction="row" spacing={1} alignItems="flex-start">
-        <TextField
-          size="small"
-          placeholder="Add a note…"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-              e.preventDefault()
-              void handleAdd()
-            }
-          }}
-          multiline
-          minRows={2}
-          fullWidth
-        />
-        <Button
-          variant="contained"
-          size="small"
-          startIcon={saving ? <CircularProgress size={16} /> : <AddIcon />}
-          onClick={() => void handleAdd()}
-          disabled={!canAdd}
-          sx={{ height: 40, whiteSpace: 'nowrap' }}
-        >
-          Add
-        </Button>
-      </Stack>
+      <TextField
+        size="small"
+        placeholder="Add a note…"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault()
+            void handleAdd()
+          }
+        }}
+        multiline
+        minRows={2}
+        fullWidth
+        helperText="Tip: Ctrl+Enter to add quickly."
+        InputProps={{
+          endAdornment: (
+            <InputAdornment position="end" sx={{ alignSelf: 'flex-start', mt: 0.5 }}>
+              <Button
+                variant="contained"
+                size="small"
+                startIcon={saving ? <CircularProgress size={16} /> : <AddIcon />}
+                onClick={() => void handleAdd()}
+                disabled={!canAdd}
+                sx={{ height: 32, whiteSpace: 'nowrap' }}
+              >
+                Add
+              </Button>
+            </InputAdornment>
+          ),
+        }}
+      />
 
       <Box sx={{ flex: 1, overflow: 'auto', pr: 0.5 }}>
         {loading ? (
@@ -144,7 +164,7 @@ export function GameNotesPanel(props: {
                       size="small"
                       aria-label="Delete note"
                       onClick={() => void handleDelete(n.id as number)}
-                      sx={{ width: 32, height: 32 }}
+                      sx={{ width: 32, height: 32, color: 'error.main' }}
                     >
                       <DeleteOutlineIcon fontSize="small" />
                     </IconButton>
@@ -159,9 +179,6 @@ export function GameNotesPanel(props: {
         )}
       </Box>
 
-      <Typography variant="caption" color="text.secondary">
-        Tip: Ctrl+Enter to add quickly.
-      </Typography>
     </Box>
   )
 }

@@ -11,6 +11,9 @@ import {
   TextField,
   Tooltip,
   Typography,
+  alpha,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material'
 import SearchIcon from '@mui/icons-material/Search'
 import AddIcon from '@mui/icons-material/Add'
@@ -19,6 +22,9 @@ import type { GameRecord, UserRecord } from '../../db/types'
 import { GameRow } from './GameRow'
 import { GameEditDialog } from '../GameEditDialog'
 import { GameDetailsDialog } from '../gameDetails/GameDetailsDialog'
+import { colors } from '../../theme/theme'
+import type { LayoutMode } from '../../services/storage/uiPreferences'
+import { LayoutToggle } from '../LayoutToggle'
 
 interface GamePreviewGridProps {
   games: GameRecord[]
@@ -26,12 +32,18 @@ interface GamePreviewGridProps {
   gameOwners: Record<number, string[]>
   totalGames: number
   users: UserRecord[]
+  layoutMode?: LayoutMode
+  onLayoutModeChange?: (mode: LayoutMode) => void
   onRemoveOwner?: (username: string, bggId: number) => Promise<void>
   onAddOwner?: (username: string, bggId: number) => Promise<void>
   onAddToSession?: (bggId: number) => void
   onExcludeFromSession?: (game: GameRecord) => void
   onEditGame?: (game: GameRecord) => Promise<void>
   onRefreshGameFromBgg?: (bggId: number, options: { keepNotes: boolean }) => Promise<GameRecord>
+
+  showAddNewGamesAction?: boolean
+  onToggleAddNewGamesPanel?: () => void
+  addNewGamesPanelOpen?: boolean
 }
 
 export function GamePreviewGrid({
@@ -40,13 +52,20 @@ export function GamePreviewGrid({
   gameOwners,
   totalGames,
   users,
+  layoutMode = 'standard',
+  onLayoutModeChange,
   onRemoveOwner,
   onAddOwner,
   onAddToSession,
   onExcludeFromSession,
   onEditGame,
   onRefreshGameFromBgg,
+  showAddNewGamesAction,
+  onToggleAddNewGamesPanel,
+  addNewGamesPanelOpen,
 }: GamePreviewGridProps) {
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const [searchQuery, setSearchQuery] = useState('')
   const [filterPlayers, setFilterPlayers] = useState<number | null>(null)
   const [showCollectionGames, setShowCollectionGames] = useState(false)
@@ -72,7 +91,7 @@ export function GamePreviewGrid({
     return result
   }, [sessionGames, searchQuery, filterPlayers])
 
-  if (totalGames === 0) return null
+  if (totalGames === 0 && !showAddNewGamesAction) return null
 
   const playerCounts = [2, 3, 4, 5, 6]
 
@@ -111,6 +130,12 @@ export function GamePreviewGrid({
               </IconButton>
             ))}
           </Stack>
+
+          {onLayoutModeChange ? (
+            <Box sx={{ ml: 1 }}>
+              <LayoutToggle layoutMode={layoutMode} onChange={onLayoutModeChange} variant="icon" />
+            </Box>
+          ) : null}
         </Stack>
 
         {filteredGames.length !== sessionGames.length && (
@@ -119,50 +144,91 @@ export function GamePreviewGrid({
           </Typography>
         )}
 
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, maxHeight: 350, overflow: 'auto', pr: 0.5 }}>
-          {filteredGames.length === 0 ? (
-            <Typography color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>No games match</Typography>
-          ) : (
-            filteredGames.map((game) => (
-              <GameRow
-                key={game.bggId}
-                game={game}
-                owners={gameOwners[game.bggId] ?? []}
-                onExcludeFromSession={onExcludeFromSession ? () => onExcludeFromSession(game) : undefined}
-                onOpenDetails={() => setDetailsGame(game)}
-              />
-            ))
-          )}
-        </Box>
+        {sessionGames.length > 0 ? (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, maxHeight: 350, overflow: 'auto', pr: 0.5 }}>
+            {filteredGames.length === 0 ? (
+              <Typography color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>No games match</Typography>
+            ) : (
+              filteredGames.map((game) => (
+                <GameRow
+                  key={game.bggId}
+                  game={game}
+                  owners={gameOwners[game.bggId] ?? []}
+                  variant={layoutMode === 'simplified' ? 'compact' : 'standard'}
+                  onExcludeFromSession={onExcludeFromSession ? () => onExcludeFromSession(game) : undefined}
+                  onOpenDetails={() => setDetailsGame(game)}
+                />
+              ))
+            )}
+          </Box>
+        ) : (
+          <Typography color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
+            No games yet
+          </Typography>
+        )}
 
-        {collectionOnlyGames.length > 0 && (
+        {(collectionOnlyGames.length > 0 || showAddNewGamesAction) && (
           <Box sx={{ mt: 2 }}>
-            <Button size="small" startIcon={<PlaylistAddIcon />} onClick={() => setShowCollectionGames(!showCollectionGames)} sx={{ mb: 1 }}>
-              {showCollectionGames ? 'Hide' : 'Show'} {collectionOnlyGames.length} games from collection
-            </Button>
-            <Collapse in={showCollectionGames}>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, maxHeight: 200, overflow: 'auto' }}>
-                {collectionOnlyGames.map((game) => (
-                  <Box key={game.bggId} sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 0.75, bgcolor: 'action.hover', borderRadius: 1, opacity: 0.7 }}>
-                    <Box
-                      component="img"
-                      src={game.thumbnail || '/vite.svg'}
-                      alt={game.name}
-                      sx={{ width: 28, height: 28, borderRadius: 0.5, objectFit: 'cover' }}
-                      onError={(e) => { (e.target as HTMLImageElement).src = '/vite.svg' }}
-                    />
-                    <Typography variant="body2" sx={{ flex: 1 }} noWrap>{game.name}</Typography>
-                    {onAddToSession && (
-                      <Tooltip title="Add to session">
-                        <IconButton size="small" onClick={() => onAddToSession(game.bggId)}>
-                          <AddIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    )}
-                  </Box>
-                ))}
-              </Box>
-            </Collapse>
+            <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center" sx={{ mb: 1 }}>
+              {collectionOnlyGames.length > 0 ? (
+                <Button
+                  size="small"
+                  startIcon={<PlaylistAddIcon />}
+                  onClick={() => setShowCollectionGames(!showCollectionGames)}
+                >
+                  {showCollectionGames
+                    ? isMobile
+                      ? 'Hide Collection'
+                      : `Hide ${collectionOnlyGames.length} games from collection`
+                    : isMobile
+                      ? 'Show Collection'
+                      : `Show ${collectionOnlyGames.length} games from collection`}
+                </Button>
+              ) : null}
+
+              {showAddNewGamesAction && onToggleAddNewGamesPanel ? (
+                <Button
+                  size="small"
+                  startIcon={<AddIcon />}
+                  onClick={onToggleAddNewGamesPanel}
+                  sx={{
+                    bgcolor: alpha(colors.sand, 0.65),
+                    color: colors.navyBlue,
+                    border: `1px solid ${alpha(colors.sand, 0.95)}`,
+                    '&:hover': { bgcolor: alpha(colors.sand, 0.8) },
+                  }}
+                  aria-expanded={addNewGamesPanelOpen ? 'true' : 'false'}
+                >
+                  {isMobile ? 'Add New Game' : 'Add New Games to Collection'}
+                </Button>
+              ) : null}
+            </Stack>
+
+            {collectionOnlyGames.length > 0 ? (
+              <Collapse in={showCollectionGames}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, maxHeight: 200, overflow: 'auto' }}>
+                  {collectionOnlyGames.map((game) => (
+                    <Box key={game.bggId} sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 0.75, bgcolor: 'action.hover', borderRadius: 1, opacity: 0.7 }}>
+                      <Box
+                        component="img"
+                        src={game.thumbnail || '/vite.svg'}
+                        alt={game.name}
+                        sx={{ width: 28, height: 28, borderRadius: 0.5, objectFit: 'cover' }}
+                        onError={(e) => { (e.target as HTMLImageElement).src = '/vite.svg' }}
+                      />
+                      <Typography variant="body2" sx={{ flex: 1 }} noWrap>{game.name}</Typography>
+                      {onAddToSession && (
+                        <Tooltip title="Add to session">
+                          <IconButton size="small" onClick={() => onAddToSession(game.bggId)}>
+                            <AddIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </Box>
+                  ))}
+                </Box>
+              </Collapse>
+            ) : null}
           </Box>
         )}
       </CardContent>

@@ -6,7 +6,7 @@ These guidelines define visual and interaction consistency rules for the PIKME w
 
 ## 1) Design principles
 - Consistency beats novelty: same components and interaction rules across steps.
-- Desktop-first ergonomics: primary target is desktop use; mobile remains supported.
+- Desktop-first ergonomics with mobile-first clarity: primary target is desktop use; mobile remains fully supported and must be understandable without extra text.
 - Fast scanning: emphasize selected states and primary actions.
 - Safe actions: destructive/overwriting actions must be clearly labeled and confirmable.
 
@@ -48,6 +48,23 @@ PIKME uses a blue base with a warm yellow/sand accent.
 - “Select all”, “Clear”, “Reset”, “Undo” must be visually distinguishable as actions:
   - Use buttons (text buttons are OK) with consistent placement
   - Never look like plain static text
+- Close/X, delete/trash, and “remove” icons must use a relaxing red (error palette) to distinguish destructive/exit actions from blue positive actions (add/edit/create) while keeping contrast.
+
+### 3.5 Tile density toggle (Standard vs Simplified)
+Some steps need a compact, fast-scanning list. Provide a consistent, global toggle where game lists are shown.
+
+Rules:
+- Provide a single “Layout” toggle button (icon-only on narrow widths) that switches between:
+  - **Standard tiles**: current rich rectangular tile/card.
+  - **Simplified tiles**: compact row/list style similar to the collection list.
+- The toggle must be consistent across steps where it appears (icon, tooltip/label, placement).
+- Persist the last chosen layout locally (per device/browser) so users don’t need to re-toggle each time.
+- Simplified tiles must never hide key actions (exclude/edit/dislike) and must keep hit targets >= 44px.
+
+### 3.6 Stat / metadata pills (players, time, rating, weight)
+- Use the warm yellow/sand accent as the pill background with dark/navy text and icons for readability.
+- Prefer filled chips (no gray outline); keep height consistent and compact.
+- Apply the same style across all surfaces that show these stats (rich tiles, rows/compact lists, details dialogs) to avoid mixed gray/yellow treatments.
 
 ## 4) Layout and density (desktop-first)
 
@@ -62,6 +79,16 @@ PIKME uses a blue base with a warm yellow/sand accent.
   - Filters: number of eligible games
   - Preferences: number of ranked/top picks (active user)
   - Result: top pick ready / alternatives count
+
+### 4.3 Responsive simplification (narrow widths)
+On narrow widths (portrait phones), prefer removing redundant explanatory text and compressing navigation.
+
+Rules:
+- Stepper may switch to a compact mode:
+  - Show current step name only (e.g., “Players”) and a small circular badge indicating eligible game count.
+  - Preserve Back/Next behavior; avoid layout shifts when changing steps.
+- Remove/condense long helper paragraphs in step headers when the content is already obvious.
+- Keep icons + short labels over long sentences.
 
 ## 5) Scrolling
 - Scrollbars must be styled consistently across the app (where browser permits).
@@ -81,11 +108,26 @@ PIKME uses a blue base with a warm yellow/sand accent.
 - Rank indicators (numbers) must appear on the **right** side of ranked items.
 - Drag handles and key actions must be consistent in placement.
 
+### 6.4 Preferences quick actions
+If “quick actions” are present, they must not compete with primary preference interactions.
+
+Rules:
+- Prefer a single layout toggle (Standard/Simplified) over multiple one-off action buttons.
+- Avoid placing secondary actions in a way that pushes primary drag/drop content below the fold on mobile.
+
 ## 7) Result (Winning game) presentation
 - The winning game should be presented as a strong hero tile:
   - Game image is visible within the tile.
   - Add a subtle “liquid/material” overlay (e.g., gradient or glass effect) to improve readability of text on top of imagery.
   - Maintain consistent tile shape (rectangular, subtle rounding).
+
+### 7.1 Promoting alternatives
+Alternative results are exploratory; selecting one should feel safe and reversible.
+
+Rules:
+- Clicking a Top Alternative may promote it to “Tonight’s pick” in-place.
+- The UI must clearly reflect the promoted state (hero tile updates, selection highlight).
+- Any Save action must save the currently promoted “Tonight’s pick”.
 
 ## 8) Non-functional UI requirements
 - Touch targets >= 44px for key actions.
@@ -93,10 +135,35 @@ PIKME uses a blue base with a warm yellow/sand accent.
 - Loading states are required for operations taking >300ms.
 - Error messages must be actionable.
 
-## 9) Implementation notes (guidance)
+## 9) Add new games entry (Players step)
+Adding games manually should be discoverable but not visually noisy.
+
+Rules:
+- Provide an “Add New Games to Collection” action directly under the “Show games from collection” action.
+- Style: same component style as “Show games from collection” (including an icon), but using the yellow/sand accent to differentiate.
+- The “Add new games” panel must be hidden by default and only expand/open when the user clicks the action.
+- When expanded, it must use the same selectable panel/card pattern (see 3.3), with clear cancel/close.
+
+## 10) Implementation notes (guidance)
 - Prefer implementing these via MUI theme overrides (ToggleButton, Tabs, Select, Paper/Card) and shared small components (e.g., SelectablePanel, GameTileActionBar).
 - Avoid one-off styles per step; changes should apply globally where possible.
 
-## 10) Related requirements
+## 11) Small-screen copy rules (narrow widths)
+When screen real estate is constrained, hide redundant “celebration” and explanatory copy.
+
+Rules:
+- Result step may hide large header/subheader copy (e.g., “Your recommendation is ready!”) on narrow widths.
+- “What’s the vibe?” control must switch to icon-first presentation on narrow widths (icon + short label under it; no long phrases like “Work together”).
+
+## 12) Help / walkthrough formatting
+Help content must be skimmable and non-intimidating.
+
+Rules:
+- Avoid numbered lists for major sections; use clear headers.
+- Prefer rendering each topic as a small dedicated tile/card with a header and short bullets.
+
+## 13) Related requirements
 - Requirements/REQ-030 UI UX Improvements & Game Tile Consistency.md
 - Requirements/REQ-040 CSV Import & Export (Backup Restore).md
+- Requirements/REQ-050 In-App Help Walkthrough Dialog.md
+- Requirements/REQ-060 Usability Improvements & Responsive Enhancements.md

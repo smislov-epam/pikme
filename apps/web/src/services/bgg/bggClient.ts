@@ -30,6 +30,13 @@ export class BggRateLimitError extends Error {
   }
 }
 
+export class BggUserNotFoundError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'BggUserNotFoundError'
+  }
+}
+
 // Get API key from environment or localStorage
 function getBggApiKey(providedKey?: string): string | undefined {
   if (providedKey) return providedKey

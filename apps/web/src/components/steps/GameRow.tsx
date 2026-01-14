@@ -2,20 +2,31 @@ import { Box, Chip, IconButton, Stack, Tooltip, Typography } from '@mui/material
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import CloseIcon from '@mui/icons-material/Close'
 import type { GameRecord } from '../../db/types'
+import type { ReactNode } from 'react'
 
 export interface GameRowProps {
   game: GameRecord
   owners: string[]
+  variant?: 'standard' | 'compact'
+  hidePlayerCount?: boolean
+  onRowClick?: () => void
   onExcludeFromSession?: () => void
-  onOpenDetails: () => void
+  onOpenDetails?: () => void
+  metaRight?: ReactNode
 }
 
 export function GameRow({
   game,
   owners,
+  variant = 'standard',
+  hidePlayerCount,
+  onRowClick,
   onExcludeFromSession,
   onOpenDetails,
+  metaRight,
 }: GameRowProps) {
+  const isCompact = variant === 'compact'
+
   return (
     <Box
       sx={{
@@ -27,12 +38,14 @@ export function GameRow({
       }}
     >
       <Box
-        onClick={onOpenDetails}
+        onClick={onRowClick ?? onOpenDetails}
         sx={{
           display: 'flex',
           alignItems: 'center',
-          gap: 1.5,
-          p: 1.25,
+          gap: isCompact ? 0.75 : 1.5,
+          p: isCompact ? 0 : 1.25,
+          pr: metaRight ? 1.3 : isCompact ? 0 : 1.25,
+          minHeight: isCompact ? 44 : undefined,
           cursor: 'pointer',
           '&:hover': { bgcolor: 'action.hover' },
         }}
@@ -41,29 +54,41 @@ export function GameRow({
           component="img"
           src={game.thumbnail || '/vite.svg'}
           alt={game.name}
-          sx={{ width: 36, height: 36, borderRadius: '6px', objectFit: 'cover', bgcolor: 'grey.200', flexShrink: 0 }}
+          sx={{
+            width: isCompact ? 44 : 36,
+            height: isCompact ? 44 : 36,
+            borderRadius: isCompact ? 0 : '6px',
+            objectFit: 'cover',
+            bgcolor: 'grey.200',
+            flexShrink: 0,
+          }}
           onError={(e) => { (e.target as HTMLImageElement).src = '/vite.svg' }}
         />
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography variant="body2" fontWeight={500} noWrap>{game.name}</Typography>
-          <Stack direction="row" spacing={1} alignItems="center">
-            {game.minPlayers && game.maxPlayers && (
-              <Typography variant="caption" color="text.secondary">
-                👥 {game.minPlayers === game.maxPlayers ? game.minPlayers : `${game.minPlayers}-${game.maxPlayers}`}
-              </Typography>
-            )}
-            {(game.minPlayTimeMinutes || game.maxPlayTimeMinutes || game.playingTimeMinutes) && (
-              <Typography variant="caption" color="text.secondary">
-                ⏱️ {formatPlayTime(game)}
-              </Typography>
-            )}
-            {game.averageRating && (
-              <Typography variant="caption" color="text.secondary">⭐ {game.averageRating.toFixed(1)}</Typography>
-            )}
-          </Stack>
+        <Box sx={{ flex: 1, minWidth: 0, py: isCompact ? 0.25 : 0 }}>
+          <Typography variant={isCompact ? 'body2' : 'body2'} fontWeight={500} noWrap>
+            {game.name}
+          </Typography>
+          {!isCompact ? (
+            <Stack direction="row" spacing={1} alignItems="center">
+              {!hidePlayerCount && game.minPlayers && game.maxPlayers && (
+                <Typography variant="caption" color="text.secondary">
+                  👥 {game.minPlayers === game.maxPlayers ? game.minPlayers : `${game.minPlayers}-${game.maxPlayers}`}
+                </Typography>
+              )}
+              {(game.minPlayTimeMinutes || game.maxPlayTimeMinutes || game.playingTimeMinutes) && (
+                <Typography variant="caption" color="text.secondary">
+                  ⏱️ {formatPlayTime(game)}
+                </Typography>
+              )}
+              {game.averageRating && (
+                <Typography variant="caption" color="text.secondary">⭐ {game.averageRating.toFixed(1)}</Typography>
+              )}
+            </Stack>
+          ) : null}
         </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
-          {owners.length > 0 ? (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0, pr: isCompact ? 0.25 : 0 }}>
+          {metaRight ? metaRight : null}
+          {!isCompact && owners.length > 0 ? (
             <Chip
               label={owners.length === 1 ? owners[0] : `${owners.length}`}
               size="small"
@@ -75,7 +100,7 @@ export function GameRow({
             <Tooltip title="Remove from session">
               <IconButton
                 size="small"
-                sx={{ width: 36, height: 36 }}
+                sx={{ width: 44, height: 44, color: 'error.main' }}
                 onClick={(e) => {
                   e.stopPropagation()
                   onExcludeFromSession()
@@ -86,19 +111,20 @@ export function GameRow({
               </IconButton>
             </Tooltip>
           ) : null}
-
-          <Tooltip title="Open details">
-            <IconButton
-              size="small"
-              sx={{ width: 36, height: 36 }}
-              onClick={(e) => {
-                e.stopPropagation()
-                onOpenDetails()
-              }}
-            >
-              <InfoOutlinedIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
+          {onOpenDetails ? (
+            <Tooltip title="Open details">
+              <IconButton
+                size="small"
+                sx={{ width: 44, height: 44 }}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onOpenDetails()
+                }}
+              >
+                <InfoOutlinedIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          ) : null}
         </Box>
       </Box>
     </Box>

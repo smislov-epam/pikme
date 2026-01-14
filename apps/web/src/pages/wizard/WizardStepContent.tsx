@@ -16,8 +16,16 @@ export function WizardStepContent(props: {
           games={wizard.games}
           sessionGames={wizard.sessionGames}
           gameOwners={wizard.gameOwners}
+          layoutMode={wizard.layoutMode}
+          onLayoutModeChange={wizard.setLayoutMode}
           existingLocalUsers={wizard.existingLocalUsers}
           savedNights={wizard.savedNights}
+          pendingBggUserNotFoundUsername={wizard.pendingBggUserNotFoundUsername}
+          onConfirmAddBggUserAnyway={wizard.confirmAddBggUserAnyway}
+          onCancelAddBggUserAnyway={wizard.cancelAddBggUserAnyway}
+          pendingReuseGamesNight={wizard.pendingReuseGamesNight}
+          onConfirmReuseGamesFromNight={wizard.confirmReuseGamesFromNight}
+          onDismissReuseGamesPrompt={wizard.dismissReuseGamesPrompt}
           onAddBggUser={wizard.addBggUser}
           onAddLocalUser={wizard.addLocalUser}
           onRemoveUser={wizard.removeUser}
@@ -47,6 +55,8 @@ export function WizardStepContent(props: {
           users={wizard.users}
           gameOwners={wizard.gameOwners}
           sessionUserCount={wizard.users.length}
+          layoutMode={wizard.layoutMode}
+          onLayoutModeChange={wizard.setLayoutMode}
           playerCount={wizard.filters.playerCount}
           onPlayerCountChange={wizard.setPlayerCount}
           timeRange={wizard.filters.timeRange}
@@ -72,13 +82,13 @@ export function WizardStepContent(props: {
           users={wizard.users}
           games={wizard.filteredGames}
           gameOwners={wizard.gameOwners}
+          layoutMode={wizard.layoutMode}
+          onLayoutModeChange={wizard.setLayoutMode}
           preferences={wizard.preferences}
           userRatings={wizard.userRatings}
           onUpdatePreference={wizard.updatePreference}
           onClearPreference={wizard.clearPreference}
           onReorderPreferences={wizard.reorderPreferences}
-          onAutoSort={wizard.autoSortByRating}
-          onMarkRestNeutral={wizard.markRestNeutral}
         />
       )
     case 3:
@@ -90,6 +100,9 @@ export function WizardStepContent(props: {
           filters={wizard.filters}
           users={wizard.users}
           gameOwners={wizard.gameOwners}
+          layoutMode={wizard.layoutMode}
+          onLayoutModeChange={wizard.setLayoutMode}
+          onPromoteAlternative={wizard.promoteAlternativeToTopPick}
           onSaveNight={onOpenSaveDialog}
           onExcludeGameFromSession={wizard.excludeGameFromSession}
           onUndoExcludeGameFromSession={wizard.undoExcludeGameFromSession}

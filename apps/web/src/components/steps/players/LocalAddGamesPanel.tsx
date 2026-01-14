@@ -1,0 +1,65 @@
+import { Box, Collapse } from '@mui/material'
+import type { UserRecord } from '../../../db/types'
+import { LocalPlayersGamesCard } from '../LocalPlayersGamesCard'
+
+export function LocalAddGamesPanel(props: {
+  open: boolean
+  localUsers: UserRecord[]
+  selectedLocalUsers: string[]
+  onToggleUser: (username: string) => void
+  onSelectAll: () => void
+  gameUrlInput: string
+  onGameUrlInputChange: (value: string) => void
+  onAddGameFromUrl: () => void
+  isLoading: boolean
+  searchQuery: string
+  onSearchQueryChange: (value: string) => void
+  onSearch: () => void
+  isSearching: boolean
+  searchResults: Array<{ bggId: number; name: string; yearPublished?: number }>
+  onAddGame: (bggId: number) => void
+  onClose: () => void
+}) {
+  const {
+    open,
+    localUsers,
+    selectedLocalUsers,
+    onToggleUser,
+    onSelectAll,
+    gameUrlInput,
+    onGameUrlInputChange,
+    onAddGameFromUrl,
+    isLoading,
+    searchQuery,
+    onSearchQueryChange,
+    onSearch,
+    isSearching,
+    searchResults,
+    onAddGame,
+    onClose,
+  } = props
+
+  return (
+    <Collapse in={open} mountOnEnter unmountOnExit>
+      <Box sx={{ mt: 1 }}>
+        <LocalPlayersGamesCard
+          localUsers={localUsers}
+          selectedLocalUsers={selectedLocalUsers}
+          onToggleUser={onToggleUser}
+          onSelectAll={onSelectAll}
+          gameUrlInput={gameUrlInput}
+          onGameUrlInputChange={onGameUrlInputChange}
+          onAddGameFromUrl={onAddGameFromUrl}
+          isLoading={isLoading}
+          searchQuery={searchQuery}
+          onSearchQueryChange={onSearchQueryChange}
+          onSearch={onSearch}
+          isSearching={isSearching}
+          searchResults={searchResults}
+          onAddGame={onAddGame}
+          onClose={onClose}
+        />
+      </Box>
+    </Collapse>
+  )
+}

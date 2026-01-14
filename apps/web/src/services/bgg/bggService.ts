@@ -9,9 +9,9 @@ import {
   upsertGame,
   upsertGames,
 } from '../db'
-import { BggAuthError, fetchQueuedXml, hasBggApiKey } from './bggClient'
+import { BggAuthError, BggUserNotFoundError, fetchQueuedXml, hasBggApiKey } from './bggClient'
 import { buildCollectionUrl, buildSearchUrl, buildThingUrl } from './bggUrls'
-import { parseCollectionXml } from './parseCollectionXml'
+import { parseCollectionXmlResponse } from './parseCollectionXml'
 import { parseSearchXml } from './parseSearchXml'
 import { parseThingXml } from './parseThingXml'
 import type {
@@ -54,7 +54,13 @@ export async function fetchOwnedCollection(
     signal: options.signal,
   })
 
-  return parseCollectionXml(xml)
+  const parsed = parseCollectionXmlResponse(xml)
+  const message = parsed.message?.toLowerCase() ?? ''
+  if (message.includes('user not found') || message.includes('username') && message.includes('not found')) {
+    throw new BggUserNotFoundError(`User not found on BGG: ${username}`)
+  }
+
+  return parsed.items
 }
 
 export async function fetchThingDetails(

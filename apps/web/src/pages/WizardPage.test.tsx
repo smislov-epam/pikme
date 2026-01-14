@@ -1,7 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { ThemeProvider } from '@mui/material/styles'
-import { describe, expect, it, vi } from 'vitest'
-import '@testing-library/jest-dom/vitest'
+import { vi } from 'vitest'
 import { theme } from '../theme/theme'
 import WizardPage from './WizardPage'
 import { ToastProvider } from '../services/toast'

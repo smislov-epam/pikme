@@ -4,11 +4,14 @@ import { useState, useCallback, useEffect, useMemo } from 'react'
 import type { GameRecord, UserRecord, UserPreferenceRecord, SavedNightRecord } from '../db/types'
 import * as dbService from '../services/db'
 import * as bggService from '../services/bgg/bggService'
-import { BggAuthError, BggRateLimitError } from '../services/bgg/bggClient'
+import { BggAuthError, BggRateLimitError, BggUserNotFoundError } from '../services/bgg/bggClient'
 import type { BggSearchResult } from '../services/bgg/types'
 import type { WizardFilters } from '../store/wizardTypes'
 import { applyGameFilters } from '../services/filtering/applyGameFilters'
 import { loadWizardState, saveWizardState, clearWizardState } from '../services/storage/wizardStateStorage'
+import { loadLayoutMode, saveLayoutMode, type LayoutMode } from '../services/storage/uiPreferences'
+import { promotePickInSortedGames } from '../services/recommendation/promotePick'
+import { findReusableNight } from '../services/savedNights/findReusableNight'
 
 export interface WizardState {
   // Step 1: Players
@@ -21,6 +24,8 @@ export interface WizardState {
   isLoadingUser: boolean
   userError: string | null
   needsApiKey: boolean
+  pendingBggUserNotFoundUsername: string | null
+  pendingReuseGamesNight: { id: number; name: string; gameCount: number } | null
 
   // Step 2: Filters
   filters: WizardFilters
@@ -37,11 +42,18 @@ export interface WizardState {
     alternatives: Array<{ game: GameRecord; score: number; matchReasons: string[] }>
     vetoed: Array<{ game: GameRecord; vetoedBy: string[] }>
   }
+
+  // UI preferences
+  layoutMode: LayoutMode
 }
 
 export interface WizardActions {
   // Players
   addBggUser: (username: string) => Promise<void>
+  confirmAddBggUserAnyway: () => Promise<void>
+  cancelAddBggUserAnyway: () => void
+  confirmReuseGamesFromNight: () => Promise<void>
+  dismissReuseGamesPrompt: () => void
   addLocalUser: (name: string, isOrganizer?: boolean) => Promise<void>
   removeUser: (username: string) => void
   deleteUserPermanently: (username: string) => Promise<void>
@@ -88,6 +100,7 @@ export interface WizardActions {
 
   // Results
   computeRecommendation: () => void
+  promoteAlternativeToTopPick: (bggId: number) => void
   saveNight: (name: string, description?: string) => Promise<void>
 
   // Saved nights
@@ -103,6 +116,9 @@ export interface WizardActions {
 
   // API Key
   clearNeedsApiKey: () => void
+
+  // UI preferences
+  setLayoutMode: (mode: LayoutMode) => void
 }
 
 const DEFAULT_FILTERS: WizardFilters = {
@@ -156,13 +172,33 @@ export function useWizardState(): WizardState & WizardActions {
   const [userError, setUserError] = useState<string | null>(null)
   // API key is optional - users can add games via BGG links instead
   const [needsApiKey, setNeedsApiKey] = useState(false)
+  const [pendingBggUserNotFoundUsername, setPendingBggUserNotFoundUsername] = useState<string | null>(null)
+  const [pendingReuseGamesNightId, setPendingReuseGamesNightId] = useState<number | null>(null)
+  const [dismissedReuseGamesNightId, setDismissedReuseGamesNightId] = useState<number | null>(null)
   const [filters, setFilters] = useState<WizardFilters>(DEFAULT_FILTERS)
   const [preferences, setPreferences] = useState<Record<string, UserPreferenceRecord[]>>({})
   const [userRatings, setUserRatings] = useState<Record<string, Record<number, number | undefined>>>({})
   const [savedNights, setSavedNights] = useState<SavedNightRecord[]>([])
+  const [promotedPickBggId, setPromotedPickBggId] = useState<number | null>(null)
+  const [layoutMode, setLayoutModeState] = useState<LayoutMode>(() => {
+    try {
+      return loadLayoutMode()
+    } catch {
+      return 'standard'
+    }
+  })
 
   const clearUserError = useCallback(() => {
     setUserError(null)
+  }, [])
+
+  const setLayoutMode = useCallback((mode: LayoutMode) => {
+    setLayoutModeState(mode)
+    try {
+      saveLayoutMode(mode)
+    } catch {
+      // ignore (e.g. strict privacy settings)
+    }
   }, [])
 
   // Load existing users and saved nights on mount (but don't auto-select players)
@@ -246,6 +282,41 @@ export function useWizardState(): WizardState & WizardActions {
     return games.filter((g) => sessionSet.has(g.bggId) && !excludedSet.has(g.bggId))
   }, [games, excludedBggIds, sessionGameIds])
 
+  const organizerUsername = useMemo(() => users.find((u) => u.isOrganizer)?.username ?? null, [users])
+
+  const pendingReuseGamesNight = useMemo(() => {
+    if (!pendingReuseGamesNightId) return null
+    const match = savedNights.find((n) => n.id === pendingReuseGamesNightId)
+    if (!match) return null
+    return {
+      id: pendingReuseGamesNightId,
+      name: match.data.name,
+      gameCount: (match.data.gameIds ?? []).length,
+    }
+  }, [pendingReuseGamesNightId, savedNights])
+
+  useEffect(() => {
+    if (sessionGameIds.length > 0) return
+    const match = findReusableNight({
+      savedNights,
+      organizerUsername,
+      playerCount: users.length,
+    })
+
+    if (!match) {
+      setPendingReuseGamesNightId(null)
+      return
+    }
+
+    if (!match.id) {
+      setPendingReuseGamesNightId(null)
+      return
+    }
+
+    if (dismissedReuseGamesNightId === match.id) return
+    setPendingReuseGamesNightId(match.id)
+  }, [dismissedReuseGamesNightId, organizerUsername, savedNights, sessionGameIds.length, users.length])
+
   // Filtered games (session games after applying filters)
   const filteredGames = useMemo(() => {
     return applyGameFilters(sessionGames, filters, userRatings)
@@ -320,12 +391,14 @@ export function useWizardState(): WizardState & WizardActions {
       }))
       .sort((a, b) => b.score - a.score)
 
+    const promotedSortedGames = promotePickInSortedGames(sortedGames, promotedPickBggId)
+
     return {
-      topPick: sortedGames[0] ?? null,
-      alternatives: sortedGames.slice(1, 6),
+      topPick: promotedSortedGames[0] ?? null,
+      alternatives: promotedSortedGames.slice(1, 6),
       vetoed,
     }
-  }, [filteredGames, preferences, users, filters])
+  }, [filteredGames, preferences, users, filters, promotedPickBggId])
 
   // Actions
   const addBggUser = useCallback(async (username: string) => {
@@ -359,6 +432,10 @@ export function useWizardState(): WizardState & WizardActions {
         [username]: [],
       }))
     } catch (err) {
+      if (err instanceof BggUserNotFoundError) {
+        setPendingBggUserNotFoundUsername(username)
+        return
+      }
       if (err instanceof BggAuthError || err instanceof BggRateLimitError) {
         // Only prompt for API key if there's an auth/rate limit issue
         setNeedsApiKey(true)
@@ -368,6 +445,77 @@ export function useWizardState(): WizardState & WizardActions {
       setIsLoadingUser(false)
     }
   }, [])
+
+  const confirmAddBggUserAnyway = useCallback(async () => {
+    const username = pendingBggUserNotFoundUsername
+    if (!username) return
+
+    setIsLoadingUser(true)
+    setUserError(null)
+
+    try {
+      const user = await dbService.createBggUser(username)
+
+      setUsers((prev) => {
+        if (prev.some((u) => u.username === username)) return prev
+        return [...prev, user]
+      })
+
+      setPreferences((prev) => ({
+        ...prev,
+        [username]: prev[username] ?? [],
+      }))
+
+      setUserRatings((prev) => ({
+        ...prev,
+        [username]: prev[username] ?? {},
+      }))
+    } catch (err) {
+      setUserError(err instanceof Error ? err.message : 'Failed to add BGG user')
+    } finally {
+      setIsLoadingUser(false)
+      setPendingBggUserNotFoundUsername(null)
+    }
+  }, [pendingBggUserNotFoundUsername])
+
+  const cancelAddBggUserAnyway = useCallback(() => {
+    setPendingBggUserNotFoundUsername(null)
+  }, [])
+
+  const confirmReuseGamesFromNight = useCallback(async () => {
+    const nightId = pendingReuseGamesNightId
+    if (!nightId) return
+
+    const night = savedNights.find((n) => n.id === nightId)
+    const gameIds = night?.data.gameIds ?? []
+    if (gameIds.length === 0) {
+      setPendingReuseGamesNightId(null)
+      return
+    }
+
+    try {
+      const loadedGames = await dbService.getGames(gameIds)
+      setGames((prev) => {
+        const existing = new Set(prev.map((g) => g.bggId))
+        const additions = loadedGames.filter((g) => !existing.has(g.bggId))
+        return additions.length > 0 ? [...prev, ...additions] : prev
+      })
+      setSessionGameIds(gameIds)
+      setExcludedBggIds([])
+
+      const owners = await dbService.getGameOwners(gameIds)
+      setGameOwners((prev) => ({ ...prev, ...owners }))
+    } catch (err) {
+      setUserError(err instanceof Error ? err.message : 'Failed to load games from previous night')
+    } finally {
+      setPendingReuseGamesNightId(null)
+    }
+  }, [pendingReuseGamesNightId, savedNights])
+
+  const dismissReuseGamesPrompt = useCallback(() => {
+    setDismissedReuseGamesNightId(pendingReuseGamesNightId)
+    setPendingReuseGamesNightId(null)
+  }, [pendingReuseGamesNightId])
 
   const addLocalUser = useCallback(async (name: string, isOrganizer?: boolean) => {
     try {
@@ -876,14 +1024,20 @@ export function useWizardState(): WizardState & WizardActions {
     // Recommendation is computed reactively via useMemo
   }, [])
 
+  const promoteAlternativeToTopPick = useCallback((bggId: number) => {
+    setPromotedPickBggId(bggId)
+  }, [])
+
   const saveNight = useCallback(async (name: string, description?: string) => {
     if (!recommendation.topPick) return
 
     const excludedSet = new Set(excludedBggIds)
+    const organizerUsername = users.find((u) => u.isOrganizer)?.username
 
     await dbService.saveNight({
       name,
       description,
+      organizerUsername,
       usernames: users.map((u) => u.username),
       gameIds: sessionGameIds.filter((id) => !excludedSet.has(id)),
       filters: {
@@ -946,6 +1100,18 @@ export function useWizardState(): WizardState & WizardActions {
         }
         loadedUsers.push(user)
       }
+
+      // Restore organizer (starred player) if the saved night recorded it.
+      // Backward compatible: older saved nights will have no organizerUsername.
+      if (data.organizerUsername) {
+        await dbService.setUserAsOrganizer(data.organizerUsername)
+        for (let i = 0; i < loadedUsers.length; i++) {
+          loadedUsers[i] = {
+            ...loadedUsers[i],
+            isOrganizer: loadedUsers[i].username === data.organizerUsername,
+          }
+        }
+      }
       setUsers(loadedUsers)
 
       // Load games from saved gameIds
@@ -1005,6 +1171,8 @@ export function useWizardState(): WizardState & WizardActions {
     isLoadingUser,
     userError,
     needsApiKey,
+    pendingBggUserNotFoundUsername,
+    pendingReuseGamesNight,
     filters,
     sessionGames,
     filteredGames,
@@ -1012,9 +1180,14 @@ export function useWizardState(): WizardState & WizardActions {
     userRatings,
     recommendation,
     savedNights,
+    layoutMode,
 
     // Actions
     addBggUser,
+    confirmAddBggUserAnyway,
+    cancelAddBggUserAnyway,
+    confirmReuseGamesFromNight,
+    dismissReuseGamesPrompt,
     addLocalUser,
     removeUser,
     deleteUserPermanently,
@@ -1044,12 +1217,14 @@ export function useWizardState(): WizardState & WizardActions {
     autoSortByRating,
     markRestNeutral,
     computeRecommendation,
+    promoteAlternativeToTopPick,
     saveNight,
     loadSavedNights,
     loadSavedNight,
     reset,
     clearUserError,
     clearNeedsApiKey: () => setNeedsApiKey(false),
+    setLayoutMode,
   }
 }
 

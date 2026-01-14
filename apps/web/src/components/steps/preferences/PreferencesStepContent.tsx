@@ -21,12 +21,14 @@ import {
 } from '@dnd-kit/core'
 import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import type { GameRecord, UserPreferenceRecord, UserRecord } from '../../../db/types'
-import { PreferencesQuickActions } from './PreferencesQuickActions'
 import { PreferencesUserSelector } from './PreferencesUserSelector'
 import { GameCard } from '../PreferenceGameCard'
 import { DislikedSection, NeutralSection, RankedSection, type PreferenceGameRow, TopPicksSection } from './PreferencesSections'
 import { useToast } from '../../../services/toast'
 import { GameDetailsDialog } from '../../gameDetails/GameDetailsDialog'
+import { LayoutToggle } from '../../LayoutToggle'
+import type { LayoutMode } from '../../../services/storage/uiPreferences'
+import { PreferenceRowCard } from './PreferenceRowCard'
 
 const TOP_PICKS_LIMIT = 3
 
@@ -43,6 +45,8 @@ export interface PreferencesStepProps {
   users: UserRecord[]
   games: GameRecord[]
   gameOwners: Record<number, string[]>
+  layoutMode: LayoutMode
+  onLayoutModeChange: (mode: LayoutMode) => void
   preferences: Record<string, UserPreferenceRecord[]>
   userRatings: Record<string, Record<number, number | undefined>>
   onUpdatePreference: (
@@ -52,21 +56,19 @@ export interface PreferencesStepProps {
   ) => void
   onReorderPreferences: (username: string, orderedBggIds: number[]) => void
   onClearPreference: (username: string, bggId: number) => void
-  onAutoSort: (username: string) => void
-  onMarkRestNeutral: (username: string) => void
 }
 
 export function PreferencesStepContent({
   users,
   games,
   gameOwners,
+  layoutMode,
+  onLayoutModeChange,
   preferences,
   userRatings,
   onUpdatePreference,
   onReorderPreferences,
   onClearPreference,
-  onAutoSort,
-  onMarkRestNeutral,
 }: PreferencesStepProps) {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
@@ -300,8 +302,10 @@ export function PreferencesStepContent({
   return (
     <Stack spacing={3}>
       <Box>
-        <Typography variant="h5" gutterBottom sx={{ color: 'primary.dark' }}>Share your preferences</Typography>
-        <Typography color="text.secondary">Each player can mark favorites and rank games</Typography>
+        <Box>
+          <Typography variant="h5" gutterBottom sx={{ color: 'primary.dark' }}>Share your preferences</Typography>
+          <Typography color="text.secondary">Each player can mark favorites and rank games</Typography>
+        </Box>
       </Box>
 
       <PreferencesUserSelector
@@ -311,13 +315,9 @@ export function PreferencesStepContent({
         onChange={setSelectedUserState}
       />
 
-      <PreferencesQuickActions
-        selectedUser={selectedUser}
-        onAutoSort={onAutoSort}
-        onMarkRestNeutral={onMarkRestNeutral}
-      />
-
-
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <LayoutToggle layoutMode={layoutMode} onChange={onLayoutModeChange} variant="icon" />
+      </Box>
 
       <DndContext
         sensors={sensors}
@@ -329,6 +329,7 @@ export function PreferencesStepContent({
         <TopPicksSection
           topPicks={topPicksForRender}
           droppableId={DROPPABLE.top}
+          layoutMode={layoutMode}
           onOpenDetails={(game) => setDetailsGame(game)}
           onToggleTopPick={handleToggleTopPick}
           onToggleDisliked={handleToggleDisliked}
@@ -336,6 +337,7 @@ export function PreferencesStepContent({
         <DislikedSection
           disliked={dislikedForRender}
           droppableId={DROPPABLE.disliked}
+          layoutMode={layoutMode}
           onOpenDetails={(game) => setDetailsGame(game)}
           onToggleTopPick={handleToggleTopPick}
           onToggleDisliked={handleToggleDisliked}
@@ -343,6 +345,7 @@ export function PreferencesStepContent({
         <RankedSection
           ranked={ranked}
           droppableId={DROPPABLE.ranked}
+          layoutMode={layoutMode}
           onOpenDetails={(game) => setDetailsGame(game)}
           onToggleTopPick={handleToggleTopPick}
           onToggleDisliked={handleToggleDisliked}
@@ -351,6 +354,7 @@ export function PreferencesStepContent({
           neutral={neutralForRender}
           nextRank={ranked.length + 1}
           droppableId={DROPPABLE.neutral}
+          layoutMode={layoutMode}
           onOpenDetails={(game) => setDetailsGame(game)}
           onToggleTopPick={handleToggleTopPick}
           onToggleDisliked={handleToggleDisliked}
@@ -359,14 +363,25 @@ export function PreferencesStepContent({
         <DragOverlay dropAnimation={null}>
           {activeDragId != null && rowByBggId.get(activeDragId) ? (
             <Box sx={{ pointerEvents: 'none', width: '100%', maxWidth: 560, boxShadow: 6, borderRadius: 2 }}>
-              <GameCard
-                game={rowByBggId.get(activeDragId)!.game}
-                userRating={rowByBggId.get(activeDragId)!.userRating}
-                isTopPick={rowByBggId.get(activeDragId)!.isTopPick}
-                isDisliked={rowByBggId.get(activeDragId)!.isDisliked}
-                onToggleTopPick={() => {}}
-                onToggleDisliked={() => {}}
-              />
+              {layoutMode === 'simplified' ? (
+                <PreferenceRowCard
+                  game={rowByBggId.get(activeDragId)!.game}
+                  userRating={rowByBggId.get(activeDragId)!.userRating}
+                  isTopPick={rowByBggId.get(activeDragId)!.isTopPick}
+                  isDisliked={rowByBggId.get(activeDragId)!.isDisliked}
+                  onToggleTopPick={() => {}}
+                  onToggleDisliked={() => {}}
+                />
+              ) : (
+                <GameCard
+                  game={rowByBggId.get(activeDragId)!.game}
+                  userRating={rowByBggId.get(activeDragId)!.userRating}
+                  isTopPick={rowByBggId.get(activeDragId)!.isTopPick}
+                  isDisliked={rowByBggId.get(activeDragId)!.isDisliked}
+                  onToggleTopPick={() => {}}
+                  onToggleDisliked={() => {}}
+                />
+              )}
             </Box>
           ) : null}
         </DragOverlay>

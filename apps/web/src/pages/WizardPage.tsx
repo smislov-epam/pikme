@@ -84,7 +84,12 @@ export default function WizardPage() {
       throw err
     }
   }
-  const onStartOver = () => { wizard.reset(); setActiveStep(0); setCompletedSteps(wizardSteps.map(() => false)) }
+  const onStartOver = async () => {
+    wizard.reset()
+    setActiveStep(0)
+    setCompletedSteps(wizardSteps.map(() => false))
+    await wizard.loadSavedNights()
+  }
   const canJumpTo = (stepIndex: number) => stepIndex <= activeStep || completedSteps[stepIndex - 1]
 
   const stepSubtitles = useMemo(() => {
@@ -102,6 +107,12 @@ export default function WizardPage() {
       `${resultGamesCount} game${resultGamesCount === 1 ? '' : 's'}`,
     ]
   }, [wizard.filteredGames.length, wizard.recommendation, wizard.sessionGameIds.length])
+
+  const compactBadgeCount = useMemo(() => {
+    const eligible = wizard.filteredGames.length
+    const imported = wizard.games.length
+    return eligible > 0 ? eligible : imported
+  }, [wizard.filteredGames.length, wizard.games.length])
 
   return (
     <Box
@@ -157,6 +168,7 @@ export default function WizardPage() {
             activeStep={activeStep}
             completedSteps={completedSteps}
             stepSubtitles={stepSubtitles}
+            compactBadgeCount={compactBadgeCount}
             canJumpTo={canJumpTo}
             onSelectStep={setActiveStep}
           />

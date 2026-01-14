@@ -54,7 +54,7 @@ export function PlayersListCard(props: {
                   cursor: user.isOrganizer ? 'default' : 'pointer',
                   fontWeight: user.isOrganizer ? 600 : 400,
                   '& .MuiChip-label': { px: 1, py: 0 },
-                  '& .MuiChip-deleteIcon': { color: 'primary.dark', opacity: 0.6, '&:hover': { opacity: 1 } },
+                  '& .MuiChip-deleteIcon': { color: 'white', opacity: 0.9, '&:hover': { opacity: 1 } },
                 }}
               />
             )

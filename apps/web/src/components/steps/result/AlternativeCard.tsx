@@ -1,11 +1,4 @@
-import {
-  Chip,
-  IconButton,
-  LinearProgress,
-  Stack,
-  Typography,
-} from '@mui/material'
-import CloseIcon from '@mui/icons-material/Close'
+import { Chip, LinearProgress, Stack } from '@mui/material'
 import type { GameRecord } from '../../../db/types'
 import { GameTile } from '../GameTile'
 
@@ -15,27 +8,27 @@ export function AlternativeCard(props: {
   score: number
   maxScore: number
   matchReasons: string[]
+  onPromote: () => void
   onOpenDetails?: () => void
-  onExclude: () => void
 }) {
-  const { rank, game, score, maxScore, matchReasons, onOpenDetails, onExclude } = props
+  const { rank, game, score, maxScore, matchReasons, onPromote } = props
   const percentage = maxScore > 0 ? (score / maxScore) * 100 : 0
 
   return (
     <GameTile
       game={game}
-      onClick={onOpenDetails}
-      leading={
-        <Chip
-          label={`#${rank}`}
-          size="small"
-          sx={{ bgcolor: 'primary.light', color: 'primary.dark', fontWeight: 800, minWidth: 44 }}
-        />
-      }
-      actions={
-        <IconButton size="small" onClick={onExclude} aria-label="Exclude from session">
-          <CloseIcon fontSize="small" />
-        </IconButton>
+      onClick={onPromote}
+      trailing={
+        <Stack spacing={0.5} alignItems="flex-end">
+          <Stack direction="row" spacing={0.5} alignItems="center">
+            <Chip
+              label={`#${rank}`}
+              size="small"
+              sx={{ bgcolor: 'primary.light', color: 'primary.dark', fontWeight: 800, minWidth: 44 }}
+            />
+            <Chip label={`${score.toFixed(1)} pts`} size="small" color="secondary" sx={{ fontWeight: 700 }} />
+          </Stack>
+        </Stack>
       }
     >
       <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 0.25 }}>
@@ -44,14 +37,6 @@ export function AlternativeCard(props: {
         ))}
       </Stack>
 
-      <Stack direction="row" justifyContent="space-between" alignItems="center">
-        <Typography variant="caption" color="text.secondary">
-          Score
-        </Typography>
-        <Typography variant="caption" fontWeight={700}>
-          {score} pts
-        </Typography>
-      </Stack>
       <LinearProgress
         variant="determinate"
         value={percentage}

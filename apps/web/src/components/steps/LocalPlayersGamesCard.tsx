@@ -14,6 +14,7 @@ import {
 import LinkIcon from '@mui/icons-material/Link'
 import SearchIcon from '@mui/icons-material/Search'
 import StarIcon from '@mui/icons-material/Star'
+import CloseIcon from '@mui/icons-material/Close'
 import type { UserRecord } from '../../db/types'
 import { colors } from '../../theme/theme'
 
@@ -32,6 +33,7 @@ export function LocalPlayersGamesCard(props: {
   isSearching: boolean
   searchResults: Array<{ bggId: number; name: string; yearPublished?: number }>
   onAddGame: (bggId: number) => void
+  onClose?: () => void
 }) {
   const {
     localUsers,
@@ -48,14 +50,26 @@ export function LocalPlayersGamesCard(props: {
     isSearching,
     searchResults,
     onAddGame,
+    onClose,
   } = props
 
   return (
     <Card sx={{ bgcolor: colors.sand + '20' }}>
-      <CardContent>
-        <Typography variant="subtitle2" gutterBottom>
-          Add games for local players
-        </Typography>
+        <CardContent>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+            <Typography variant="subtitle2" gutterBottom sx={{ mb: 0 }}>
+              Add games for local players
+            </Typography>
+            {onClose ? (
+              <Button
+                size="small"
+                onClick={onClose}
+                startIcon={<CloseIcon fontSize="small" sx={{ color: 'error.main' }} />}
+              >
+                Close
+              </Button>
+            ) : null}
+          </Box>
 
         <Box sx={{ mb: 2 }}>
           <Stack direction="row" alignItems="center" gap={1} mb={1}>
