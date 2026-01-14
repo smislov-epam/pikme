@@ -1,12 +1,15 @@
 import type { ReactNode } from 'react'
 import {
   Box,
-  Chip,
   Stack,
   Typography,
 } from '@mui/material'
+import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined'
+import ScheduleOutlinedIcon from '@mui/icons-material/ScheduleOutlined'
+import StarOutlinedIcon from '@mui/icons-material/StarOutlined'
 import type { GameRecord } from '../../db/types'
 import { colors } from '../../theme/theme'
+import { StatPill } from '../ui/StatPill'
 
 export type GameTileVariant = 'default' | 'topPick' | 'disliked'
 
@@ -115,28 +118,18 @@ export function GameTile(props: {
           <Typography fontWeight={600} noWrap>
             {game.name}
           </Typography>
-          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+          <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap">
             {game.minPlayers && game.maxPlayers ? (
-              <Typography variant="caption" color="text.secondary">
-                👥 {game.minPlayers === game.maxPlayers ? game.minPlayers : `${game.minPlayers}-${game.maxPlayers}`}
-              </Typography>
+              <StatPill
+                icon={<GroupsOutlinedIcon />}
+                label={game.minPlayers === game.maxPlayers ? `${game.minPlayers}` : `${game.minPlayers}-${game.maxPlayers}`}
+              />
             ) : null}
             {(game.minPlayTimeMinutes || game.maxPlayTimeMinutes || game.playingTimeMinutes) ? (
-              <Typography variant="caption" color="text.secondary">
-                ⏱️ {formatPlayTime(game)}
-              </Typography>
+              <StatPill icon={<ScheduleOutlinedIcon />} label={formatPlayTime(game)} />
             ) : null}
             {game.averageRating ? (
-              <Chip
-                label={`BGG ★ ${game.averageRating.toFixed(1)}`}
-                size="small"
-                sx={{
-                  height: 20,
-                  fontSize: '0.7rem',
-                  bgcolor: 'primary.light',
-                  color: 'primary.dark',
-                }}
-              />
+              <StatPill icon={<StarOutlinedIcon />} label={game.averageRating.toFixed(1)} />
             ) : null}
           </Stack>
         </Box>

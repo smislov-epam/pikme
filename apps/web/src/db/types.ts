@@ -3,6 +3,7 @@ export interface GameRecord {
   name: string
   yearPublished?: number
   thumbnail?: string
+  image?: string
   minPlayers?: number
   maxPlayers?: number
   bestWith?: string // e.g. "4" or "3-4" from BGG poll
@@ -33,6 +34,7 @@ export interface UserRecord {
   isOrganizer?: boolean
   lastSyncAt?: string
   ownedCount?: number
+  isDeleted?: boolean
 }
 
 export interface UserGameRecord {

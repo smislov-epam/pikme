@@ -14,7 +14,7 @@ import StarIcon from '@mui/icons-material/Star'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import EditIcon from '@mui/icons-material/Edit'
 import type { GameRecord } from '../../db/types'
-import { formatPlayTime, getComplexityColor, getComplexityLabel } from '../gameEdit/gameEditUtils'
+import { formatPlayTime, getComplexityLabel } from '../gameEdit/gameEditUtils'
 import { colors } from '../../theme/theme'
 
 export function GameDetailsSummaryPanel(props: {
@@ -124,7 +124,7 @@ export function GameDetailsSummaryPanel(props: {
             {game.weight ? (
               <Chip
                 label={`${getComplexityLabel(game.weight)} (${game.weight.toFixed(1)}/5)`}
-                sx={{ bgcolor: getComplexityColor(game.weight), color: 'white', height: 28 }}
+                sx={statChipSx}
               />
             ) : null}
             {game.bestWith ? (

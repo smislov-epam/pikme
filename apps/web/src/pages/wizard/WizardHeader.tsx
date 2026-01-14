@@ -10,14 +10,16 @@ import {
 import SettingsIcon from '@mui/icons-material/Settings'
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
+import BackupIcon from '@mui/icons-material/Backup'
 import { colors } from '../../theme/theme'
 
 export function WizardHeader(props: {
   onOpenClearDialog: () => void
+  onOpenBackup: () => void
   onOpenSettings: () => void
   onOpenHelp: () => void
 }) {
-  const { onOpenClearDialog, onOpenSettings, onOpenHelp } = props
+  const { onOpenClearDialog, onOpenBackup, onOpenSettings, onOpenHelp } = props
 
   const iconButtonSx = {
     width: 40,
@@ -72,6 +74,12 @@ export function WizardHeader(props: {
         <Tooltip title="Clear all data">
           <IconButton onClick={onOpenClearDialog} sx={{ ...iconButtonSx, color: 'error.main' }}>
             <DeleteForeverIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+
+        <Tooltip title="Backup & Restore">
+          <IconButton onClick={onOpenBackup} sx={{ ...iconButtonSx, color: 'primary.main' }}>
+            <BackupIcon fontSize="small" />
           </IconButton>
         </Tooltip>
 

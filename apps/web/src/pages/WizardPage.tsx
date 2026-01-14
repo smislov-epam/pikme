@@ -13,6 +13,7 @@ import { WizardStepContent } from './wizard/WizardStepContent'
 import { BggApiKeyDialog } from '../components/BggApiKeyDialog'
 import { SaveNightDialog } from '../components/SaveNightDialog'
 import { HelpWalkthroughDialog } from '../components/HelpWalkthroughDialog'
+import { BackupRestoreDialog } from '../components/BackupRestoreDialog'
 import { useWizardState } from '../hooks/useWizardState'
 import { clearAllData } from '../db/db'
 import { colors } from '../theme/theme'
@@ -25,6 +26,7 @@ export default function WizardPage() {
   const [showSaveDialog, setShowSaveDialog] = useState(false)
   const [showClearDialog, setShowClearDialog] = useState(false)
   const [showHelpDialog, setShowHelpDialog] = useState(false)
+  const [showBackupDialog, setShowBackupDialog] = useState(false)
 
   const wizard = useWizardState()
   const toast = useToast()
@@ -124,6 +126,7 @@ export default function WizardPage() {
     >
       <WizardHeader
         onOpenClearDialog={() => setShowClearDialog(true)}
+        onOpenBackup={() => setShowBackupDialog(true)}
         onOpenSettings={() => setShowApiKeyDialog(true)}
         onOpenHelp={() => setShowHelpDialog(true)}
       />
@@ -152,6 +155,8 @@ export default function WizardPage() {
           setShowHelpDialog(false)
         }}
       />
+
+      <BackupRestoreDialog open={showBackupDialog} onClose={() => setShowBackupDialog(false)} />
 
       {/* Main Content */}
       <Container maxWidth="md" sx={{ pb: 12, pt: 3, maxWidth: { lg: 1120 } }}>

@@ -216,6 +216,9 @@ export function useWizardState(): WizardState & WizardActions {
             const loadedUsers: UserRecord[] = []
             for (const username of persisted.usernames) {
               let user = await dbService.getUser(username)
+              if (user?.isDeleted) {
+                continue
+              }
               if (!user) {
                 user = await dbService.createLocalUser(username, username, loadedUsers.length === 0)
               }
@@ -525,12 +528,25 @@ export function useWizardState(): WizardState & WizardActions {
       let user: UserRecord
       
       if (existingUser) {
-        // User exists - add them to session with their existing data
-        user = existingUser
-        // If this should be organizer (first user in session), update them
-        if (isOrganizer && !existingUser.isOrganizer) {
-          await dbService.setUserAsOrganizer(name)
-          user = { ...existingUser, isOrganizer: true }
+        if (existingUser.isDeleted) {
+          // Revive soft-deleted user so they rejoin autocomplete/session cleanly
+          user = await dbService.upsertUser({
+            ...existingUser,
+            isDeleted: false,
+            isOrganizer: isOrganizer ?? existingUser.isOrganizer,
+            isBggUser: false,
+          })
+          setExistingLocalUsers((prev) =>
+            prev.some((u) => u.username === user.username) ? prev : [...prev, user]
+          )
+        } else {
+          // User exists - add them to session with their existing data
+          user = existingUser
+          // If this should be organizer (first user in session), update them
+          if (isOrganizer && !existingUser.isOrganizer) {
+            await dbService.setUserAsOrganizer(name)
+            user = { ...existingUser, isOrganizer: true }
+          }
         }
       } else {
         // New user - create them
@@ -614,6 +630,25 @@ export function useWizardState(): WizardState & WizardActions {
       await dbService.deleteUser(username)
       // Remove from state
       removeUser(username)
+      // Also drop any games that are only owned by the deleted user
+      setGameOwners((prevOwners) => {
+        const nextOwners: Record<number, string[]> = {}
+        for (const [bggId, owners] of Object.entries(prevOwners)) {
+          const remaining = owners.filter((u) => u !== username)
+          if (remaining.length > 0) {
+            nextOwners[Number(bggId)] = remaining
+          }
+        }
+        // Remove session games that no longer have owners
+        const withoutOwner = Object.keys(prevOwners)
+          .map((id) => Number(id))
+          .filter((id) => !nextOwners[id])
+        if (withoutOwner.length) {
+          setSessionGameIds((prev) => prev.filter((id) => !withoutOwner.includes(id)))
+        }
+        return nextOwners
+      })
+      setExistingLocalUsers((prev) => prev.filter((u) => u.username !== username))
     } catch (err) {
       setUserError(err instanceof Error ? err.message : 'Failed to delete user')
     }

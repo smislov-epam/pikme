@@ -55,8 +55,6 @@ describe('ResultStep responsive header copy', () => {
     onLayoutModeChange: vi.fn(),
     onPromoteAlternative: vi.fn(),
     onSaveNight: vi.fn(),
-    onExcludeGameFromSession: vi.fn(),
-    onUndoExcludeGameFromSession: vi.fn(),
   }
 
   it('hides header and subheader on narrow screens', () => {

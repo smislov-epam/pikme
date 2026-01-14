@@ -104,8 +104,6 @@ export function WizardStepContent(props: {
           onLayoutModeChange={wizard.setLayoutMode}
           onPromoteAlternative={wizard.promoteAlternativeToTopPick}
           onSaveNight={onOpenSaveDialog}
-          onExcludeGameFromSession={wizard.excludeGameFromSession}
-          onUndoExcludeGameFromSession={wizard.undoExcludeGameFromSession}
         />
       )
     default:

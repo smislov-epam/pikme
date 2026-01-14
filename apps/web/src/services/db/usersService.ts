@@ -5,6 +5,7 @@ export async function createBggUser(username: string): Promise<UserRecord> {
   const record: UserRecord = {
     username,
     isBggUser: true,
+    isDeleted: false,
   }
 
   await db.users.put(record)
@@ -21,6 +22,7 @@ export async function createLocalUser(
     displayName,
     isBggUser: false,
     isOrganizer,
+    isDeleted: false,
   }
 
   await db.users.put(record)
@@ -39,7 +41,7 @@ export async function setUserAsOrganizer(username: string): Promise<void> {
 
 export async function getOrganizer(): Promise<UserRecord | undefined> {
   const users = await db.users.toArray()
-  return users.find((u) => u.isOrganizer)
+  return users.find((u) => u.isOrganizer && !u.isDeleted)
 }
 
 export async function upsertUser(
@@ -50,6 +52,7 @@ export async function upsertUser(
     ...existing,
     ...user,
     isBggUser: user.isBggUser ?? existing?.isBggUser ?? true,
+    isDeleted: false,
   }
 
   await db.users.put(record)
@@ -63,16 +66,17 @@ export async function getUser(
 }
 
 export async function getAllUsers(): Promise<UserRecord[]> {
-  return db.users.toArray()
+  const all = await db.users.toArray()
+  return all.filter((u) => !u.isDeleted)
 }
 
 export async function getBggUsers(): Promise<UserRecord[]> {
-  return db.users.where('isBggUser').equals(1).toArray()
+  return db.users.where('isBggUser').equals(1).filter((u) => !u.isDeleted).toArray()
 }
 
 export async function getLocalUsers(): Promise<UserRecord[]> {
   const allUsers = await db.users.toArray()
-  return allUsers.filter(u => !u.isBggUser)
+  return allUsers.filter(u => !u.isBggUser && !u.isDeleted)
 }
 
 export async function updateUserLastSync(username: string): Promise<void> {
@@ -89,13 +93,9 @@ export async function updateUserOwnedCount(
 }
 
 export async function deleteUser(username: string): Promise<void> {
-  await db.transaction(
-    'rw',
-    [db.users, db.userGames, db.userPreferences],
-    async () => {
-      await db.userGames.where('username').equals(username).delete()
-      await db.userPreferences.where('username').equals(username).delete()
-      await db.users.delete(username)
-    },
-  )
+  await db.transaction('rw', [db.users, db.userGames, db.userPreferences], async () => {
+    await db.userGames.where('username').equals(username).delete()
+    await db.userPreferences.where('username').equals(username).delete()
+    await db.users.update(username, { isDeleted: true, isOrganizer: false })
+  })
 }

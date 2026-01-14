@@ -1,8 +1,12 @@
 import { Box, Chip, IconButton, Stack, Tooltip, Typography } from '@mui/material'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import CloseIcon from '@mui/icons-material/Close'
+import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined'
+import ScheduleOutlinedIcon from '@mui/icons-material/ScheduleOutlined'
+import StarOutlinedIcon from '@mui/icons-material/StarOutlined'
 import type { GameRecord } from '../../db/types'
 import type { ReactNode } from 'react'
+import { StatPill } from '../ui/StatPill'
 
 export interface GameRowProps {
   game: GameRecord
@@ -69,20 +73,19 @@ export function GameRow({
             {game.name}
           </Typography>
           {!isCompact ? (
-            <Stack direction="row" spacing={1} alignItems="center">
-              {!hidePlayerCount && game.minPlayers && game.maxPlayers && (
-                <Typography variant="caption" color="text.secondary">
-                  👥 {game.minPlayers === game.maxPlayers ? game.minPlayers : `${game.minPlayers}-${game.maxPlayers}`}
-                </Typography>
-              )}
-              {(game.minPlayTimeMinutes || game.maxPlayTimeMinutes || game.playingTimeMinutes) && (
-                <Typography variant="caption" color="text.secondary">
-                  ⏱️ {formatPlayTime(game)}
-                </Typography>
-              )}
-              {game.averageRating && (
-                <Typography variant="caption" color="text.secondary">⭐ {game.averageRating.toFixed(1)}</Typography>
-              )}
+            <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap">
+              {!hidePlayerCount && game.minPlayers && game.maxPlayers ? (
+                <StatPill
+                  icon={<GroupsOutlinedIcon />}
+                  label={game.minPlayers === game.maxPlayers ? `${game.minPlayers}` : `${game.minPlayers}-${game.maxPlayers}`}
+                />
+              ) : null}
+              {(game.minPlayTimeMinutes || game.maxPlayTimeMinutes || game.playingTimeMinutes) ? (
+                <StatPill icon={<ScheduleOutlinedIcon />} label={formatPlayTime(game)} />
+              ) : null}
+              {game.averageRating ? (
+                <StatPill icon={<StarOutlinedIcon />} label={game.averageRating.toFixed(1)} />
+              ) : null}
             </Stack>
           ) : null}
         </Box>

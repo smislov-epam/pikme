@@ -4,10 +4,8 @@ import {
   CardContent,
   Chip,
   Divider,
-  IconButton,
   LinearProgress,
   Stack,
-  Tooltip,
   Typography,
   alpha,
 } from '@mui/material'
@@ -15,7 +13,6 @@ import TrophyIcon from '@mui/icons-material/EmojiEvents'
 import GroupsIcon from '@mui/icons-material/Groups'
 import ScheduleIcon from '@mui/icons-material/Schedule'
 import PsychologyIcon from '@mui/icons-material/Psychology'
-import CloseIcon from '@mui/icons-material/Close'
 import { colors } from '../../../theme/theme'
 import type { WizardFilters } from '../../../store/wizardTypes'
 import type { GameWithScore } from '../ResultStep'
@@ -24,15 +21,15 @@ export function TonightsPickCard(props: {
   topPick: GameWithScore
   filters: WizardFilters
   onOpenDetails?: () => void
-  onExcludeFromSession?: () => void
 }) {
-  const { topPick, filters, onOpenDetails, onExcludeFromSession } = props
-  const bgImage = topPick.game.thumbnail
+  const { topPick, filters, onOpenDetails } = props
+  const bgImage = topPick.game.image || topPick.game.thumbnail || '/vite.svg'
 
   return (
     <Card
       sx={{
-        background: `linear-gradient(135deg, ${colors.oceanBlue} 0%, ${colors.navyBlue} 100%)`,
+        background: 'transparent',
+        backgroundColor: 'transparent',
         color: 'white',
         position: 'relative',
         overflow: 'visible',
@@ -60,28 +57,26 @@ export function TonightsPickCard(props: {
           zIndex: 0,
         }}
       >
-        {bgImage ? (
-          <Box
-            sx={{
-              position: 'absolute',
-              inset: 0,
-              backgroundImage: `url(${bgImage})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              opacity: 0.42,
-              transform: 'scale(1.05)',
-              filter: 'saturate(1.15) contrast(1.1)',
-            }}
-          />
-        ) : null}
-
-        {/* Material / liquid overlay for text readability */}
         <Box
           sx={{
             position: 'absolute',
             inset: 0,
-            background: `linear-gradient(135deg, ${alpha(colors.oceanBlue, 0.72)} 0%, ${alpha(colors.navyBlue, 0.78)} 55%, rgba(0,0,0,0.22) 100%)`,
-            backdropFilter: 'blur(3px)',
+            backgroundImage: `url("${bgImage}")`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            filter: 'saturate(1.05) contrast(1.03)',
+          }}
+        />
+
+        {/* Blue gradient overlay for readability */}
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            background: `linear-gradient(90deg, ${alpha(colors.oceanBlue, 0.7)} 0%, ${alpha(colors.oceanBlue, 0.85)} 55%, ${alpha(colors.navyBlue, 0.97)} 80%, ${colors.navyBlue} 100%)`,
+            backdropFilter: 'blur(2px)',
+            mixBlendMode: 'normal',
           }}
         />
       </Box>
@@ -131,30 +126,6 @@ export function TonightsPickCard(props: {
             sx={{ fontWeight: 700, alignSelf: 'flex-start', bgcolor: colors.sand, color: colors.navyBlue }}
           />
         </Stack>
-
-        {onExcludeFromSession ? (
-          <Box sx={{ position: 'absolute', top: 12, right: 12, zIndex: 2 }}>
-            <Tooltip title="Remove from session">
-              <IconButton
-                size="small"
-                aria-label="Remove from session"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onExcludeFromSession()
-                }}
-                sx={{
-                  width: 44,
-                  height: 44,
-                  color: 'white',
-                  bgcolor: 'rgba(0,0,0,0.18)',
-                  '&:hover': { bgcolor: 'rgba(0,0,0,0.28)' },
-                }}
-              >
-                <CloseIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          </Box>
-        ) : null}
 
         <Stack direction="row" flexWrap="wrap" gap={1} mb={3}>
           {topPick.matchReasons.map((reason, i) => (

@@ -1,4 +1,4 @@
-import { Box, Button, Chip, IconButton, Typography } from '@mui/material'
+import { Box, Button, IconButton, Typography } from '@mui/material'
 import { useDraggable } from '@dnd-kit/core'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -9,6 +9,7 @@ import ThumbDownAltIcon from '@mui/icons-material/ThumbDownAlt'
 import ThumbDownOffAltIcon from '@mui/icons-material/ThumbDownOffAlt'
 import type { GameRecord } from '../../../db/types'
 import { colors } from '../../../theme/theme'
+import { StatPill } from '../../ui/StatPill'
 
 export interface PreferenceRowCardProps {
   game: GameRecord
@@ -119,7 +120,7 @@ export function PreferenceRowCard({
       </Box>
 
       {rank !== undefined ? (
-        <Chip label={`#${rank}`} size="small" color="primary" sx={{ height: 20, minWidth: 44, fontWeight: 800 }} />
+        <StatPill label={`#${rank}`} sx={{ minWidth: 44 }} />
       ) : null}
 
       {onRank && nextRank ? (

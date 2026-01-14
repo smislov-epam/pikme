@@ -1,10 +1,11 @@
-import { Card, CardContent, Chip, Stack, Typography } from '@mui/material'
+import { Card, CardContent, Stack, Typography } from '@mui/material'
 import LeaderboardIcon from '@mui/icons-material/Leaderboard'
 import type { GameWithScore } from '../ResultStep'
 import { AlternativeCard } from './AlternativeCard'
 import type { LayoutMode } from '../../../services/storage/uiPreferences'
 import { GameRow } from '../GameRow'
 import { LayoutToggle } from '../../LayoutToggle'
+import { StatPill } from '../../ui/StatPill'
 
 export function AlternativesSection(props: {
   alternatives: GameWithScore[]
@@ -13,9 +14,8 @@ export function AlternativesSection(props: {
   onLayoutModeChange?: (mode: LayoutMode) => void
   onPromoteAlternative: (bggId: number) => void
   onOpenDetails?: (game: GameWithScore['game']) => void
-  onExcludeGame: (game: GameWithScore['game']) => void
 }) {
-  const { alternatives, maxScore, layoutMode = 'standard', onLayoutModeChange, onPromoteAlternative, onOpenDetails, onExcludeGame } = props
+  const { alternatives, maxScore, layoutMode = 'standard', onLayoutModeChange, onPromoteAlternative, onOpenDetails } = props
 
   if (alternatives.length === 0) return null
 
@@ -46,11 +46,10 @@ export function AlternativesSection(props: {
                   hidePlayerCount
                   onRowClick={() => onPromoteAlternative(alt.game.bggId)}
                   onOpenDetails={undefined}
-                  onExcludeFromSession={() => onExcludeGame(alt.game)}
                   metaRight={(
                     <Stack direction="row" spacing={0.5} alignItems="center">
-                      <Chip label={`#${index + 2}`} size="small" color="primary" />
-                      <Chip label={`${alt.score.toFixed(1)} pts`} size="small" color="secondary" sx={{ fontWeight: 700 }} />
+                      <StatPill label={`#${index + 2}`} sx={{ minWidth: 44 }} />
+                      <StatPill label={`${alt.score.toFixed(1)} pts`} />
                     </Stack>
                   )}
                 />

@@ -223,6 +223,7 @@ export const theme = createTheme({
           fontWeight: 500,
           borderColor: alpha(colors.oceanBlue, 0.28),
           color: alpha(colors.navyBlue, 0.75),
+          backgroundColor: alpha(colors.skyBlue, 0.06),
           '&:hover': {
             borderColor: alpha(colors.oceanBlue, 0.5),
             backgroundColor: alpha(colors.skyBlue, 0.12),

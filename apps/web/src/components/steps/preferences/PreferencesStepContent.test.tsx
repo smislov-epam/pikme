@@ -52,4 +52,38 @@ describe('PreferencesStepContent', () => {
     expect(screen.queryByText(/Auto-sort by my rating/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/Mark rest neutral/i)).not.toBeInTheDocument()
   })
+
+  it('does not render a game in Top Picks when it is also disliked', () => {
+    const users: UserRecord[] = [{ username: 'alice', isBggUser: false }]
+    const games: GameRecord[] = [{ bggId: 1, name: 'Catan', lastFetchedAt: new Date().toISOString() }]
+
+    renderWithProviders(
+      <PreferencesStepContent
+        users={users}
+        games={games}
+        gameOwners={{}}
+        layoutMode="standard"
+        onLayoutModeChange={vi.fn()}
+        preferences={{
+          alice: [
+            {
+              username: 'alice',
+              bggId: 1,
+              rank: undefined,
+              isTopPick: true,
+              isDisliked: true,
+              updatedAt: new Date().toISOString(),
+            },
+          ],
+        }}
+        userRatings={{ alice: {} }}
+        onUpdatePreference={vi.fn()}
+        onReorderPreferences={vi.fn()}
+        onClearPreference={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText(/Top Picks \(0\)/i)).toBeInTheDocument()
+    expect(screen.getByText(/Disliked \(1\)/i)).toBeInTheDocument()
+  })
 })
