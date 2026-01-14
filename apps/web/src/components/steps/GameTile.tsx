@@ -153,9 +153,9 @@ function formatPlayTime(game: GameRecord): string {
   const min = game.minPlayTimeMinutes
   const max = game.maxPlayTimeMinutes
   const avg = game.playingTimeMinutes
-  if (min && max && min !== max) return `${min}-${max} min`
-  if (min) return `${min} min`
-  if (max) return `${max} min`
-  if (avg) return `${avg} min`
+  if (min && max && min !== max) return `${min}-${max}`
+  if (min) return `${min}`
+  if (max) return `${max}`
+  if (avg) return `${avg}`
   return ''
 }
