@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react'
 import CloseIcon from '@mui/icons-material/Close'
 import {
-  Alert,
   Box,
   Button,
   Chip,
@@ -11,6 +10,7 @@ import {
   DialogTitle,
   IconButton,
   Stack,
+  Typography,
 } from '@mui/material'
 import { HelpWalkthroughSections } from './help/HelpWalkthroughSections'
 
@@ -52,9 +52,15 @@ export function HelpWalkthroughDialog(props: {
         }}
       >
         <Stack spacing={2}>
-          <Alert severity="info">
-            Quick concept check: PIKME is <strong>local-first</strong> — your data stays in this browser.
-          </Alert>
+          <Box sx={{ bgcolor: 'primary.main', color: 'white', p: 2, borderRadius: 2 }}>
+            <Typography variant="h6" fontWeight={700} gutterBottom>
+              🎲 End the "what should we play?" debate forever
+            </Typography>
+            <Typography variant="body2">
+              PIKME brings peace to game night by guiding your group to a single pick everyone can enjoy. 
+              No more endless discussions — just a calm 4-step wizard that considers everyone's preferences.
+            </Typography>
+          </Box>
 
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
             <Chip label="Players" size="small" color="primary" />

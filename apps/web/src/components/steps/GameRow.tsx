@@ -1,4 +1,4 @@
-import { Box, Chip, IconButton, Stack, Tooltip, Typography } from '@mui/material'
+import { Box, IconButton, Stack, Tooltip, Typography } from '@mui/material'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import CloseIcon from '@mui/icons-material/Close'
 import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined'
@@ -21,7 +21,8 @@ export interface GameRowProps {
 
 export function GameRow({
   game,
-  owners,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  owners: _owners,
   variant = 'standard',
   hidePlayerCount,
   onRowClick,
@@ -91,13 +92,6 @@ export function GameRow({
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0, pr: isCompact ? 0.25 : 0 }}>
           {metaRight ? metaRight : null}
-          {!isCompact && owners.length > 0 ? (
-            <Chip
-              label={owners.length === 1 ? owners[0] : `${owners.length}`}
-              size="small"
-              sx={{ height: 20, fontSize: '0.65rem' }}
-            />
-          ) : null}
 
           {onExcludeFromSession ? (
             <Tooltip title="Remove from session">
@@ -138,9 +132,9 @@ function formatPlayTime(game: GameRecord): string {
   const min = game.minPlayTimeMinutes
   const max = game.maxPlayTimeMinutes
   const avg = game.playingTimeMinutes
-  if (min && max && min !== max) return `${min}-${max} min`
-  if (min) return `${min} min`
-  if (max) return `${max} min`
-  if (avg) return `${avg} min`
+  if (min && max && min !== max) return `${min}-${max}`
+  if (min) return `${min}`
+  if (max) return `${max}`
+  if (avg) return `${avg}`
   return ''
 }

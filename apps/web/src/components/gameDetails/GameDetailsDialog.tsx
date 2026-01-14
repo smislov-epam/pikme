@@ -1,18 +1,27 @@
+import { useState } from 'react'
 import {
+  Badge,
   Box,
   Button,
+  Collapse,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   IconButton,
+  Tooltip,
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
+import NotesIcon from '@mui/icons-material/Notes'
 import type { ReactElement } from 'react'
 import type { GameRecord, UserRecord } from '../../db/types'
 import { GameNotesPanel } from '../gameNotes/GameNotesPanel'
 import { GameOwnersPanel } from './GameOwnersPanel'
 import { GameDetailsSummaryPanel } from './GameDetailsSummaryPanel'
+import { useGameNotesCount } from '../../hooks/useGameNotesCount'
+
+/** Height of the collapsible notes panel in pixels */
+const NOTES_PANEL_HEIGHT = 200
 
 export type GameDetailsDialogProps = {
   open: boolean
@@ -37,6 +46,9 @@ export function GameDetailsDialog({
   onExcludeFromSession,
   onEdit,
 }: GameDetailsDialogProps): ReactElement | null {
+  const [showNotes, setShowNotes] = useState(false)
+  const notesCount = useGameNotesCount(game?.bggId ?? 0)
+
   if (!game) return null
 
   return (
@@ -50,7 +62,20 @@ export function GameDetailsDialog({
           pr: 1,
         }}
       >
-        Game details
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          Game details
+          <Tooltip title={showNotes ? 'Hide notes' : 'Show notes'}>
+            <IconButton
+              size="small"
+              onClick={() => setShowNotes(!showNotes)}
+              color={showNotes ? 'primary' : 'default'}
+            >
+              <Badge badgeContent={notesCount} color="primary" max={99}>
+                <NotesIcon fontSize="small" />
+              </Badge>
+            </IconButton>
+          </Tooltip>
+        </Box>
         <IconButton aria-label="Close" onClick={onClose} size="small" sx={{ color: 'error.main' }}>
           <CloseIcon fontSize="small" />
         </IconButton>
@@ -62,35 +87,26 @@ export function GameDetailsDialog({
           display: 'flex',
           flexDirection: 'column',
           gap: 2,
-          height: { xs: 'auto', sm: '72vh' },
-          overflow: { xs: 'auto', sm: 'hidden' },
+          maxHeight: { xs: '70vh', sm: '72vh' },
+          overflow: 'auto',
         }}
       >
         <GameDetailsSummaryPanel game={game} onEdit={onEdit} />
 
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: { xs: '1fr', sm: '3fr 1fr' },
-            gap: 2,
-            alignItems: 'stretch',
-            flex: 1,
-            minHeight: 0,
-          }}
-        >
-          <Box sx={{ minWidth: 0, height: '100%', minHeight: 0 }}>
-            <GameNotesPanel bggId={game.bggId} height="100%" />
+        <Collapse in={showNotes}>
+          <Box sx={{ minHeight: NOTES_PANEL_HEIGHT }}>
+            <GameNotesPanel bggId={game.bggId} height={NOTES_PANEL_HEIGHT} />
           </Box>
+        </Collapse>
 
-          <Box sx={{ minWidth: 0, height: '100%', minHeight: 0, overflow: 'auto' }}>
-            <GameOwnersPanel
-              game={game}
-              owners={owners}
-              users={users}
-              onAddOwner={onAddOwner}
-              onRemoveOwner={onRemoveOwner}
-            />
-          </Box>
+        <Box sx={{ minWidth: 0 }}>
+          <GameOwnersPanel
+            game={game}
+            owners={owners}
+            users={users}
+            onAddOwner={onAddOwner}
+            onRemoveOwner={onRemoveOwner}
+          />
         </Box>
       </DialogContent>
 

@@ -67,7 +67,6 @@ export function GamePreviewGrid({
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const [searchQuery, setSearchQuery] = useState('')
-  const [filterPlayers, setFilterPlayers] = useState<number | null>(null)
   const [showCollectionGames, setShowCollectionGames] = useState(false)
   const [editingGame, setEditingGame] = useState<GameRecord | null>(null)
   const [detailsGame, setDetailsGame] = useState<GameRecord | null>(null)
@@ -85,15 +84,10 @@ export function GamePreviewGrid({
           g.mechanics?.some((m) => m.toLowerCase().includes(query))
       )
     }
-    if (filterPlayers) {
-      result = result.filter((g) => g.minPlayers && g.maxPlayers && filterPlayers >= g.minPlayers && filterPlayers <= g.maxPlayers)
-    }
     return result
-  }, [sessionGames, searchQuery, filterPlayers])
+  }, [sessionGames, searchQuery])
 
   if (totalGames === 0 && !showAddNewGamesAction) return null
-
-  const playerCounts = [2, 3, 4, 5, 6]
 
   return (
     <Card sx={{ bgcolor: 'background.paper' }}>
@@ -107,29 +101,12 @@ export function GamePreviewGrid({
             placeholder="Search..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            sx={{ flex: 1, maxWidth: 200 }}
+            sx={{ flex: 1 }}
             InputProps={{
               startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" color="action" /></InputAdornment>,
               sx: { height: 32, fontSize: '0.875rem' },
             }}
           />
-          <Stack direction="row" spacing={0.5} alignItems="center">
-            {playerCounts.map((count) => (
-              <IconButton
-                key={count}
-                size="small"
-                onClick={() => setFilterPlayers(filterPlayers === count ? null : count)}
-                sx={{
-                  width: 24, height: 24, fontSize: '0.7rem',
-                  bgcolor: filterPlayers === count ? 'primary.main' : 'action.hover',
-                  color: filterPlayers === count ? 'white' : 'text.secondary',
-                  '&:hover': { bgcolor: filterPlayers === count ? 'primary.dark' : 'action.selected' },
-                }}
-              >
-                {count}
-              </IconButton>
-            ))}
-          </Stack>
 
           {onLayoutModeChange ? (
             <Box sx={{ ml: 1 }}>

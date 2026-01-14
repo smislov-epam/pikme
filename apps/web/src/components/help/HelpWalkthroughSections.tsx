@@ -154,6 +154,29 @@ export function HelpWalkthroughSections(props: {
         )}
       </HelpTile>
 
+      <HelpTile title="Export & Import">
+        <Stack spacing={0.75}>
+          {bullet(
+            <>
+              Use the <Chip label="Backup & Restore" size="small" /> button in the header to export your data as a ZIP file.
+            </>,
+          )}
+          {bullet(<>Exports include all your players, games, notes, and saved game nights.</>)}
+          {bullet(
+            <>
+              When importing, choose <Chip label="Replace" size="small" /> to start fresh or <Chip label="Merge" size="small" /> to combine with existing data.
+            </>,
+          )}
+          {bullet(<>Merge mode uses timestamps to keep the most recent version of each record.</>)}
+          {bullet(<>Use export regularly to back up your data — especially before clearing browser storage.</>)}
+        </Stack>
+
+        {tipBox(
+          'Pro tip',
+          <>Export your data before switching devices or browsers. It's the only way to transfer your PIKME history.</>,
+        )}
+      </HelpTile>
+
       <HelpTile title="Local storage & privacy">
         <Stack spacing={0.75}>
           {bullet(<>Your data is stored only for this site in this browser.</>)}
