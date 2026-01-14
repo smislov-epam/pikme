@@ -2,7 +2,7 @@ import { db } from '../../db'
 import type { ParsedTables } from './parseTables'
 
 export async function applyReplace(payload: ParsedTables) {
-  await db.transaction('rw', db.games, db.gameNotes, db.users, db.userGames, db.userPreferences, db.wizardState, db.savedNights, async () => {
+  await db.transaction('rw', [db.games, db.gameNotes, db.users, db.userGames, db.userPreferences, db.wizardState, db.savedNights], async () => {
     await Promise.all([
       db.games.clear(),
       db.gameNotes.clear(),
@@ -25,13 +25,15 @@ export async function applyReplace(payload: ParsedTables) {
 }
 
 export async function applyMerge(payload: ParsedTables) {
-  await db.transaction('rw', db.games, db.gameNotes, db.users, db.userGames, db.userPreferences, db.wizardState, db.savedNights, async () => {
+  await db.transaction('rw', [db.games, db.gameNotes, db.users, db.userGames, db.userPreferences, db.wizardState, db.savedNights], async () => {
     for (const g of payload.games) {
       const existing = await db.games.get(g.bggId)
       if (!existing || (existing.lastFetchedAt ?? '') < (g.lastFetchedAt ?? '')) await db.games.put(g)
     }
 
-    if (payload.gameNotes.length) await db.gameNotes.bulkPut(payload.gameNotes.map((n) => ({ ...n, id: n.id ?? undefined })))
+    if (payload.gameNotes.length) {
+      await db.gameNotes.bulkPut(payload.gameNotes.map((n) => ({ ...n, id: n.id ?? undefined })))
+    }
 
     for (const u of payload.users) {
       const existing = await db.users.get(u.username)
@@ -67,6 +69,8 @@ export async function applyMerge(payload: ParsedTables) {
       if (!existing || (existing.updatedAt ?? '') < (payload.wizardState.updatedAt ?? '')) await db.wizardState.put(payload.wizardState)
     }
 
-    if (payload.savedNights.length) await db.savedNights.bulkPut(payload.savedNights.map((n) => ({ ...n, id: undefined })))
+    if (payload.savedNights.length) {
+      await db.savedNights.bulkPut(payload.savedNights.map((n) => ({ ...n, id: undefined })))
+    }
   })
 }

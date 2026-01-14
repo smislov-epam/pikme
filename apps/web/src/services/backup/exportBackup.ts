@@ -2,7 +2,7 @@ import Papa from 'papaparse'
 import { zipSync, strToU8 } from 'fflate'
 import { db } from '../../db'
 import { BACKUP_DEFAULT_NAME_PREFIX, BACKUP_FORMAT_VERSION, BACKUP_META_FILE } from './constants'
-import type { BackupExportResult, BackupMetadata, BackupProgress, BackupTable, ExportContext } from './types'
+import type { BackupExportResult, BackupMetadata, BackupProgress, ExportContext } from './types'
 
 function notify(onProgress: BackupProgress['stage'] extends never ? never : ((p: BackupProgress) => void) | undefined, p: BackupProgress) {
   if (onProgress) onProgress(p)
@@ -19,12 +19,12 @@ function json(obj: unknown) {
 function withArrayBuffer(blob: Blob, bytes: Uint8Array): Blob {
   const maybe = blob as Blob & { arrayBuffer?: () => Promise<ArrayBuffer> }
   if (!maybe.arrayBuffer) {
-    maybe.arrayBuffer = async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)
+    maybe.arrayBuffer = async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
   }
   return blob
 }
 
-function toCsv(fields: string[], rows: Record<string, unknown>[]) {
+function toCsv(fields: string[], rows: unknown[]) {
   return Papa.unparse(rows, { columns: fields, header: true })
 }
 
@@ -143,7 +143,7 @@ export async function exportBackupZip(onProgress?: (p: BackupProgress) => void):
 
   notify(onProgress, { stage: 'export', message: 'Bundling backup', total: tables.length, completed: tables.length })
   const zipped = zipSync(files, { level: 6 })
-  const blob = withArrayBuffer(new Blob([zipped], { type: 'application/zip' }), zipped)
+  const blob = withArrayBuffer(new Blob([zipped as BlobPart], { type: 'application/zip' }), zipped)
   const stamp = metadata.createdAt.replace(/[-:TZ]/g, '').slice(0, 12)
   const fileName = `${BACKUP_DEFAULT_NAME_PREFIX}-${stamp}.zip`
 

@@ -32,7 +32,7 @@ async function buildFileMap(input: File | File[] | Blob | Uint8Array): Promise<R
     try {
       const unzipped = unzipSync(data)
       if (unzipped && Object.keys(unzipped).length > 0) return unzipped
-    } catch (err) {
+    } catch {
       // not a zip; fall back to raw map
     }
     if (name.toLowerCase().endsWith('.zip') || looksLikeZip(data)) return unzipSync(data)

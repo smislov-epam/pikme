@@ -34,7 +34,7 @@ function readText(files: Record<string, Uint8Array>, name: string) {
 }
 
 export function collectTables(files: Record<string, Uint8Array>) {
-  const games = parseCsv(readText(files, 'games.csv')).map((r) => ({
+  const games = parseCsv(readText(files, 'games.csv')).map((r: Record<string, string>) => ({
     bggId: Number(r.bggId),
     name: r.name,
     yearPublished: num(r.yearPublished),
@@ -56,14 +56,14 @@ export function collectTables(files: Record<string, Uint8Array>) {
     lastFetchedAt: r.lastFetchedAt,
   }))
 
-  const gameNotes = parseCsv(readText(files, 'game_notes.csv')).map((r) => ({
+  const gameNotes = parseCsv(readText(files, 'game_notes.csv')).map((r: Record<string, string>) => ({
     id: num(r.id),
     bggId: Number(r.bggId),
     text: r.text,
     createdAt: r.createdAt,
   }))
 
-  const users = parseCsv(readText(files, 'users.csv')).map((r) => ({
+  const users = parseCsv(readText(files, 'users.csv')).map((r: Record<string, string>) => ({
     username: r.username,
     displayName: r.displayName || undefined,
     isBggUser: bool(r.isBggUser) ?? false,
@@ -72,7 +72,7 @@ export function collectTables(files: Record<string, Uint8Array>) {
     ownedCount: num(r.ownedCount),
   }))
 
-  const userGames = parseCsv(readText(files, 'user_games.csv')).map((r) => ({
+  const userGames = parseCsv(readText(files, 'user_games.csv')).map((r: Record<string, string>) => ({
     id: num(r.id),
     username: r.username,
     bggId: Number(r.bggId),
@@ -81,7 +81,7 @@ export function collectTables(files: Record<string, Uint8Array>) {
     addedAt: r.addedAt,
   }))
 
-  const userPreferences = parseCsv(readText(files, 'user_preferences.csv')).map((r) => ({
+  const userPreferences = parseCsv(readText(files, 'user_preferences.csv')).map((r: Record<string, string>) => ({
     id: num(r.id),
     username: r.username,
     bggId: Number(r.bggId),
@@ -96,7 +96,7 @@ export function collectTables(files: Record<string, Uint8Array>) {
     ? { id: 'singleton' as const, data: json(wizardStateRows[0].dataJson), updatedAt: wizardStateRows[0].updatedAt }
     : null
 
-  const savedNights = parseCsv(readText(files, 'saved_nights.csv')).map((r) => ({
+  const savedNights = parseCsv(readText(files, 'saved_nights.csv')).map((r: Record<string, string>) => ({
     id: num(r.id),
     createdAt: r.createdAt,
     data: json(r.dataJson),
