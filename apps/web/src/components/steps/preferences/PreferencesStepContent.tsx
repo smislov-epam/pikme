@@ -13,6 +13,7 @@ import {
   DragOverlay,
   KeyboardSensor,
   PointerSensor,
+  TouchSensor,
   closestCenter,
   useSensor,
   useSensors,
@@ -88,6 +89,7 @@ export function PreferencesStepContent({
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
 
@@ -115,15 +117,9 @@ export function PreferencesStepContent({
     return map
   }, [gamesWithPrefs])
 
-  const topPicks = useMemo(
-    () => gamesWithPrefs.filter((g) => g.pref?.isTopPick),
-    [gamesWithPrefs]
-  )
+  const disliked = useMemo(() => gamesWithPrefs.filter((g) => g.pref?.isDisliked), [gamesWithPrefs])
 
-  const disliked = useMemo(
-    () => gamesWithPrefs.filter((g) => g.pref?.isDisliked),
-    [gamesWithPrefs]
-  )
+  const topPicks = useMemo(() => gamesWithPrefs.filter((g) => g.pref?.isTopPick && !g.pref?.isDisliked), [gamesWithPrefs])
 
   const ranked = useMemo(
     () =>

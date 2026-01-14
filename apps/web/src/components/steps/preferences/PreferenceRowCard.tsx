@@ -91,7 +91,7 @@ export function PreferenceRowCard({
           onKeyDown={(e) => {
             dragOnKeyDown?.(e)
           }}
-          sx={{ display: 'flex', alignItems: 'center', color: 'text.disabled', cursor: 'grab' }}
+          sx={{ display: 'flex', alignItems: 'center', color: 'text.disabled', cursor: 'grab', touchAction: 'none', userSelect: 'none' }}
         >
           <DragIndicatorIcon fontSize="small" />
         </Box>

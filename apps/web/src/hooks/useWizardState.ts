@@ -12,6 +12,7 @@ import { loadWizardState, saveWizardState, clearWizardState } from '../services/
 import { loadLayoutMode, saveLayoutMode, type LayoutMode } from '../services/storage/uiPreferences'
 import { promotePickInSortedGames } from '../services/recommendation/promotePick'
 import { findReusableNight } from '../services/savedNights/findReusableNight'
+import { normalizePreferenceUpdate } from '../services/preferences/preferenceRules'
 
 export interface WizardState {
   // Step 1: Players
@@ -893,24 +894,17 @@ export function useWizardState(): WizardState & WizardActions {
       await dbService.updateGamePreference(username, bggId, update)
 
       setPreferences((prev) => {
+        const now = new Date().toISOString()
         const userPrefs = [...(prev[username] ?? [])]
         const existingIndex = userPrefs.findIndex((p) => p.bggId === bggId)
 
         if (existingIndex >= 0) {
-          userPrefs[existingIndex] = {
-            ...userPrefs[existingIndex],
-            ...update,
-            updatedAt: new Date().toISOString(),
-          }
+          const existing = userPrefs[existingIndex]
+          const normalized = normalizePreferenceUpdate(existing, update)
+          userPrefs[existingIndex] = { ...existing, ...normalized, updatedAt: now }
         } else {
-          userPrefs.push({
-            username,
-            bggId,
-            rank: update.rank,
-            isTopPick: update.isTopPick ?? false,
-            isDisliked: update.isDisliked ?? false,
-            updatedAt: new Date().toISOString(),
-          })
+          const normalized = normalizePreferenceUpdate(undefined, update)
+          userPrefs.push({ username, bggId, rank: normalized.rank, isTopPick: normalized.isTopPick, isDisliked: normalized.isDisliked, updatedAt: now })
         }
 
         return { ...prev, [username]: userPrefs }

@@ -80,6 +80,8 @@ export function GameCard({
             display: 'flex',
             alignItems: 'center',
             cursor: 'grab',
+            touchAction: 'none',
+            userSelect: 'none',
             color: 'text.disabled',
             '&:hover': { color: 'text.secondary' },
             '&:active': { cursor: 'grabbing' },
