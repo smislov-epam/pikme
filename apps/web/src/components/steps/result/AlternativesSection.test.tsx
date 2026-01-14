@@ -24,7 +24,6 @@ describe('AlternativesSection', () => {
         maxScore={5}
         layoutMode="simplified"
         onPromoteAlternative={() => {}}
-        onExcludeGame={() => {}}
         onOpenDetails={() => {}}
       />,
     )
