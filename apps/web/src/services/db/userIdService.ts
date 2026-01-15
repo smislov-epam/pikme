@@ -15,7 +15,8 @@
  * - Removing consecutive hyphens
  * - Trimming leading/trailing hyphens
  */
-export function normalizeToSlug(name: string): string {
+export function normalizeToSlug(name: string | undefined | null): string {
+  if (name == null) return ''
   return name
     .toLowerCase()
     .normalize('NFD')
@@ -49,7 +50,7 @@ export function generateRandomSuffix(length: number = 4): string {
  * @returns A unique internal ID string
  */
 export function generateInternalId(
-  name: string,
+  name: string | undefined | null,
   suffixLength: number = 4,
 ): string {
   const slug = normalizeToSlug(name)
