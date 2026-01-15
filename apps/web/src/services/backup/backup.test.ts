@@ -7,7 +7,7 @@ const now = '2024-01-01T00:00:00.000Z'
 
 async function seedBasic() {
   await db.games.add({ bggId: 1, name: 'Alpha', lastFetchedAt: now })
-  await db.users.add({ username: 'u1', isBggUser: false })
+  await db.users.add({ username: 'u1', internalId: 'u1-test', isBggUser: false })
   await db.userGames.add({ username: 'u1', bggId: 1, source: 'manual', addedAt: now })
   await db.userPreferences.add({ username: 'u1', bggId: 1, isTopPick: true, isDisliked: false, updatedAt: now })
   await db.savedNights.add({ createdAt: now, data: { name: 'Night', usernames: ['u1'], gameIds: [1], filters: {}, pick: { bggId: 1, name: 'Alpha', score: 1 }, alternatives: [] } })

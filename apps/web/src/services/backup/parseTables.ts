@@ -1,6 +1,7 @@
 import Papa from 'papaparse'
 import { strFromU8 } from 'fflate'
 import type { BackupTable } from './types'
+import { generateInternalId } from '../db/userIdService'
 
 export type ParsedTables = ReturnType<typeof collectTables>
 
@@ -65,6 +66,7 @@ export function collectTables(files: Record<string, Uint8Array>) {
 
   const users = parseCsv(readText(files, 'users.csv')).map((r: Record<string, string>) => ({
     username: r.username,
+    internalId: r.internalId || generateInternalId(r.displayName || r.username),
     displayName: r.displayName || undefined,
     isBggUser: bool(r.isBggUser) ?? false,
     isOrganizer: bool(r.isOrganizer),
