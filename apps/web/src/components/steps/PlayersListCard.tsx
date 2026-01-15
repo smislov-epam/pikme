@@ -4,6 +4,7 @@ import RefreshIcon from '@mui/icons-material/Refresh'
 import PersonIcon from '@mui/icons-material/Person'
 import type { UserRecord } from '../../db/types'
 import { colors } from '../../theme/theme'
+import { getDisambiguatedLabel } from '../../services/db/userIdService'
 
 export function PlayersListCard(props: {
   users: UserRecord[]
@@ -22,6 +23,7 @@ export function PlayersListCard(props: {
         <Stack direction="row" flexWrap="wrap" gap={1}>
           {users.map((user) => {
             const userGameCount = Object.values(gameOwners).filter((owners) => owners.includes(user.username)).length
+            const displayLabel = getDisambiguatedLabel(user, users)
 
             return (
               <Chip
@@ -30,7 +32,7 @@ export function PlayersListCard(props: {
                 label={
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                     {user.isOrganizer && <StarIcon sx={{ fontSize: 16, color: '#B8860B' }} />}
-                    {user.displayName || user.username}
+                    {displayLabel}
                     {user.isOrganizer && (
                       <Typography variant="caption" sx={{ opacity: 0.8, fontWeight: 600 }}>
                         (Host)

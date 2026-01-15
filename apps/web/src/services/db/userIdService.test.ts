@@ -5,6 +5,9 @@ import {
   generateInternalId,
   extractSlugFromId,
   isSameBaseUser,
+  extractSuffixFromId,
+  findUsersWithSameName,
+  getDisambiguatedLabel,
 } from './userIdService'
 
 describe('userIdService', () => {
@@ -175,6 +178,92 @@ describe('userIdService', () => {
       expect(isSameBaseUser('', 'john-a3x9')).toBe(false)
       expect(isSameBaseUser('john-a3x9', '')).toBe(false)
       expect(isSameBaseUser('', '')).toBe(false)
+    })
+  })
+
+  describe('extractSuffixFromId', () => {
+    it('extracts suffix from ID', () => {
+      expect(extractSuffixFromId('john-smith-a3x9')).toBe('a3x9')
+    })
+
+    it('handles single-word slug with suffix', () => {
+      expect(extractSuffixFromId('john-b4y0')).toBe('b4y0')
+    })
+
+    it('returns empty for ID without hyphen', () => {
+      expect(extractSuffixFromId('johnsmith')).toBe('')
+    })
+
+    it('returns empty for empty input', () => {
+      expect(extractSuffixFromId('')).toBe('')
+    })
+  })
+
+  describe('findUsersWithSameName', () => {
+    const users = [
+      { displayName: 'Adam', username: 'adam-a1b2', internalId: 'adam-a1b2' },
+      { displayName: 'Adam', username: 'adam-c3d4', internalId: 'adam-c3d4' },
+      { displayName: 'Bob', username: 'bob-e5f6', internalId: 'bob-e5f6' },
+      { displayName: undefined, username: 'charlie-g7h8', internalId: 'charlie-g7h8' },
+    ]
+
+    it('finds all users with matching display name', () => {
+      const result = findUsersWithSameName('Adam', users)
+      expect(result).toHaveLength(2)
+      expect(result[0].username).toBe('adam-a1b2')
+      expect(result[1].username).toBe('adam-c3d4')
+    })
+
+    it('is case-insensitive', () => {
+      const result = findUsersWithSameName('ADAM', users)
+      expect(result).toHaveLength(2)
+    })
+
+    it('returns empty array when no match', () => {
+      const result = findUsersWithSameName('David', users)
+      expect(result).toHaveLength(0)
+    })
+
+    it('matches against username when displayName is undefined', () => {
+      const result = findUsersWithSameName('charlie-g7h8', users)
+      expect(result).toHaveLength(1)
+      expect(result[0].username).toBe('charlie-g7h8')
+    })
+
+    it('trims whitespace', () => {
+      const result = findUsersWithSameName('  Adam  ', users)
+      expect(result).toHaveLength(2)
+    })
+  })
+
+  describe('getDisambiguatedLabel', () => {
+    const usersWithDuplicates = [
+      { displayName: 'Adam', username: 'adam-a1b2', internalId: 'adam-a1b2' },
+      { displayName: 'Adam', username: 'adam-c3d4', internalId: 'adam-c3d4' },
+      { displayName: 'Bob', username: 'bob-e5f6', internalId: 'bob-e5f6' },
+    ]
+
+    it('returns display name with suffix when duplicates exist', () => {
+      const label = getDisambiguatedLabel(usersWithDuplicates[0], usersWithDuplicates)
+      expect(label).toBe('Adam (#a1b2)')
+    })
+
+    it('returns plain display name when no duplicates', () => {
+      const label = getDisambiguatedLabel(usersWithDuplicates[2], usersWithDuplicates)
+      expect(label).toBe('Bob')
+    })
+
+    it('falls back to username when displayName is undefined', () => {
+      const userNoDisplayName = { username: 'user-xyz1', internalId: 'user-xyz1' }
+      const allUsers = [...usersWithDuplicates, userNoDisplayName]
+      const label = getDisambiguatedLabel(userNoDisplayName, allUsers)
+      expect(label).toBe('user-xyz1')
+    })
+
+    it('handles single user with no duplicates', () => {
+      const singleUser = [{ displayName: 'Charlie', username: 'charlie-abcd', internalId: 'charlie-abcd' }]
+      const label = getDisambiguatedLabel(singleUser[0], singleUser)
+      expect(label).toBe('Charlie')
     })
   })
 })

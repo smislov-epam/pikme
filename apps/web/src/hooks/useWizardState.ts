@@ -521,10 +521,10 @@ export function useWizardState(): WizardState & WizardActions {
     setPendingReuseGamesNightId(null)
   }, [pendingReuseGamesNightId])
 
-  const addLocalUser = useCallback(async (name: string, isOrganizer?: boolean) => {
+  const addLocalUser = useCallback(async (nameOrUsername: string, isOrganizer?: boolean) => {
     try {
-      // Check if user already exists in DB
-      const existingUser = await dbService.getUser(name)
+      // First check if this matches an existing username (internalId-based)
+      const existingUser = await dbService.getUser(nameOrUsername)
       let user: UserRecord
       
       if (existingUser) {
@@ -544,33 +544,39 @@ export function useWizardState(): WizardState & WizardActions {
           user = existingUser
           // If this should be organizer (first user in session), update them
           if (isOrganizer && !existingUser.isOrganizer) {
-            await dbService.setUserAsOrganizer(name)
+            await dbService.setUserAsOrganizer(nameOrUsername)
             user = { ...existingUser, isOrganizer: true }
           }
         }
       } else {
-        // New user - create them
-        user = await dbService.createLocalUser(name, name, isOrganizer)
+        // New user - create them with unique internalId-based username
+        // The displayName will be the user-provided name
+        user = await dbService.createLocalUser(nameOrUsername, undefined, isOrganizer)
         // Add to existing local users
         setExistingLocalUsers((prev) => [...prev, user])
+      }
+      
+      // Check if user is already in session
+      if (users.some(u => u.username === user.username)) {
+        return // Already in session, don't add again
       }
       
       setUsers((prev) => [...prev, user])
       
       // Load their preferences and ratings if they exist
-      const userPrefs = await dbService.getUserPreferences(name)
-      const userGameRecords = await dbService.getUserGames(name)
+      const userPrefs = await dbService.getUserPreferences(user.username)
+      const userGameRecords = await dbService.getUserGames(user.username)
       const ratings: Record<number, number | undefined> = {}
       for (const ug of userGameRecords) {
         ratings[ug.bggId] = ug.rating
       }
       
-      setPreferences((prev) => ({ ...prev, [name]: userPrefs }))
-      setUserRatings((prev) => ({ ...prev, [name]: ratings }))
+      setPreferences((prev) => ({ ...prev, [user.username]: userPrefs }))
+      setUserRatings((prev) => ({ ...prev, [user.username]: ratings }))
       
       // Load their games into the session
       if (userGameRecords.length > 0) {
-        const userGames = await dbService.getGamesForUsers([name])
+        const userGames = await dbService.getGamesForUsers([user.username])
         setGames((prev) => {
           const existingIds = new Set(prev.map(g => g.bggId))
           const newGames = userGames.filter(g => !existingIds.has(g.bggId))
@@ -584,7 +590,7 @@ export function useWizardState(): WizardState & WizardActions {
     } catch (err) {
       setUserError(err instanceof Error ? err.message : 'Failed to add user')
     }
-  }, [])
+  }, [users])
 
   const setOrganizer = useCallback(async (username: string) => {
     try {

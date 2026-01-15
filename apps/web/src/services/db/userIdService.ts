@@ -89,3 +89,59 @@ export function isSameBaseUser(id1: string, id2: string): boolean {
   if (!id1 || !id2) return false
   return extractSlugFromId(id1) === extractSlugFromId(id2)
 }
+
+/**
+ * Extracts the unique suffix from an internal ID.
+ * Used for displaying disambiguation information.
+ * 
+ * @param internalId - The internal ID to extract suffix from
+ * @returns The suffix portion (e.g., "a3x9" from "john-smith-a3x9")
+ */
+export function extractSuffixFromId(internalId: string): string {
+  if (!internalId) return ''
+  const parts = internalId.split('-')
+  if (parts.length <= 1) return ''
+  return parts[parts.length - 1]
+}
+
+/**
+ * Checks if a display name has duplicates among a list of users.
+ * Comparison is case-insensitive.
+ * 
+ * @param displayName - The display name to check
+ * @param users - Array of user objects with displayName and username
+ * @returns Array of users with matching display names
+ */
+export function findUsersWithSameName<T extends { displayName?: string; username: string }>(
+  displayName: string,
+  users: T[],
+): T[] {
+  const normalized = displayName.toLowerCase().trim()
+  return users.filter((u) => {
+    const uName = (u.displayName || u.username).toLowerCase().trim()
+    return uName === normalized
+  })
+}
+
+/**
+ * Gets a disambiguated display label for a user.
+ * If there are other users with the same name, appends the ID suffix.
+ * 
+ * @param user - The user to get a label for
+ * @param allUsers - All users to check for duplicates
+ * @returns Display label, possibly with suffix for disambiguation
+ */
+export function getDisambiguatedLabel<T extends { displayName?: string; username: string; internalId: string }>(
+  user: T,
+  allUsers: T[],
+): string {
+  const baseName = user.displayName || user.username
+  const duplicates = findUsersWithSameName(baseName, allUsers)
+  
+  if (duplicates.length > 1) {
+    const suffix = extractSuffixFromId(user.internalId)
+    return suffix ? `${baseName} (#${suffix})` : baseName
+  }
+  
+  return baseName
+}

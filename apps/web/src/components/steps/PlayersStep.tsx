@@ -14,11 +14,12 @@ import { GamePreviewGrid } from './GamePreviewGrid'
 import { PlayersListCard } from './PlayersListCard'
 import { LocalAddGamesPanel } from './players/LocalAddGamesPanel'
 import { SavedNightPicker } from './players/SavedNightPicker'
-import { PlayersStepDialogs } from './players/PlayersStepDialogs'
+import { PlayersStepDialogs, type PendingDuplicateUser } from './players/PlayersStepDialogs'
 import { PlayersAddUserControls, type UserMode } from './players/PlayersAddUserControls.tsx'
 import { normalizePlayTime } from '../../services/bgg/normalizePlayTime'
 import { useToast } from '../../services/toast'
 import type { LayoutMode } from '../../services/storage/uiPreferences'
+import { findUsersWithSameName } from '../../services/db/userIdService'
 
 export type { ManualGameData }
 
@@ -88,6 +89,7 @@ export function PlayersStep({
   const [showAddGamesPanel, setShowAddGamesPanel] = useState(false)
   const [isFetchingGame, setIsFetchingGame] = useState(false)
   const [manualGame, setManualGame] = useState<ManualGameData>({ name: '', bggId: 0 })
+  const [pendingDuplicateUser, setPendingDuplicateUser] = useState<PendingDuplicateUser | null>(null)
 
   const showNotice = useCallback((message: string, severity: 'success' | 'info' | 'warning' = 'info') => {
     if (severity === 'success') toast.success(message)
@@ -98,22 +100,72 @@ export function PlayersStep({
   const localUsers = users.filter((u) => !u.isBggUser)
   const sortedUsers = useMemo(() => [...users].sort((a, b) => (a.isOrganizer && !b.isOrganizer ? -1 : b.isOrganizer && !a.isOrganizer ? 1 : 0)), [users])
   // Autocomplete options: existing local users not already in session (as objects for proper mapping)
+  // Include disambiguation suffix for users with duplicate names
   const autocompleteOptions = useMemo(() => {
     const sessionUsernames = new Set(users.map(u => u.username))
-    return existingLocalUsers
-      .filter(u => !sessionUsernames.has(u.username))
-      .map(u => ({ label: u.displayName || u.username, username: u.username }))
+    const availableUsers = existingLocalUsers.filter(u => !sessionUsernames.has(u.username))
+    
+    return availableUsers.map(u => {
+      const baseName = u.displayName || u.username
+      const duplicates = findUsersWithSameName(baseName, availableUsers)
+      
+      // Add suffix for disambiguation if there are duplicates
+      let label = baseName
+      if (duplicates.length > 1 && u.internalId) {
+        const suffix = u.internalId.split('-').pop()
+        if (suffix) {
+          label = `${baseName} (#${suffix})`
+        }
+      }
+      
+      return { label, username: u.username, internalId: u.internalId }
+    })
   }, [existingLocalUsers, users])
 
   const handleAddUser = async () => {
     if (!inputValue.trim()) return
-    if (mode === 'bgg') await onAddBggUser(inputValue.trim())
-    else {
+    if (mode === 'bgg') {
+      await onAddBggUser(inputValue.trim())
+    } else {
+      const trimmedName = inputValue.trim()
+      
+      // Check for existing users with the same name (not already in session)
+      const sessionUsernames = new Set(users.map(u => u.username))
+      const duplicates = findUsersWithSameName(trimmedName, existingLocalUsers)
+        .filter(u => !sessionUsernames.has(u.username))
+      
+      if (duplicates.length > 0) {
+        // Show confirmation dialog
+        setPendingDuplicateUser({ name: trimmedName, existingUsers: duplicates })
+        return
+      }
+      
+      // No duplicates - proceed to add new user
       const isOrganizer = users.length === 0
-      await onAddLocalUser(inputValue.trim(), isOrganizer)
-      setSelectedLocalUsers((prev) => [...prev, inputValue.trim()])
+      await onAddLocalUser(trimmedName, isOrganizer)
     }
     setInputValue('')
+  }
+
+  const handleSelectExistingUser = async (user: UserRecord) => {
+    const isOrganizer = users.length === 0
+    await onAddLocalUser(user.username, isOrganizer)
+    setSelectedLocalUsers((prev) => [...prev, user.username])
+    setPendingDuplicateUser(null)
+    setInputValue('')
+  }
+
+  const handleCreateNewDuplicateUser = async () => {
+    if (!pendingDuplicateUser) return
+    const isOrganizer = users.length === 0
+    // Create a new user with the same display name (will get unique username based on internalId)
+    await onAddLocalUser(pendingDuplicateUser.name, isOrganizer)
+    setPendingDuplicateUser(null)
+    setInputValue('')
+  }
+
+  const handleCancelDuplicateUser = () => {
+    setPendingDuplicateUser(null)
   }
 
   const toggleUserSelection = (username: string) => setSelectedLocalUsers((prev) => prev.includes(username) ? prev.filter((u) => u !== username) : [...prev, username])
@@ -208,6 +260,10 @@ export function PlayersStep({
         pendingReuseGamesNight={pendingReuseGamesNight}
         onConfirmReuseGamesFromNight={() => void onConfirmReuseGamesFromNight()}
         onDismissReuseGamesPrompt={onDismissReuseGamesPrompt}
+        pendingDuplicateUser={pendingDuplicateUser}
+        onSelectExistingUser={(user) => void handleSelectExistingUser(user)}
+        onCreateNewDuplicateUser={() => void handleCreateNewDuplicateUser()}
+        onCancelDuplicateUser={handleCancelDuplicateUser}
         isLoading={isLoading}
       />
 
