@@ -23,7 +23,7 @@ describe('AlternativesSection', () => {
         alternatives={alternatives}
         maxScore={5}
         layoutMode="simplified"
-        onPromoteAlternative={() => {}}
+        onPromoteAlternative={(_alt, _index) => {}}
         onOpenDetails={() => {}}
       />,
     )

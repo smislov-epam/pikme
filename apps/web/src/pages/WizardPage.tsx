@@ -18,6 +18,7 @@ import { useWizardState } from '../hooks/useWizardState'
 import { clearAllData } from '../db/db'
 import { colors } from '../theme/theme'
 import { useToast } from '../services/toast'
+import { trackWizardStepView } from '../services/analytics/googleAnalytics'
 
 export default function WizardPage() {
   const [activeStep, setActiveStep] = useState(0)
@@ -36,6 +37,16 @@ export default function WizardPage() {
     toast.error(wizard.userError)
     wizard.clearUserError()
   }, [toast, wizard])
+
+  useEffect(() => {
+    const stepName = wizardSteps[activeStep] ?? `Step ${activeStep + 1}`
+    trackWizardStepView(stepName, {
+      stepIndex: activeStep,
+      playerCount: wizard.users.length,
+      sessionGames: wizard.sessionGameIds.length,
+      filteredGames: wizard.filteredGames.length,
+    })
+  }, [activeStep, wizard.filteredGames.length, wizard.sessionGameIds.length, wizard.users.length])
 
   const handleClearAllData = async () => {
     await clearAllData()

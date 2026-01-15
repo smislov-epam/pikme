@@ -8,7 +8,7 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material'
-import { useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { GameRecord, UserRecord } from '../../db/types'
 import { colors } from '../../theme/theme'
 import type { WizardFilters } from '../../store/wizardTypes'
@@ -16,6 +16,7 @@ import { TonightsPickCard } from './result/TonightsPickCard'
 import { AlternativesSection } from './result/AlternativesSection'
 import { GameDetailsDialog } from '../gameDetails/GameDetailsDialog'
 import type { LayoutMode } from '../../services/storage/uiPreferences'
+import { trackAlternativePromoted, trackTonightsPickReady } from '../../services/analytics/googleAnalytics'
 
 export interface GameWithScore {
   game: GameRecord
@@ -50,9 +51,43 @@ export function ResultStep({
   const theme = useTheme()
   const isNarrow = useMediaQuery(theme.breakpoints.down('sm'))
   const [detailsGame, setDetailsGame] = useState<GameRecord | null>(null)
+  const lastTrackedPickRef = useRef<number | null>(null)
   const maxScore = Math.max(
     topPick?.score ?? 0,
     ...alternatives.map((a) => a.score)
+  )
+
+  useEffect(() => {
+    if (!topPick) {
+      lastTrackedPickRef.current = null
+      return
+    }
+    if (lastTrackedPickRef.current === topPick.game.bggId) return
+    trackTonightsPickReady({
+      bggId: topPick.game.bggId,
+      name: topPick.game.name,
+      score: topPick.score,
+      matchReasons: topPick.matchReasons,
+      playerCount: users.length,
+      filters,
+      alternativeCount: alternatives.length,
+    })
+    lastTrackedPickRef.current = topPick.game.bggId
+  }, [alternatives.length, filters, topPick, users.length])
+
+  const handlePromoteAlternative = useCallback(
+    (alternative: GameWithScore, index: number) => {
+      trackAlternativePromoted({
+        bggId: alternative.game.bggId,
+        name: alternative.game.name,
+        rank: index + 2,
+        score: alternative.score,
+        playerCount: users.length,
+        filters,
+      })
+      onPromoteAlternative(alternative.game.bggId)
+    },
+    [filters, onPromoteAlternative, users.length],
   )
 
   if (!topPick) {
@@ -125,7 +160,7 @@ export function ResultStep({
         maxScore={maxScore}
         layoutMode={layoutMode}
         onLayoutModeChange={onLayoutModeChange}
-        onPromoteAlternative={onPromoteAlternative}
+        onPromoteAlternative={handlePromoteAlternative}
         onOpenDetails={(game) => setDetailsGame(game)}
       />
 

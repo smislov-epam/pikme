@@ -12,7 +12,7 @@ export function AlternativesSection(props: {
   maxScore: number
   layoutMode?: LayoutMode
   onLayoutModeChange?: (mode: LayoutMode) => void
-  onPromoteAlternative: (bggId: number) => void
+  onPromoteAlternative: (alternative: GameWithScore, index: number) => void
   onOpenDetails?: (game: GameWithScore['game']) => void
 }) {
   const { alternatives, maxScore, layoutMode = 'standard', onLayoutModeChange, onPromoteAlternative, onOpenDetails } = props
@@ -44,7 +44,7 @@ export function AlternativesSection(props: {
                   owners={[]}
                   variant="compact"
                   hidePlayerCount
-                  onRowClick={() => onPromoteAlternative(alt.game.bggId)}
+                  onRowClick={() => onPromoteAlternative(alt, index)}
                   onOpenDetails={undefined}
                   metaRight={(
                     <Stack direction="row" spacing={0.5} alignItems="center">
@@ -62,7 +62,7 @@ export function AlternativesSection(props: {
                 score={alt.score}
                 maxScore={maxScore}
                 matchReasons={alt.matchReasons}
-                onPromote={() => onPromoteAlternative(alt.game.bggId)}
+                onPromote={() => onPromoteAlternative(alt, index)}
                 onOpenDetails={onOpenDetails ? () => onOpenDetails(alt.game) : undefined}
               />
             )
