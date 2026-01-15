@@ -16,7 +16,7 @@ import {
 
 export type UserMode = 'bgg' | 'local'
 
-export type PlayersAddUserControlsOption = { label: string; username: string }
+export type PlayersAddUserControlsOption = { label: string; username: string; internalId?: string }
 
 export interface PlayersAddUserControlsProps {
   mode: UserMode
