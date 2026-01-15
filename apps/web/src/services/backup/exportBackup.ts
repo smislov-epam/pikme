@@ -65,7 +65,7 @@ function mapGameNotes(ctx: ExportContext) {
 }
 
 function mapUsers(ctx: ExportContext) {
-  const fields = ['username', 'displayName', 'isBggUser', 'isOrganizer', 'lastSyncAt', 'ownedCount']
+  const fields = ['username', 'internalId', 'displayName', 'isBggUser', 'isOrganizer', 'lastSyncAt', 'ownedCount']
   const rows = ctx.users
   return { file: 'users.csv', fields, rows }
 }

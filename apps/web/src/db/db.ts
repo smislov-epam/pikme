@@ -8,6 +8,7 @@ import type {
   UserRecord,
   WizardStateRecord,
 } from './types'
+import { generateInternalId } from '../services/db/userIdService'
 
 export class PikmeDb extends Dexie {
   games!: Table<GameRecord, number>
@@ -106,6 +107,28 @@ export class PikmeDb extends Dexie {
           // Clear legacy field so UI doesn't show duplicate sources.
           await tx.table('games').update(game.bggId, { userNotes: undefined })
         }
+      })
+
+    this.version(5)
+      .stores({
+        games: 'bggId, name, lastFetchedAt',
+        gameNotes: '++id, bggId, createdAt',
+        users: 'username, internalId, isBggUser, lastSyncAt',
+        userGames: '++id, [username+bggId], username, bggId, source, addedAt',
+        userPreferences: '++id, [username+bggId], username, bggId, updatedAt',
+        wizardState: 'id, updatedAt',
+        savedNights: '++id, createdAt',
+      })
+      .upgrade((tx) => {
+        // Generate internalId for existing users
+        return tx
+          .table('users')
+          .toCollection()
+          .modify((user) => {
+            if (!user.internalId) {
+              user.internalId = generateInternalId(user.displayName ?? user.username)
+            }
+          })
       })
   }
 }

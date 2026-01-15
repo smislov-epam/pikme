@@ -49,7 +49,7 @@ describe('ResultStep responsive header copy', () => {
       complexityRange: { min: 1, max: 5 },
       ratingRange: { min: 0, max: 10 },
     },
-    users: [{ username: 'u1', isBggUser: false }],
+    users: [{ username: 'u1', internalId: 'u1-test', isBggUser: false }],
     gameOwners: {},
     layoutMode: 'standard' as const,
     onLayoutModeChange: vi.fn(),

@@ -26,6 +26,15 @@ export {
   upsertUser,
 } from './usersService'
 
+// User ID service
+export {
+  extractSlugFromId,
+  generateInternalId,
+  generateRandomSuffix,
+  isSameBaseUser,
+  normalizeToSlug,
+} from './userIdService'
+
 // User games service
 export {
   addGameToUser,

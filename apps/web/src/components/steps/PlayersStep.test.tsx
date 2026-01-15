@@ -35,7 +35,7 @@ describe('PlayersStep', () => {
   it('prompts for confirmation before loading a saved night', async () => {
     const onLoadSavedNight = vi.fn().mockResolvedValue(undefined)
 
-    const users: UserRecord[] = [{ username: 'Alice', isBggUser: false, isOrganizer: true }]
+    const users: UserRecord[] = [{ username: 'Alice', internalId: 'alice-test', isBggUser: false, isOrganizer: true }]
 
     renderWithProviders(
       <PlayersStep
@@ -98,7 +98,7 @@ describe('PlayersStep', () => {
   })
 
   it('shows and hides the Add New Games panel via the action button', async () => {
-    const users: UserRecord[] = [{ username: 'Alice', isBggUser: false, isOrganizer: true }]
+    const users: UserRecord[] = [{ username: 'Alice', internalId: 'alice-test', isBggUser: false, isOrganizer: true }]
 
     renderWithProviders(
       <PlayersStep

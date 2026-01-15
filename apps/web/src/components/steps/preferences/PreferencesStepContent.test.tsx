@@ -30,7 +30,7 @@ function renderWithProviders(ui: React.ReactElement) {
 
 describe('PreferencesStepContent', () => {
   it('shows the Layout toggle and does not show deprecated quick actions', () => {
-    const users: UserRecord[] = [{ username: 'alice', isBggUser: false }]
+    const users: UserRecord[] = [{ username: 'alice', internalId: 'alice-test', isBggUser: false }]
     const games: GameRecord[] = [{ bggId: 1, name: 'Catan', lastFetchedAt: new Date().toISOString() }]
 
     renderWithProviders(
@@ -54,7 +54,7 @@ describe('PreferencesStepContent', () => {
   })
 
   it('does not render a game in Top Picks when it is also disliked', () => {
-    const users: UserRecord[] = [{ username: 'alice', isBggUser: false }]
+    const users: UserRecord[] = [{ username: 'alice', internalId: 'alice-test', isBggUser: false }]
     const games: GameRecord[] = [{ bggId: 1, name: 'Catan', lastFetchedAt: new Date().toISOString() }]
 
     renderWithProviders(

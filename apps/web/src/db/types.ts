@@ -29,6 +29,7 @@ export interface GameNoteRecord {
 
 export interface UserRecord {
   username: string
+  internalId: string // Unique internal identifier (slug-based with random suffix)
   displayName?: string
   isBggUser: boolean
   isOrganizer?: boolean

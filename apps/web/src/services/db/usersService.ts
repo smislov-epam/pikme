@@ -1,9 +1,11 @@
 import { db } from '../../db'
 import type { UserRecord } from '../../db/types'
+import { generateInternalId } from './userIdService'
 
 export async function createBggUser(username: string): Promise<UserRecord> {
   const record: UserRecord = {
     username,
+    internalId: generateInternalId(username),
     isBggUser: true,
     isDeleted: false,
   }
@@ -19,6 +21,7 @@ export async function createLocalUser(
 ): Promise<UserRecord> {
   const record: UserRecord = {
     username,
+    internalId: generateInternalId(displayName ?? username),
     displayName,
     isBggUser: false,
     isOrganizer,
@@ -45,12 +48,13 @@ export async function getOrganizer(): Promise<UserRecord | undefined> {
 }
 
 export async function upsertUser(
-  user: Omit<UserRecord, 'isBggUser'> & { isBggUser?: boolean },
+  user: Omit<UserRecord, 'isBggUser' | 'internalId'> & { isBggUser?: boolean; internalId?: string },
 ): Promise<UserRecord> {
   const existing = await db.users.get(user.username)
   const record: UserRecord = {
     ...existing,
     ...user,
+    internalId: user.internalId ?? existing?.internalId ?? generateInternalId(user.displayName ?? user.username),
     isBggUser: user.isBggUser ?? existing?.isBggUser ?? true,
     isDeleted: false,
   }
