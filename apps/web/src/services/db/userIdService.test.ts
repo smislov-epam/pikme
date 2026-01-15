@@ -134,6 +134,10 @@ describe('userIdService', () => {
     it('handles multi-hyphen names', () => {
       expect(extractSlugFromId('john-paul-smith-a3x9')).toBe('john-paul-smith')
     })
+
+    it('returns empty string for empty input', () => {
+      expect(extractSlugFromId('')).toBe('')
+    })
   })
 
   describe('isSameBaseUser', () => {
@@ -147,6 +151,12 @@ describe('userIdService', () => {
 
     it('handles single-word names', () => {
       expect(isSameBaseUser('john-a3x9', 'john-b4y0')).toBe(true)
+    })
+
+    it('returns false for empty inputs', () => {
+      expect(isSameBaseUser('', 'john-a3x9')).toBe(false)
+      expect(isSameBaseUser('john-a3x9', '')).toBe(false)
+      expect(isSameBaseUser('', '')).toBe(false)
     })
   })
 })

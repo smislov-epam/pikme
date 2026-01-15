@@ -64,8 +64,12 @@ export function generateInternalId(
 /**
  * Extracts the base slug (without suffix) from an internal ID.
  * Useful for display or comparison purposes.
+ * 
+ * @param internalId - The internal ID to extract slug from
+ * @returns The slug portion, or the original string if no suffix found
  */
 export function extractSlugFromId(internalId: string): string {
+  if (!internalId) return ''
   const parts = internalId.split('-')
   if (parts.length <= 1) return internalId
   // Remove the last part (suffix)
@@ -75,7 +79,12 @@ export function extractSlugFromId(internalId: string): string {
 /**
  * Checks if two internal IDs are derived from the same base name.
  * This compares the slug portion, ignoring the random suffix.
+ * 
+ * @param id1 - First internal ID
+ * @param id2 - Second internal ID
+ * @returns true if both IDs share the same base slug
  */
 export function isSameBaseUser(id1: string, id2: string): boolean {
+  if (!id1 || !id2) return false
   return extractSlugFromId(id1) === extractSlugFromId(id2)
 }
