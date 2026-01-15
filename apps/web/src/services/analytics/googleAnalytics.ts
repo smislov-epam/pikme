@@ -65,12 +65,25 @@ function trackEvent(eventName: string, params?: Record<string, unknown>) {
   gtag('event', eventName, sanitizeParams(params) ?? {})
 }
 
+export function trackPageView(title?: string) {
+  const gtag = getGtag()
+  if (!gtag || typeof window === 'undefined') return
+  const params: Record<string, unknown> = {
+    page_location: window.location.href,
+    page_path: window.location.pathname,
+  }
+  if (title) params.page_title = title
+  gtag('event', 'page_view', params)
+}
+
 export function trackWizardStepView(stepName: string, context: {
   stepIndex: number
   playerCount: number
   sessionGames: number
   filteredGames: number
 }) {
+  // Track as both a custom event and a page view for better GA reporting
+  trackPageView(`Pikme - ${stepName}`)
   trackEvent('wizard_step_view', {
     step_name: stepName,
     step_index: context.stepIndex,
@@ -118,5 +131,30 @@ export function trackAlternativePromoted(payload: {
     score: roundScore(payload.score),
     player_count: payload.playerCount,
     filters_mode: payload.filters.mode,
+  })
+}
+
+/**
+ * Tracks when a user saves a game night configuration.
+ * Records information about the saved game night including player count,
+ * number of games in the session, and metadata about the save action.
+ *
+ * @param payload - The game night save event data
+ * @param payload.playerCount - Number of players in the game night
+ * @param payload.sessionGames - Number of games in the session
+ * @param payload.topPickName - Name of the recommended top pick game (if available)
+ * @param payload.hasDescription - Whether the user provided a description for the saved night
+ */
+export function trackGameNightSaved(payload: {
+  playerCount: number
+  sessionGames: number
+  topPickName?: string
+  hasDescription: boolean
+}) {
+  trackEvent('game_night_saved', {
+    player_count: payload.playerCount,
+    session_games: payload.sessionGames,
+    top_pick_name: payload.topPickName,
+    has_description: payload.hasDescription,
   })
 }

@@ -18,7 +18,7 @@ import { useWizardState } from '../hooks/useWizardState'
 import { clearAllData } from '../db/db'
 import { colors } from '../theme/theme'
 import { useToast } from '../services/toast'
-import { trackWizardStepView } from '../services/analytics/googleAnalytics'
+import { trackGameNightSaved, trackWizardStepView } from '../services/analytics/googleAnalytics'
 
 export default function WizardPage() {
   const [activeStep, setActiveStep] = useState(0)
@@ -92,6 +92,12 @@ export default function WizardPage() {
     try {
       await wizard.saveNight(name, description)
       toast.success('Game night saved')
+      trackGameNightSaved({
+        playerCount: wizard.users.length,
+        sessionGames: wizard.sessionGameIds.length,
+        topPickName: wizard.recommendation.topPick?.game.name,
+        hasDescription: Boolean(description),
+      })
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to save game night')
       throw err
