@@ -10,7 +10,7 @@ type GtagArgs = [string, ...unknown[]]
 
 declare global {
   interface Window {
-    dataLayer?: unknown[]
+    dataLayer?: IArguments[]
     gtag?: (...args: GtagArgs) => void
   }
 }
@@ -23,10 +23,15 @@ export function initializeGoogleAnalytics() {
   }
 
   window.dataLayer = window.dataLayer || []
+  // IMPORTANT: Use `arguments` object, not rest parameters.
+  // Google's gtag.js expects the Arguments object format, not arrays.
+  // Using `...args` with `dataLayer.push(args)` would push arrays,
+  // which gtag.js silently ignores, causing analytics to not work.
   window.gtag =
     window.gtag ||
-    function gtag(...args: GtagArgs) {
-      window.dataLayer!.push(args)
+    function gtag() {
+      // eslint-disable-next-line prefer-rest-params
+      window.dataLayer!.push(arguments)
     }
 
   const script = document.createElement('script')
