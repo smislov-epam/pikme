@@ -65,12 +65,25 @@ function trackEvent(eventName: string, params?: Record<string, unknown>) {
   gtag('event', eventName, sanitizeParams(params) ?? {})
 }
 
+export function trackPageView(title?: string) {
+  const gtag = getGtag()
+  if (!gtag) return
+  const params: Record<string, unknown> = {
+    page_location: window.location.href,
+    page_path: window.location.pathname,
+  }
+  if (title) params.page_title = title
+  gtag('event', 'page_view', params)
+}
+
 export function trackWizardStepView(stepName: string, context: {
   stepIndex: number
   playerCount: number
   sessionGames: number
   filteredGames: number
 }) {
+  // Track as both a custom event and a page view for better GA reporting
+  trackPageView(`Pikme - ${stepName}`)
   trackEvent('wizard_step_view', {
     step_name: stepName,
     step_index: context.stepIndex,

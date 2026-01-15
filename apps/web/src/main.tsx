@@ -2,7 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
-import { initializeGoogleAnalytics } from './services/analytics/googleAnalytics'
+import { initializeGoogleAnalytics, trackPageView } from './services/analytics/googleAnalytics'
 
 // Keep a single canonical origin in production.
 // IndexedDB is scoped per-origin, so `www.pikme.online` and `pikme.online` would otherwise have separate local DBs.
@@ -18,6 +18,7 @@ if (
 }
 
 initializeGoogleAnalytics()
+trackPageView('Pikme - Board Game Selector')
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
