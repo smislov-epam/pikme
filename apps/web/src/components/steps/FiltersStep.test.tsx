@@ -55,6 +55,8 @@ function renderFiltersStep(options: {
       onTimeRangeChange={options.onTimeRangeChange}
       mode={'any'}
       onModeChange={vi.fn()}
+      requireBestWithPlayerCount={false}
+      onRequireBestWithPlayerCountChange={vi.fn()}
       excludeLowRatedThreshold={null}
       onExcludeLowRatedChange={vi.fn()}
       ageRange={{ min: 0, max: 21 }}
