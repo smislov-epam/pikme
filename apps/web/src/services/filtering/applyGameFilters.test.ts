@@ -15,6 +15,7 @@ const baseFilters: WizardFilters = {
   playerCount: 4,
   timeRange: { min: 0, max: 300 },
   mode: 'any',
+  requireBestWithPlayerCount: false,
   excludeLowRatedThreshold: null,
   ageRange: { min: 0, max: 21 },
   complexityRange: { min: 1, max: 5 },
@@ -66,5 +67,38 @@ describe('applyGameFilters', () => {
 
     expect(applyGameFilters(games, { ...baseFilters, mode: 'coop' }, {})).toHaveLength(1)
     expect(applyGameFilters(games, { ...baseFilters, mode: 'competitive' }, {})).toHaveLength(1)
+  })
+
+  it('filters by best-with player count when enabled', () => {
+    const games = [
+      makeGame({ bggId: 1, minPlayers: 2, maxPlayers: 6, bestWith: '4' }),
+      makeGame({ bggId: 2, minPlayers: 2, maxPlayers: 6, bestWith: '3-4' }),
+      makeGame({ bggId: 3, minPlayers: 2, maxPlayers: 6, bestWith: 'Best with 4 players' }),
+      makeGame({ bggId: 4, minPlayers: 2, maxPlayers: 6, bestWith: '2, 5' }),
+      makeGame({ bggId: 5, minPlayers: 2, maxPlayers: 6 }),
+    ]
+
+    const filtered = applyGameFilters(
+      games,
+      { ...baseFilters, playerCount: 4, requireBestWithPlayerCount: true },
+      {},
+    )
+
+    expect(filtered.map((g) => g.bggId)).toEqual([1, 2, 3])
+  })
+
+  it('treats best-with ranges with an en dash as a range', () => {
+    const games = [
+      makeGame({ bggId: 1, minPlayers: 2, maxPlayers: 6, bestWith: '3–4' }),
+      makeGame({ bggId: 2, minPlayers: 2, maxPlayers: 6, bestWith: '5–6' }),
+    ]
+
+    const filtered = applyGameFilters(
+      games,
+      { ...baseFilters, playerCount: 4, requireBestWithPlayerCount: true },
+      {},
+    )
+
+    expect(filtered.map((g) => g.bggId)).toEqual([1])
   })
 })

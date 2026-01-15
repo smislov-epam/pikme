@@ -122,7 +122,15 @@ export function GamePreviewGrid({
         )}
 
         {sessionGames.length > 0 ? (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, maxHeight: 350, overflow: 'auto', pr: 0.5 }}>
+          <Box
+            sx={{
+              display: 'grid',
+              rowGap: 0.5,
+              maxHeight: 350,
+              overflowY: 'auto',
+              pr: 0.5,
+            }}
+          >
             {filteredGames.length === 0 ? (
               <Typography color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>No games match</Typography>
             ) : (
@@ -183,7 +191,7 @@ export function GamePreviewGrid({
 
             {collectionOnlyGames.length > 0 ? (
               <Collapse in={showCollectionGames}>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, maxHeight: 200, overflow: 'auto' }}>
+                <Box sx={{ display: 'grid', rowGap: 0.5, maxHeight: 200, overflowY: 'auto' }}>
                   {collectionOnlyGames.map((game) => (
                     <Box key={game.bggId} sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 0.75, bgcolor: 'action.hover', borderRadius: 1, opacity: 0.7 }}>
                       <Box

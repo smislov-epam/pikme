@@ -5,6 +5,9 @@ export interface WizardFilters {
   timeRange: { min: number; max: number }
   mode: GameMode
 
+  /** Only show games explicitly marked as “best with” the selected player count. */
+  requireBestWithPlayerCount: boolean
+
   /** Exclude games rated below this by any player (null = off) */
   excludeLowRatedThreshold: number | null
 

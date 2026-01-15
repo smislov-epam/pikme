@@ -157,7 +157,7 @@ export function ToastProvider({
                 color="inherit"
                 size="small"
                 onClick={handleClose}
-                sx={{ color: (theme) => theme.palette.error.main }}
+                sx={{ color: 'common.white' }}
               >
                 <CloseIcon fontSize="small" />
               </IconButton>

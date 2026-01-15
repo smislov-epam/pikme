@@ -3,14 +3,20 @@ import {
   AccordionDetails,
   AccordionSummary,
   Box,
+  FormControlLabel,
   Slider,
   Stack,
+  Switch,
   Typography,
 } from '@mui/material'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import StarIcon from '@mui/icons-material/Star'
 
 export interface AdvancedFiltersAccordionProps {
+  playerCount: number
+  requireBestWithPlayerCount: boolean
+  onRequireBestWithPlayerCountChange: (enabled: boolean) => void
+
   excludeLowRatedThreshold: number | null
   onExcludeLowRatedChange: (threshold: number | null) => void
 
@@ -25,6 +31,9 @@ export interface AdvancedFiltersAccordionProps {
 }
 
 export function AdvancedFiltersAccordion({
+  playerCount,
+  requireBestWithPlayerCount,
+  onRequireBestWithPlayerCountChange,
   excludeLowRatedThreshold,
   onExcludeLowRatedChange,
   ageRange,
@@ -50,6 +59,20 @@ export function AdvancedFiltersAccordion({
         </Stack>
       </AccordionSummary>
       <AccordionDetails>
+        <FormControlLabel
+          control={
+            <Switch
+              checked={requireBestWithPlayerCount}
+              onChange={(_, checked) => onRequireBestWithPlayerCountChange(checked)}
+            />
+          }
+          label={`Only games “best with ${playerCount}”`}
+          sx={{ mb: 1 }}
+        />
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 3 }}>
+          Uses the game’s “Best with” field (BGG poll-summary / import). Games without that info are hidden.
+        </Typography>
+
         {/* Player ratings exclusion */}
         <Typography variant="body2" color="text.secondary" gutterBottom>
           Exclude games rated below this threshold by any player

@@ -53,6 +53,39 @@ describe('PreferencesStepContent', () => {
     expect(screen.queryByText(/Mark rest neutral/i)).not.toBeInTheDocument()
   })
 
+  it('hides the Layout toggle on mobile screens', () => {
+    ;(window.matchMedia as unknown as ReturnType<typeof vi.fn>).mockImplementation((query: string) => ({
+      matches: true,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }))
+
+    const users: UserRecord[] = [{ username: 'alice', internalId: 'alice-test', isBggUser: false }]
+    const games: GameRecord[] = [{ bggId: 1, name: 'Catan', lastFetchedAt: new Date().toISOString() }]
+
+    renderWithProviders(
+      <PreferencesStepContent
+        users={users}
+        games={games}
+        gameOwners={{}}
+        layoutMode="standard"
+        onLayoutModeChange={vi.fn()}
+        preferences={{ alice: [] }}
+        userRatings={{ alice: {} }}
+        onUpdatePreference={vi.fn()}
+        onReorderPreferences={vi.fn()}
+        onClearPreference={vi.fn()}
+      />,
+    )
+
+    expect(screen.queryByRole('button', { name: /Layout:\s*Standard/i })).not.toBeInTheDocument()
+  })
+
   it('does not render a game in Top Picks when it is also disliked', () => {
     const users: UserRecord[] = [{ username: 'alice', internalId: 'alice-test', isBggUser: false }]
     const games: GameRecord[] = [{ bggId: 1, name: 'Catan', lastFetchedAt: new Date().toISOString() }]

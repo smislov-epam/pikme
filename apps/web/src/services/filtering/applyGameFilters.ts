@@ -8,6 +8,36 @@ function isCoopGame(mechanics?: string[]): boolean {
   return mechanics.some((m) => COOP_MECHANICS.includes(m))
 }
 
+function bestWithMatchesPlayerCount(bestWith: string, playerCount: number): boolean {
+  const normalized = bestWith
+    .replace(/best\s*with/gi, '')
+    .replace(/players?/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  if (!normalized) return false
+
+  const parts = normalized.split(',').map((p) => p.trim()).filter(Boolean)
+  const chunks = parts.length ? parts : [normalized]
+
+  for (const chunk of chunks) {
+    const hasRange = chunk.includes('-') || chunk.includes('–')
+    const nums = chunk.match(/\d+/g)?.map((n) => Number(n)).filter((n) => Number.isFinite(n)) ?? []
+    if (!nums.length) continue
+
+    if (hasRange && nums.length >= 2) {
+      const min = Math.min(nums[0], nums[1])
+      const max = Math.max(nums[0], nums[1])
+      if (playerCount >= min && playerCount <= max) return true
+      continue
+    }
+
+    if (nums.includes(playerCount)) return true
+  }
+
+  return false
+}
+
 export function applyGameFilters(
   games: GameRecord[],
   filters: WizardFilters,
@@ -18,6 +48,12 @@ export function applyGameFilters(
     const minPlayers = game.minPlayers ?? 1
     const maxPlayers = game.maxPlayers ?? 99
     if (filters.playerCount < minPlayers || filters.playerCount > maxPlayers) return false
+
+    // Best-with refinement
+    if (filters.requireBestWithPlayerCount) {
+      if (!game.bestWith) return false
+      if (!bestWithMatchesPlayerCount(game.bestWith, filters.playerCount)) return false
+    }
 
     // Time range
     const time = game.playingTimeMinutes

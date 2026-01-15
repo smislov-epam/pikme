@@ -83,6 +83,8 @@ export function PreferencesStepContent({
     return users[0]?.username ?? ''
   }, [selectedUserState, users])
 
+  const effectiveLayoutMode: LayoutMode = isMobile ? 'simplified' : layoutMode
+
   const showNotice = useCallback((message: string) => {
     toast.info(message)
   }, [toast])
@@ -311,9 +313,11 @@ export function PreferencesStepContent({
         onChange={setSelectedUserState}
       />
 
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <LayoutToggle layoutMode={layoutMode} onChange={onLayoutModeChange} variant="icon" />
-      </Box>
+      {!isMobile ? (
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <LayoutToggle layoutMode={layoutMode} onChange={onLayoutModeChange} variant="icon" />
+        </Box>
+      ) : null}
 
       <DndContext
         sensors={sensors}
@@ -325,7 +329,7 @@ export function PreferencesStepContent({
         <TopPicksSection
           topPicks={topPicksForRender}
           droppableId={DROPPABLE.top}
-          layoutMode={layoutMode}
+          layoutMode={effectiveLayoutMode}
           onOpenDetails={(game) => setDetailsGame(game)}
           onToggleTopPick={handleToggleTopPick}
           onToggleDisliked={handleToggleDisliked}
@@ -333,7 +337,7 @@ export function PreferencesStepContent({
         <DislikedSection
           disliked={dislikedForRender}
           droppableId={DROPPABLE.disliked}
-          layoutMode={layoutMode}
+          layoutMode={effectiveLayoutMode}
           onOpenDetails={(game) => setDetailsGame(game)}
           onToggleTopPick={handleToggleTopPick}
           onToggleDisliked={handleToggleDisliked}
@@ -341,7 +345,7 @@ export function PreferencesStepContent({
         <RankedSection
           ranked={ranked}
           droppableId={DROPPABLE.ranked}
-          layoutMode={layoutMode}
+          layoutMode={effectiveLayoutMode}
           onOpenDetails={(game) => setDetailsGame(game)}
           onToggleTopPick={handleToggleTopPick}
           onToggleDisliked={handleToggleDisliked}
@@ -350,7 +354,7 @@ export function PreferencesStepContent({
           neutral={neutralForRender}
           nextRank={ranked.length + 1}
           droppableId={DROPPABLE.neutral}
-          layoutMode={layoutMode}
+          layoutMode={effectiveLayoutMode}
           onOpenDetails={(game) => setDetailsGame(game)}
           onToggleTopPick={handleToggleTopPick}
           onToggleDisliked={handleToggleDisliked}
@@ -359,7 +363,7 @@ export function PreferencesStepContent({
         <DragOverlay dropAnimation={null}>
           {activeDragId != null && rowByBggId.get(activeDragId) ? (
             <Box sx={{ pointerEvents: 'none', width: '100%', maxWidth: 560, boxShadow: 6, borderRadius: 2 }}>
-              {layoutMode === 'simplified' ? (
+              {effectiveLayoutMode === 'simplified' ? (
                 <PreferenceRowCard
                   game={rowByBggId.get(activeDragId)!.game}
                   userRating={rowByBggId.get(activeDragId)!.userRating}

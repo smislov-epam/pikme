@@ -63,6 +63,8 @@ export function WizardStepContent(props: {
           onTimeRangeChange={wizard.setTimeRange}
           mode={wizard.filters.mode}
           onModeChange={wizard.setMode}
+          requireBestWithPlayerCount={wizard.filters.requireBestWithPlayerCount}
+          onRequireBestWithPlayerCountChange={wizard.setRequireBestWithPlayerCount}
           excludeLowRatedThreshold={wizard.filters.excludeLowRatedThreshold}
           onExcludeLowRatedChange={wizard.setExcludeLowRated}
           ageRange={wizard.filters.ageRange}

@@ -33,6 +33,12 @@ export const theme = createTheme({
       dark: '#D4A72C',
       contrastText: colors.navyBlue,
     },
+    warning: {
+      main: colors.sand,
+      light: alpha(colors.sand, 0.4),
+      dark: '#D4A72C',
+      contrastText: colors.navyBlue,
+    },
     text: {
       primary: colors.navyBlue,
       secondary: alpha(colors.navyBlue, 0.7),

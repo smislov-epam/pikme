@@ -1,5 +1,6 @@
 import { Box, ButtonBase, Paper, Stack, Typography, alpha, useMediaQuery, useTheme } from '@mui/material'
 import { colors } from '../../theme/theme'
+import { MobileStepperNav } from './MobileStepperNav'
 import { wizardSteps } from './wizardSteps'
 
 export function WizardStepperNav(props: {
@@ -16,79 +17,7 @@ export function WizardStepperNav(props: {
   const isNarrow = useMediaQuery(theme.breakpoints.down('sm'))
 
   if (isNarrow) {
-    const label = wizardSteps[activeStep] ?? 'Step'
-    const badgeCount = compactBadgeCount ?? 0
-
-    return (
-      <Paper
-        elevation={10}
-        sx={{
-          mb: 3,
-          px: 1.5,
-          py: 1,
-          borderRadius: 999,
-          bgcolor: alpha(colors.warmWhite, 0.92),
-          border: '1px solid',
-          borderColor: alpha(colors.oceanBlue, 0.18),
-          backdropFilter: 'blur(10px)',
-          boxShadow: `0 10px 28px ${alpha(colors.navyBlue, 0.15)}`,
-        }}
-      >
-        <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1}>
-          <Stack direction="row" alignItems="center" gap={1}>
-            <Box
-              sx={{
-                width: 22,
-                height: 22,
-                borderRadius: 999,
-                display: 'grid',
-                placeItems: 'center',
-                bgcolor: colors.sand,
-                color: colors.navyBlue,
-                fontSize: '0.78rem',
-                fontWeight: 900,
-                flexShrink: 0,
-              }}
-            >
-              {activeStep + 1}
-            </Box>
-
-            <Typography
-              component="span"
-              sx={{
-                fontWeight: 900,
-                letterSpacing: '-0.01em',
-                fontSize: '0.95rem',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {label}
-            </Typography>
-          </Stack>
-
-          <Box
-            role="status"
-            aria-label="Games count"
-            sx={{
-              width: 28,
-              height: 28,
-              borderRadius: 999,
-              display: 'grid',
-              placeItems: 'center',
-              bgcolor: alpha(colors.oceanBlue, 0.12),
-              border: '1px solid',
-              borderColor: alpha(colors.oceanBlue, 0.28),
-              color: colors.navyBlue,
-              fontWeight: 900,
-              fontSize: '0.8rem',
-              flexShrink: 0,
-            }}
-          >
-            {badgeCount}
-          </Box>
-        </Stack>
-      </Paper>
-    )
+    return <MobileStepperNav activeStep={activeStep} compactBadgeCount={compactBadgeCount} />
   }
 
   return (

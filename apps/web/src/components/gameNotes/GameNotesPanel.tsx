@@ -9,6 +9,8 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
+import { useTheme } from '@mui/material/styles'
+import useMediaQuery from '@mui/material/useMediaQuery'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import AddIcon from '@mui/icons-material/Add'
 import { colors } from '../../theme/theme'
@@ -25,7 +27,10 @@ export function GameNotesPanel(props: {
   bggId: number
   height?: number | string
 }) {
-  const { bggId, height = 200 } = props
+  const { bggId, height = 250 } = props
+
+  const theme = useTheme()
+  const isPhone = useMediaQuery(theme.breakpoints.down('sm'))
 
   const [notes, setNotes] = useState<GameNoteRecord[]>([])
   const [loading, setLoading] = useState(true)
@@ -115,7 +120,7 @@ export function GameNotesPanel(props: {
         multiline
         minRows={2}
         fullWidth
-        helperText="Tip: Ctrl+Enter to add quickly."
+        helperText={isPhone ? undefined : 'Tip: Ctrl+Enter to add quickly.'}
         InputProps={{
           endAdornment: (
             <InputAdornment position="end" sx={{ alignSelf: 'flex-start', mt: 0.5 }}>

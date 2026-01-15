@@ -87,6 +87,7 @@ export interface WizardActions {
   setPlayerCount: (count: number) => void
   setTimeRange: (range: { min: number; max: number }) => void
   setMode: (mode: 'coop' | 'competitive' | 'any') => void
+  setRequireBestWithPlayerCount: (enabled: boolean) => void
   setExcludeLowRated: (threshold: number | null) => void
   setAgeRange: (range: { min: number; max: number }) => void
   setComplexityRange: (range: { min: number; max: number }) => void
@@ -126,6 +127,7 @@ const DEFAULT_FILTERS: WizardFilters = {
   playerCount: 4,
   timeRange: { min: 0, max: 300 },
   mode: 'any',
+  requireBestWithPlayerCount: false,
   excludeLowRatedThreshold: null,
   ageRange: { min: 0, max: 21 },
   complexityRange: { min: 1, max: 5 },
@@ -208,7 +210,7 @@ export function useWizardState(): WizardState & WizardActions {
       try {
         const persisted = await loadWizardState<unknown>()
         if (isPersistedWizardStateV1(persisted)) {
-          setFilters(persisted.filters)
+          setFilters({ ...DEFAULT_FILTERS, ...persisted.filters })
           setSessionGameIds(persisted.sessionGameIds)
           setExcludedBggIds(persisted.excludedBggIds)
 
@@ -915,6 +917,10 @@ export function useWizardState(): WizardState & WizardActions {
     setFilters((prev) => ({ ...prev, mode }))
   }, [])
 
+  const setRequireBestWithPlayerCount = useCallback((enabled: boolean) => {
+    setFilters((prev) => ({ ...prev, requireBestWithPlayerCount: enabled }))
+  }, [])
+
   const setExcludeLowRated = useCallback((threshold: number | null) => {
     setFilters((prev) => ({ ...prev, excludeLowRatedThreshold: threshold }))
   }, [])
@@ -1243,6 +1249,7 @@ export function useWizardState(): WizardState & WizardActions {
     setPlayerCount,
     setTimeRange,
     setMode,
+    setRequireBestWithPlayerCount,
     setExcludeLowRated,
     setAgeRange,
     setComplexityRange,

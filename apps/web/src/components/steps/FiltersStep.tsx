@@ -20,6 +20,8 @@ export interface FiltersStepProps {
   onTimeRangeChange: (range: { min: number; max: number }) => void
   mode: 'coop' | 'competitive' | 'any'
   onModeChange: (mode: 'coop' | 'competitive' | 'any') => void
+  requireBestWithPlayerCount: boolean
+  onRequireBestWithPlayerCountChange: (enabled: boolean) => void
   excludeLowRatedThreshold: number | null
   onExcludeLowRatedChange: (threshold: number | null) => void
   ageRange: { min: number; max: number }
@@ -46,6 +48,8 @@ export function FiltersStep({
   onTimeRangeChange,
   mode,
   onModeChange,
+  requireBestWithPlayerCount,
+  onRequireBestWithPlayerCountChange,
   excludeLowRatedThreshold,
   onExcludeLowRatedChange,
   ageRange,
@@ -84,6 +88,9 @@ export function FiltersStep({
       <VibeCard mode={mode} onModeChange={onModeChange} />
 
       <AdvancedFiltersAccordion
+        playerCount={playerCount}
+        requireBestWithPlayerCount={requireBestWithPlayerCount}
+        onRequireBestWithPlayerCountChange={onRequireBestWithPlayerCountChange}
         excludeLowRatedThreshold={excludeLowRatedThreshold}
         onExcludeLowRatedChange={onExcludeLowRatedChange}
         ageRange={ageRange}

@@ -1,4 +1,4 @@
-import { Box, Button, Container, Paper, alpha } from '@mui/material'
+import { Box, Button, Container, Paper, alpha, useMediaQuery, useTheme } from '@mui/material'
 import { colors } from '../../theme/theme'
 
 export function WizardFooter(props: {
@@ -11,6 +11,9 @@ export function WizardFooter(props: {
   onStartOver: () => void
   onSave: () => void
 }) {
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+
   const {
     canGoBack,
     canGoNext,
@@ -31,6 +34,7 @@ export function WizardFooter(props: {
         left: 0,
         right: 0,
         bottom: 0,
+        zIndex: (theme) => theme.zIndex.appBar,
         borderTop: '1px solid',
         borderColor: 'divider',
         bgcolor: alpha(colors.warmWhite, 0.98),
@@ -68,7 +72,7 @@ export function WizardFooter(props: {
           ) : (
             <Box sx={{ display: 'flex', gap: 1 }}>
               <Button variant="outlined" onClick={onStartOver}>
-                Start over
+                {isMobile ? 'Start' : 'Start over'}
               </Button>
               <Button
                 variant="contained"
@@ -80,7 +84,7 @@ export function WizardFooter(props: {
                   '&:hover': { bgcolor: '#E5D194' },
                 }}
               >
-                Save game night
+                {isMobile ? 'Save Game' : 'Save game night'}
               </Button>
             </Box>
           )}

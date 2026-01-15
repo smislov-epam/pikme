@@ -6,6 +6,7 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  Divider,
   LinearProgress,
   Stack,
   TextField,
@@ -18,6 +19,7 @@ import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile'
 import { exportBackupZip, importBackup } from '../services/backup'
 import { useToast } from '../services/toast'
 import { colors } from '../theme/theme'
+import { BggCollectionCsvImportPanel } from './bggCsv/BggCollectionCsvImportPanel'
 
 export function BackupRestoreDialog(props: { open: boolean; onClose: () => void }) {
   const { open, onClose } = props
@@ -71,6 +73,7 @@ export function BackupRestoreDialog(props: { open: boolean; onClose: () => void 
     setError('')
     setSummary('')
   }
+
 
   const runImport = (mode: 'replace' | 'merge') => {
     if (!pendingFile) return
@@ -142,7 +145,7 @@ export function BackupRestoreDialog(props: { open: boolean; onClose: () => void 
               fileInputRef.current = node
             }}
             type="file"
-            accept=".zip,.csv"
+            accept=".zip"
             aria-label="Backup file"
             hidden
             onChange={(e) => {
@@ -153,61 +156,70 @@ export function BackupRestoreDialog(props: { open: boolean; onClose: () => void 
         </Stack>
 
         {pendingFile ? (
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1,
-              border: '1px solid',
-              borderColor: 'divider',
-              borderRadius: 2,
-              px: 1.25,
-              py: 1,
-              bgcolor: 'background.default',
-            }}
-          >
-            <InsertDriveFileIcon fontSize="small" color="action" />
-            <Box sx={{ minWidth: 0 }}>
-              <Typography variant="body2" fontWeight={600} noWrap>
-                {pendingFile.name}
-              </Typography>
-              <Typography variant="caption" color="text.secondary" noWrap>
-                {backupDateLabelFromFileName(pendingFile.name)} • {formatBytes(pendingFile.size)}
-              </Typography>
+          <>
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 2,
+                px: 1.25,
+                py: 1,
+                bgcolor: 'background.default',
+              }}
+            >
+              <InsertDriveFileIcon fontSize="small" color="action" />
+              <Box sx={{ minWidth: 0 }}>
+                <Typography variant="body2" fontWeight={600} noWrap>
+                  {pendingFile.name}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" noWrap>
+                  {backupDateLabelFromFileName(pendingFile.name)} • {formatBytes(pendingFile.size)}
+                </Typography>
+              </Box>
             </Box>
-          </Box>
+
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+              <Box sx={{ flex: 1, border: '1px solid', borderColor: 'divider', borderRadius: 2, p: 1.5 }}>
+                <Button
+                  fullWidth
+                  variant="contained"
+                  color="warning"
+                  disabled={status === 'busy'}
+                  onClick={() => runImport('replace')}
+                >
+                  Replace
+                </Button>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75 }}>
+                  Clears local data, then imports from the backup.
+                </Typography>
+              </Box>
+
+              <Box sx={{ flex: 1, border: '1px solid', borderColor: 'divider', borderRadius: 2, p: 1.5 }}>
+                <Button fullWidth variant="contained" disabled={status === 'busy'} onClick={() => runImport('merge')}>
+                  Merge
+                </Button>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75 }}>
+                  Keeps existing data; updates/creates records using latest timestamps.
+                </Typography>
+              </Box>
+            </Stack>
+          </>
         ) : null}
 
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-          <Box sx={{ flex: 1, border: '1px solid', borderColor: 'divider', borderRadius: 2, p: 1.5 }}>
-            <Button
-              fullWidth
-              variant="contained"
-              color="warning"
-              disabled={status === 'busy' || !pendingFile}
-              onClick={() => runImport('replace')}
-            >
-              Replace
-            </Button>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75 }}>
-              Clears local data, then imports from the backup.
-            </Typography>
-          </Box>
+        <Divider />
 
-          <Box sx={{ flex: 1, border: '1px solid', borderColor: 'divider', borderRadius: 2, p: 1.5 }}>
-            <Button
-              fullWidth
-              variant="contained"
-              disabled={status === 'busy' || !pendingFile}
-              onClick={() => runImport('merge')}
-            >
-              Merge
-            </Button>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75 }}>
-              Keeps existing data; updates/creates records using latest timestamps.
-            </Typography>
-          </Box>
-        </Stack>
+        <BggCollectionCsvImportPanel
+          disabled={status === 'busy'}
+          onBusyStart={() => setStatus('busy')}
+          onBusyEnd={() => setStatus('idle')}
+          onProgress={(m) => setProgress(m)}
+          onSummary={(m) => setSummary(m)}
+          onError={(m) => setError(m)}
+          formatBytes={formatBytes}
+        />
 
         {progress ? (
           <Box>

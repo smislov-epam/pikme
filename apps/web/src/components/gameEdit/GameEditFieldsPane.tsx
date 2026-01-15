@@ -38,6 +38,15 @@ export function GameEditFieldsPane(props: {
             />
           </Stack>
 
+          <TextField
+            label="Best with (players)"
+            size="small"
+            value={game.bestWith ?? ''}
+            onChange={(e) => onChange('bestWith', e.target.value.trim() || undefined)}
+            placeholder="e.g. 4, 3-4, 2, 4"
+            helperText="Used by the Advanced filter: Only games best with selected player count"
+          />
+
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <TextField
               label="Min Time (min)"

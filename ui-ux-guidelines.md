@@ -11,10 +11,10 @@ These guidelines define visual and interaction consistency rules for the PIKME w
 - Safe actions: destructive/overwriting actions must be clearly labeled and confirmable.
 
 ## 2) Color and state semantics
-PIKME uses a blue base with a warm yellow/sand accent.
+PIKME uses a blue base with a strong yellow focus color ("PIKME Yellow").
 
 ### 2.1 State colors (semantic)
-- **Selected / active**: warm yellow accent (high visibility)
+- **Selected / active / focused item**: PIKME Yellow (high visibility)
 - **Unselected but selectable**: muted blue
 - **Disabled**: neutral gray
 - **Destructive**: red
@@ -26,7 +26,7 @@ PIKME uses a blue base with a warm yellow/sand accent.
 
 ### 3.1 Toggle choices (e.g., “BGG User” vs “Local Player”)
 - Selected toggle must be visually obvious:
-  - Background: yellow accent
+  - Background: PIKME Yellow
   - Text: dark/high-contrast
   - Border/outline: stronger than unselected
 - Unselected toggles use muted blue styling.
@@ -40,7 +40,7 @@ PIKME uses a blue base with a warm yellow/sand accent.
 ### 3.3 Panels and selectable lists
 - Panels that act like selectable items must follow consistent rules:
   - Unselected: muted blue background/border
-  - Selected: yellow accent background/border
+  - Selected (focused): PIKME Yellow background/border
   - Hover: slight elevation/border intensification
 - “Add games for local players” and similar panels must use the same selectable panel pattern.
 
@@ -62,7 +62,7 @@ Rules:
 - Simplified tiles must never hide key actions (exclude/edit/dislike) and must keep hit targets >= 44px.
 
 ### 3.6 Stat / metadata pills (players, time, rating, weight)
-- Use the warm yellow/sand accent as the pill background with dark/navy text and icons for readability.
+- Use PIKME Yellow as the pill background with dark/navy text and icons for readability.
 - Prefer filled chips (no gray outline); keep height consistent and compact.
 - Apply the same style across all surfaces that show these stats (rich tiles, rows/compact lists, details dialogs) to avoid mixed gray/yellow treatments.
 
@@ -97,7 +97,7 @@ Rules:
 ## 6) Preferences step guidelines
 
 ### 6.1 User tabs visibility
-- Active user tab must be clearly highlighted (yellow accent or strong underline).
+- Active user tab must be clearly highlighted (PIKME Yellow or strong underline).
 - Inactive tabs must still be readable.
 
 ### 6.2 Internal panel shape consistency
@@ -140,7 +140,7 @@ Adding games manually should be discoverable but not visually noisy.
 
 Rules:
 - Provide an “Add New Games to Collection” action directly under the “Show games from collection” action.
-- Style: same component style as “Show games from collection” (including an icon), but using the yellow/sand accent to differentiate.
+- Style: same component style as “Show games from collection” (including an icon), but using PIKME Yellow to differentiate.
 - The “Add new games” panel must be hidden by default and only expand/open when the user clicks the action.
 - When expanded, it must use the same selectable panel/card pattern (see 3.3), with clear cancel/close.
 

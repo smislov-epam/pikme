@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import {
-  Badge,
   Box,
   Button,
   Collapse,
@@ -9,10 +8,8 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
-  Tooltip,
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
-import NotesIcon from '@mui/icons-material/Notes'
 import type { ReactElement } from 'react'
 import type { GameRecord, UserRecord } from '../../db/types'
 import { GameNotesPanel } from '../gameNotes/GameNotesPanel'
@@ -21,7 +18,7 @@ import { GameDetailsSummaryPanel } from './GameDetailsSummaryPanel'
 import { useGameNotesCount } from '../../hooks/useGameNotesCount'
 
 /** Height of the collapsible notes panel in pixels */
-const NOTES_PANEL_HEIGHT = 200
+const NOTES_PANEL_HEIGHT = 250
 
 export type GameDetailsDialogProps = {
   open: boolean
@@ -62,20 +59,7 @@ export function GameDetailsDialog({
           pr: 1,
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          Game details
-          <Tooltip title={showNotes ? 'Hide notes' : 'Show notes'}>
-            <IconButton
-              size="small"
-              onClick={() => setShowNotes(!showNotes)}
-              color={showNotes ? 'primary' : 'default'}
-            >
-              <Badge badgeContent={notesCount} color="primary" max={99}>
-                <NotesIcon fontSize="small" />
-              </Badge>
-            </IconButton>
-          </Tooltip>
-        </Box>
+        <Box>Game details</Box>
         <IconButton aria-label="Close" onClick={onClose} size="small" sx={{ color: 'error.main' }}>
           <CloseIcon fontSize="small" />
         </IconButton>
@@ -91,7 +75,13 @@ export function GameDetailsDialog({
           overflow: 'auto',
         }}
       >
-        <GameDetailsSummaryPanel game={game} onEdit={onEdit} />
+        <GameDetailsSummaryPanel
+          game={game}
+          onEdit={onEdit}
+          notesCount={notesCount}
+          showNotes={showNotes}
+          onToggleNotes={() => setShowNotes((s) => !s)}
+        />
 
         <Collapse in={showNotes}>
           <Box sx={{ minHeight: NOTES_PANEL_HEIGHT }}>

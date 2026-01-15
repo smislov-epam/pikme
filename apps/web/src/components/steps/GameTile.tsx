@@ -7,6 +7,7 @@ import {
 import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined'
 import ScheduleOutlinedIcon from '@mui/icons-material/ScheduleOutlined'
 import StarOutlinedIcon from '@mui/icons-material/StarOutlined'
+import EmojiEventsOutlinedIcon from '@mui/icons-material/EmojiEventsOutlined'
 import type { GameRecord } from '../../db/types'
 import { colors } from '../../theme/theme'
 import { StatPill } from '../ui/StatPill'
@@ -118,12 +119,15 @@ export function GameTile(props: {
           <Typography fontWeight={600} noWrap>
             {game.name}
           </Typography>
-          <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap">
+          <Stack direction="row" spacing={0.75} useFlexGap alignItems="center" flexWrap="wrap">
             {game.minPlayers && game.maxPlayers ? (
               <StatPill
                 icon={<GroupsOutlinedIcon />}
                 label={game.minPlayers === game.maxPlayers ? `${game.minPlayers}` : `${game.minPlayers}-${game.maxPlayers}`}
               />
+            ) : null}
+            {game.bestWith ? (
+              <StatPill icon={<EmojiEventsOutlinedIcon />} label={`Best ${game.bestWith}`} />
             ) : null}
             {(game.minPlayTimeMinutes || game.maxPlayTimeMinutes || game.playingTimeMinutes) ? (
               <StatPill icon={<ScheduleOutlinedIcon />} label={formatPlayTime(game)} />

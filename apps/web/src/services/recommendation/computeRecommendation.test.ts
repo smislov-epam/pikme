@@ -30,6 +30,7 @@ const defaultFilters: WizardFilters = {
   playerCount: 4,
   timeRange: { min: 0, max: 300 },
   mode: 'any',
+  requireBestWithPlayerCount: false,
   excludeLowRatedThreshold: null,
   ageRange: { min: 0, max: 21 },
   complexityRange: { min: 1, max: 5 },
