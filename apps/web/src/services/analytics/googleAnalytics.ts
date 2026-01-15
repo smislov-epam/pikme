@@ -67,7 +67,7 @@ function trackEvent(eventName: string, params?: Record<string, unknown>) {
 
 export function trackPageView(title?: string) {
   const gtag = getGtag()
-  if (!gtag) return
+  if (!gtag || typeof window === 'undefined') return
   const params: Record<string, unknown> = {
     page_location: window.location.href,
     page_path: window.location.pathname,
