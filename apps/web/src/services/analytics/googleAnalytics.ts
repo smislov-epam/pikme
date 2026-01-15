@@ -133,3 +133,17 @@ export function trackAlternativePromoted(payload: {
     filters_mode: payload.filters.mode,
   })
 }
+
+export function trackGameNightSaved(payload: {
+  playerCount: number
+  sessionGames: number
+  topPickName?: string
+  hasDescription: boolean
+}) {
+  trackEvent('game_night_saved', {
+    player_count: payload.playerCount,
+    session_games: payload.sessionGames,
+    top_pick_name: payload.topPickName,
+    has_description: payload.hasDescription,
+  })
+}
