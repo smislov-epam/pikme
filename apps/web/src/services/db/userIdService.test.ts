@@ -44,6 +44,14 @@ describe('userIdService', () => {
     it('handles unicode names', () => {
       expect(normalizeToSlug('北京')).toBe('')
     })
+
+    it('handles undefined input', () => {
+      expect(normalizeToSlug(undefined)).toBe('')
+    })
+
+    it('handles null input', () => {
+      expect(normalizeToSlug(null)).toBe('')
+    })
   })
 
   describe('generateRandomSuffix', () => {
@@ -115,6 +123,16 @@ describe('userIdService', () => {
     it('handles names with diacritics', () => {
       const id = generateInternalId('José García')
       expect(id).toMatch(/^jose-garcia-[a-z0-9]{4}$/)
+    })
+
+    it('handles undefined input', () => {
+      const id = generateInternalId(undefined)
+      expect(id).toMatch(/^user-[a-z0-9]{4}$/)
+    })
+
+    it('handles null input', () => {
+      const id = generateInternalId(null)
+      expect(id).toMatch(/^user-[a-z0-9]{4}$/)
     })
   })
 
