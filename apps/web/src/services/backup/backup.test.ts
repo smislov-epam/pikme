@@ -8,6 +8,7 @@ const now = '2024-01-01T00:00:00.000Z'
 async function seedBasic() {
   await db.games.add({ bggId: 1, name: 'Alpha', lastFetchedAt: now })
   await db.users.add({ username: 'u1', internalId: 'u1-test', isBggUser: false })
+  await db.users.add({ username: 'ghost', internalId: 'ghost-1', isBggUser: false, isDeleted: true })
   await db.userGames.add({ username: 'u1', bggId: 1, source: 'manual', addedAt: now })
   await db.userPreferences.add({ username: 'u1', bggId: 1, isTopPick: true, isDisliked: false, updatedAt: now })
   await db.savedNights.add({ createdAt: now, data: { name: 'Night', usernames: ['u1'], gameIds: [1], filters: {}, pick: { bggId: 1, name: 'Alpha', score: 1 }, alternatives: [] } })
@@ -30,11 +31,14 @@ describe('backup export/import', () => {
     await importBackup({ files: zipBlob, mode: 'replace' })
 
     expect(await db.games.count()).toBe(1)
-    expect(await db.users.count()).toBe(1)
+    expect(await db.users.count()).toBe(2)
     expect(await db.userGames.count()).toBe(1)
     expect(await db.userPreferences.count()).toBe(1)
     expect(await db.savedNights.count()).toBe(1)
     expect(await db.gameNotes.count()).toBe(1)
+
+    const deleted = await db.users.get('ghost')
+    expect(deleted?.isDeleted).toBe(true)
   })
 
   it('merge keeps newer game data', async () => {

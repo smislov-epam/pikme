@@ -49,9 +49,18 @@ From the repo root:
 
 Then open `http://localhost:5173/`.
 
-### Build / lint
+### Build / lint / test
 - `npm --prefix "apps/web" run build`
 - `npm --prefix "apps/web" run lint`
+- `npm --prefix "apps/web" run test`
+
+## Architecture highlights
+- **Hooks composition**: Wizard state split into 6 single-responsibility hooks under `src/hooks/wizard/`
+- **Pure services**: Business logic in `src/services/` (recommendation scoring, filtering, BGG API)
+- **214+ tests**: Vitest + React Testing Library
+- **180-line limit**: Files kept focused and atomic
+
+See [Requirements/Solution Architecture Guidelines.md](Requirements/Solution%20Architecture%20Guidelines.md) for details.
 
 ## Requirements extraction helper
 Source DOCX files are in `Requirements/`. To produce plain-text snapshots for diff/review:

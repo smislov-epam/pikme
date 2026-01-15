@@ -39,7 +39,7 @@ export interface PlayersStepProps {
   onConfirmReuseGamesFromNight: () => Promise<void>
   onDismissReuseGamesPrompt: () => void
   onAddBggUser: (username: string) => Promise<void>
-  onAddLocalUser: (name: string, isOrganizer?: boolean) => Promise<void>
+  onAddLocalUser: (name: string, isOrganizer?: boolean, options?: { forceNew?: boolean }) => Promise<void>
   onRemoveUser: (username: string) => void
   onDeleteUser: (username: string) => Promise<void>
   onSetOrganizer: (username: string) => Promise<void>
@@ -99,26 +99,17 @@ export function PlayersStep({
 
   const localUsers = users.filter((u) => !u.isBggUser)
   const sortedUsers = useMemo(() => [...users].sort((a, b) => (a.isOrganizer && !b.isOrganizer ? -1 : b.isOrganizer && !a.isOrganizer ? 1 : 0)), [users])
-  // Autocomplete options: existing local users not already in session (as objects for proper mapping)
-  // Include disambiguation suffix for users with duplicate names
+  // Autocomplete options: all local users (including ones already in session for duplicate warning)
+  // Include disambiguation with internal ID so the user can tell them apart
   const autocompleteOptions = useMemo(() => {
-    const sessionUsernames = new Set(users.map(u => u.username))
-    const availableUsers = existingLocalUsers.filter(u => !sessionUsernames.has(u.username))
-    
-    return availableUsers.map(u => {
+    return existingLocalUsers.map(u => {
       const baseName = u.displayName || u.username
-      const duplicates = findUsersWithSameName(baseName, availableUsers)
-      
-      // Add suffix for disambiguation if there are duplicates
-      let label = baseName
-      if (duplicates.length > 1 && u.internalId) {
-        const suffix = extractSuffixFromId(u.internalId)
-        if (suffix) {
-          label = `${baseName} (#${suffix})`
-        }
-      }
-      
-      return { label, username: u.username, internalId: u.internalId }
+      const duplicates = findUsersWithSameName(baseName, existingLocalUsers)
+
+      const suffixRaw = u.internalId ? extractSuffixFromId(u.internalId) : ''
+      const suffix = duplicates.length > 1 && suffixRaw ? `#${suffixRaw}` : undefined
+
+      return { label: baseName, username: u.username, internalId: u.internalId, suffix }
     })
   }, [existingLocalUsers, users])
 
@@ -129,10 +120,8 @@ export function PlayersStep({
     } else {
       const trimmedName = inputValue.trim()
       
-      // Check for existing users with the same name (not already in session)
-      const sessionUsernames = new Set(users.map(u => u.username))
+      // Check for existing users with the same name
       const duplicates = findUsersWithSameName(trimmedName, existingLocalUsers)
-        .filter(u => !sessionUsernames.has(u.username))
       
       if (duplicates.length > 0) {
         // Show confirmation dialog
@@ -158,8 +147,8 @@ export function PlayersStep({
   const handleCreateNewDuplicateUser = async () => {
     if (!pendingDuplicateUser) return
     const isOrganizer = users.length === 0
-    // Create a new user with the same display name (will get unique username based on internalId)
-    await onAddLocalUser(pendingDuplicateUser.name, isOrganizer)
+    // Create a new user with the same display name (will get unique internalId/username)
+    await onAddLocalUser(pendingDuplicateUser.name, isOrganizer, { forceNew: true })
     setPendingDuplicateUser(null)
     setInputValue('')
   }

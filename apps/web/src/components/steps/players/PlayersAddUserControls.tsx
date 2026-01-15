@@ -16,7 +16,7 @@ import {
 
 export type UserMode = 'bgg' | 'local'
 
-export type PlayersAddUserControlsOption = { label: string; username: string; internalId?: string }
+export type PlayersAddUserControlsOption = { label: string; username: string; internalId?: string; suffix?: string }
 
 export interface PlayersAddUserControlsProps {
   mode: UserMode
@@ -98,8 +98,8 @@ export function PlayersAddUserControls({
           onInputChange={(_, v) => onInputValueChange(v)}
           onChange={(_, v) => {
             if (v && typeof v !== 'string') {
-              // Selected an existing user - use their username
-              onInputValueChange(v.username)
+              // Selected an existing user - keep display name in the field (avoid stuffing internalId)
+              onInputValueChange(v.label)
             } else if (typeof v === 'string') {
               onInputValueChange(v)
             }
@@ -109,7 +109,13 @@ export function PlayersAddUserControls({
             <Box component="li" {...props} key={option.username}>
               <Stack direction="row" spacing={1} alignItems="center">
                 <PersonIcon fontSize="small" color="action" />
-                <Typography variant="body2">{option.label}</Typography>
+                <Typography
+                  variant="body2"
+                  sx={{ display: 'flex', gap: 0.5, alignItems: 'center', '& .suffix': { color: 'text.secondary', fontWeight: 600 } }}
+                >
+                  <span>{option.label}</span>
+                  {option.suffix && <span className="suffix">{option.suffix}</span>}
+                </Typography>
               </Stack>
             </Box>
           )}

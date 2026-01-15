@@ -72,6 +72,7 @@ export function collectTables(files: Record<string, Uint8Array>) {
     isOrganizer: bool(r.isOrganizer),
     lastSyncAt: r.lastSyncAt || undefined,
     ownedCount: num(r.ownedCount),
+    isDeleted: bool(r.isDeleted) ?? false,
   }))
 
   const userGames = parseCsv(readText(files, 'user_games.csv')).map((r: Record<string, string>) => ({
@@ -83,15 +84,18 @@ export function collectTables(files: Record<string, Uint8Array>) {
     addedAt: r.addedAt,
   }))
 
-  const userPreferences = parseCsv(readText(files, 'user_preferences.csv')).map((r: Record<string, string>) => ({
-    id: num(r.id),
-    username: r.username,
-    bggId: Number(r.bggId),
-    rank: num(r.rank),
-    isTopPick: bool(r.isTopPick) ?? false,
-    isDisliked: bool(r.isDisliked) ?? false,
-    updatedAt: r.updatedAt,
-  })).map((p) => (p.isDisliked ? { ...p, rank: undefined, isTopPick: false } : p))
+  const userPreferences = parseCsv(readText(files, 'user_preferences.csv')).map((r: Record<string, string>) => {
+    const pref = {
+      id: num(r.id),
+      username: r.username,
+      bggId: Number(r.bggId),
+      rank: num(r.rank),
+      isTopPick: bool(r.isTopPick) ?? false,
+      isDisliked: bool(r.isDisliked) ?? false,
+      updatedAt: r.updatedAt,
+    }
+    return pref.isDisliked ? { ...pref, rank: undefined, isTopPick: false } : pref
+  })
 
   const wizardStateRows = parseCsv(readText(files, 'wizard_state.csv'))
   const wizardState = wizardStateRows[0]

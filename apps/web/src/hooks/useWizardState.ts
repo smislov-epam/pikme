@@ -55,7 +55,7 @@ export interface WizardActions {
   cancelAddBggUserAnyway: () => void
   confirmReuseGamesFromNight: () => Promise<void>
   dismissReuseGamesPrompt: () => void
-  addLocalUser: (name: string, isOrganizer?: boolean) => Promise<void>
+  addLocalUser: (name: string, isOrganizer?: boolean, options?: { forceNew?: boolean }) => Promise<void>
   removeUser: (username: string) => void
   deleteUserPermanently: (username: string) => Promise<void>
   setOrganizer: (username: string) => Promise<void>
@@ -521,10 +521,11 @@ export function useWizardState(): WizardState & WizardActions {
     setPendingReuseGamesNightId(null)
   }, [pendingReuseGamesNightId])
 
-  const addLocalUser = useCallback(async (nameOrUsername: string, isOrganizer?: boolean) => {
+  const addLocalUser = useCallback(async (nameOrUsername: string, isOrganizer?: boolean, options?: { forceNew?: boolean }) => {
+    const forceNew = options?.forceNew ?? false
     try {
       // First check if this matches an existing username (internalId-based)
-      const existingUser = await dbService.getUser(nameOrUsername)
+      const existingUser = forceNew ? undefined : await dbService.getUser(nameOrUsername)
       let user: UserRecord
       
       if (existingUser) {

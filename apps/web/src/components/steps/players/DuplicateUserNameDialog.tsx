@@ -37,7 +37,19 @@ export function DuplicateUserNameDialog({
 }: DuplicateUserNameDialogProps) {
   return (
     <Dialog open={open} onClose={isLoading ? undefined : onCancel} maxWidth="xs" fullWidth>
-      <DialogTitle>Player "{name}" already exists</DialogTitle>
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Button
+          variant="contained"
+          size="small"
+          color="secondary"
+          disableElevation
+          startIcon={<PersonIcon fontSize="small" />}
+          sx={{ minWidth: 0, px: 1.5, py: 0.5, fontWeight: 700, bgcolor: 'secondary.main', color: 'secondary.contrastText' }}
+        >
+          {name}
+        </Button>
+        already exists
+      </DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 0.5 }}>
           <Typography variant="body2" color="text.secondary">
@@ -61,7 +73,7 @@ export function DuplicateUserNameDialog({
                   </ListItemIcon>
                   <ListItemText
                     primary={user.displayName || user.username}
-                    secondary={suffix ? `ID: #${suffix}` : undefined}
+                    secondary={user.internalId ? `ID: ${user.internalId}${suffix ? ` • #${suffix}` : ''}` : undefined}
                   />
                 </ListItemButton>
               )
@@ -80,7 +92,11 @@ export function DuplicateUserNameDialog({
                 <AddIcon color="primary" />
               </ListItemIcon>
               <ListItemText
-                primary="Create new player"
+                primary={
+                  <Typography variant="body2" color="primary" fontWeight={600}>
+                    Create new player
+                  </Typography>
+                }
                 secondary={`A new "${name}" with a unique ID`}
                 primaryTypographyProps={{ color: 'primary' }}
               />
