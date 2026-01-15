@@ -549,8 +549,8 @@ export function useWizardState(): WizardState & WizardActions {
           }
         }
       } else {
-        // New user - create them with unique internalId-based username
-        // The displayName will be the user-provided name
+        // New user - create with displayName set to the user-provided name
+        // Username will be generated from internalId for guaranteed uniqueness
         user = await dbService.createLocalUser(nameOrUsername, undefined, isOrganizer)
         // Add to existing local users
         setExistingLocalUsers((prev) => [...prev, user])

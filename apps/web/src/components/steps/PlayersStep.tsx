@@ -19,7 +19,7 @@ import { PlayersAddUserControls, type UserMode } from './players/PlayersAddUserC
 import { normalizePlayTime } from '../../services/bgg/normalizePlayTime'
 import { useToast } from '../../services/toast'
 import type { LayoutMode } from '../../services/storage/uiPreferences'
-import { findUsersWithSameName } from '../../services/db/userIdService'
+import { findUsersWithSameName, extractSuffixFromId } from '../../services/db/userIdService'
 
 export type { ManualGameData }
 
@@ -112,7 +112,7 @@ export function PlayersStep({
       // Add suffix for disambiguation if there are duplicates
       let label = baseName
       if (duplicates.length > 1 && u.internalId) {
-        const suffix = u.internalId.split('-').pop()
+        const suffix = extractSuffixFromId(u.internalId)
         if (suffix) {
           label = `${baseName} (#${suffix})`
         }

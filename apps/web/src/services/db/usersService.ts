@@ -19,8 +19,11 @@ export async function createLocalUser(
   usernameOverride?: string,
   isOrganizer?: boolean,
 ): Promise<UserRecord> {
-  // Generate a unique internal ID first
-  const internalId = generateInternalId(displayName)
+  // Ensure displayName is not empty - fallback to 'Player' if needed
+  const sanitizedDisplayName = displayName?.trim() || 'Player'
+  
+  // Generate a unique internal ID based on the display name
+  const internalId = generateInternalId(sanitizedDisplayName)
   
   // Use the internal ID as the username to ensure uniqueness
   // This allows multiple users with the same display name
@@ -29,7 +32,7 @@ export async function createLocalUser(
   const record: UserRecord = {
     username,
     internalId,
-    displayName,
+    displayName: sanitizedDisplayName,
     isBggUser: false,
     isOrganizer,
     isDeleted: false,
