@@ -134,6 +134,17 @@ export function trackAlternativePromoted(payload: {
   })
 }
 
+/**
+ * Tracks when a user saves a game night configuration.
+ * Records information about the saved game night including player count,
+ * number of games in the session, and metadata about the save action.
+ *
+ * @param payload - The game night save event data
+ * @param payload.playerCount - Number of players in the game night
+ * @param payload.sessionGames - Number of games in the session
+ * @param payload.topPickName - Name of the recommended top pick game (if available)
+ * @param payload.hasDescription - Whether the user provided a description for the saved night
+ */
 export function trackGameNightSaved(payload: {
   playerCount: number
   sessionGames: number
