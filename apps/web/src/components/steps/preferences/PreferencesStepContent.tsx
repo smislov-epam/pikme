@@ -261,7 +261,7 @@ export function PreferencesStepContent({
         collisionDetection={closestCenter}
         onDragStart={handleDragStart}
         onDragCancel={handleDragCancel}
-        onDragEnd={(e) => { handleDragEnd(e); setActiveDragId(null) }}
+        onDragEnd={handleDragEnd}
       >
         <TopPicksSection
           topPicks={topPicksForRender}

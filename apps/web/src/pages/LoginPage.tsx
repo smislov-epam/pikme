@@ -32,21 +32,21 @@ export function LoginPage() {
     setLoading(true);
 
     try {
-      const userCredential = await signIn(email, password);
+      const authUser = await signIn(email, password);
 
       // Link local owner to Firebase UID (REQ-103 user journeys)
-      if (userCredential?.user) {
+      if (authUser) {
         try {
           const localOwner = await getLocalOwner();
           if (localOwner) {
             // Existing local owner - link to Firebase
-            await linkLocalOwnerToFirebase(userCredential.user.uid);
+            await linkLocalOwnerToFirebase(authUser.uid);
           } else {
             // No local owner yet - create one from Firebase profile
             await createLocalOwner({
-              displayName: userCredential.user.displayName || 'User',
+              displayName: authUser.displayName || 'User',
             });
-            await linkLocalOwnerToFirebase(userCredential.user.uid);
+            await linkLocalOwnerToFirebase(authUser.uid);
           }
         } catch (linkError) {
           // Non-fatal - log but don't fail login

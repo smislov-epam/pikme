@@ -241,7 +241,7 @@ export function CreateSessionForm(props: CreateSessionFormProps) {
       )}
 
       {/* Participant selection - only for detailed mode */}
-      <Collapse in={!isQuickShare && showParticipantSelection}>
+      <Collapse in={!isQuickShare && Boolean(showParticipantSelection)}>
         <ParticipantSelection
           users={users}
           preferences={preferences}
