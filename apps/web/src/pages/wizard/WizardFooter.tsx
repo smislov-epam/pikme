@@ -1,4 +1,7 @@
 import { Box, Button, Container, Paper, alpha, useMediaQuery, useTheme } from '@mui/material'
+import ShareIcon from '@mui/icons-material/Share'
+import VisibilityIcon from '@mui/icons-material/Visibility'
+import DoneIcon from '@mui/icons-material/Done'
 import { colors } from '../../theme/theme'
 
 export function WizardFooter(props: {
@@ -6,10 +9,16 @@ export function WizardFooter(props: {
   canGoNext: boolean
   isLastStep: boolean
   canSave: boolean
+  canShare?: boolean
+  hasSession?: boolean
+  /** Whether we're in session guest mode (joined a session with local games) */
+  sessionGuestMode?: boolean
   onBack: () => void
   onNext: () => void
   onStartOver: () => void
   onSave: () => void
+  onShare?: () => void
+  onExitSession?: () => void
 }) {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
@@ -19,10 +28,15 @@ export function WizardFooter(props: {
     canGoNext,
     isLastStep,
     canSave,
+    canShare = false,
+    hasSession = false,
+    sessionGuestMode = false,
     onBack,
     onNext,
     onStartOver,
     onSave,
+    onShare,
+    onExitSession,
   } = props
 
   return (
@@ -60,17 +74,55 @@ export function WizardFooter(props: {
           </Button>
 
           {!isLastStep ? (
-            <Button
-              variant="contained"
-              disabled={!canGoNext}
-              onClick={onNext}
-              size="large"
-              sx={{ minWidth: 140, py: 1.5 }}
-            >
-              Next
-            </Button>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+              {canShare && !sessionGuestMode && (
+                <Button
+                  variant="outlined"
+                  onClick={onShare}
+                  startIcon={<ShareIcon />}
+                  sx={{ minWidth: isMobile ? 'auto' : 100 }}
+                >
+                  {isMobile ? '' : 'Share'}
+                </Button>
+              )}
+              <Button
+                variant="contained"
+                disabled={!canGoNext}
+                onClick={onNext}
+                size="large"
+                sx={{ minWidth: 140, py: 1.5 }}
+              >
+                Next
+              </Button>
+            </Box>
+          ) : sessionGuestMode ? (
+            // Session guest mode - show "Done" instead of Save/Share
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button
+                variant="contained"
+                onClick={onExitSession}
+                startIcon={<DoneIcon />}
+                sx={{
+                  bgcolor: colors.sand,
+                  color: colors.navyBlue,
+                  '&:hover': { bgcolor: '#E5D194' },
+                }}
+              >
+                {isMobile ? 'Done' : 'Preferences Set'}
+              </Button>
+            </Box>
           ) : (
             <Box sx={{ display: 'flex', gap: 1 }}>
+              {canShare && (
+                <Button
+                  variant="outlined"
+                  onClick={onShare}
+                  startIcon={hasSession ? <VisibilityIcon /> : <ShareIcon />}
+                  sx={{ minWidth: isMobile ? 'auto' : 100 }}
+                >
+                  {isMobile ? '' : hasSession ? 'See Invite' : 'Share'}
+                </Button>
+              )}
               <Button variant="outlined" onClick={onStartOver}>
                 {isMobile ? 'Start' : 'Start over'}
               </Button>

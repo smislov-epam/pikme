@@ -22,6 +22,7 @@ import type { WizardFilters } from '../store/wizardTypes'
 import { loadWizardState, saveWizardState, clearWizardState } from '../services/storage/wizardStateStorage'
 import { loadLayoutMode, saveLayoutMode, type LayoutMode } from '../services/storage/uiPreferences'
 import * as dbService from '../services/db'
+import { getLocalOwner } from '../services/db/localOwnerService'
 import { DEFAULT_FILTERS } from '../services/filtering/filterConstants'
 
 // Import individual hooks
@@ -147,12 +148,15 @@ export function useWizardState() {
     const loadState = async () => {
       try {
         const persisted = await loadWizardState<unknown>()
+        let hasLoadedUsers = false
+
         if (isPersistedWizardStateV1(persisted)) {
           filtersState.setFilters(persisted.filters)
           gamesState.setSessionGameIds(persisted.sessionGameIds)
           gamesState.setExcludedBggIds(persisted.excludedBggIds)
 
           if (persisted.usernames.length > 0) {
+            hasLoadedUsers = true
             const loadedUsers: UserRecord[] = []
             for (const username of persisted.usernames) {
               let user = await dbService.getUser(username)
@@ -178,6 +182,33 @@ export function useWizardState() {
             }
             preferencesState.setPreferences(prefsMap)
             playersState.setUserRatings(ratingsMap)
+          }
+        }
+
+        // If no users were loaded from persisted state, add the local owner
+        if (!hasLoadedUsers) {
+          const localOwner = await getLocalOwner()
+          if (localOwner) {
+            playersState.setUsers([localOwner])
+            // Load any existing games and preferences for the local owner
+            const ownerGames = await dbService.getGamesForUsers([localOwner.username])
+            if (ownerGames.length > 0) {
+              gamesState.setGames(ownerGames)
+              gamesState.setSessionGameIds(ownerGames.map((g) => g.bggId))
+              gamesState.setGameOwners(
+                await dbService.getGameOwners(ownerGames.map((g) => g.bggId))
+              )
+            }
+            const ownerPrefs = await dbService.getUserPreferences(localOwner.username)
+            if (ownerPrefs.length > 0) {
+              preferencesState.setPreferences({ [localOwner.username]: ownerPrefs })
+            }
+            const ugRecords = await dbService.getUserGames(localOwner.username)
+            if (ugRecords.length > 0) {
+              const ratings: Record<number, number | undefined> = {}
+              for (const ug of ugRecords) ratings[ug.bggId] = ug.rating
+              playersState.setUserRatings({ [localOwner.username]: ratings })
+            }
           }
         }
 

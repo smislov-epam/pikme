@@ -13,6 +13,12 @@
   - Key constraints: BGG 202 polling, local-first persistence, possible BGG CORS limitations.
 - UI/UX consistency guidelines: `ui-ux-guidelines.md`
   - Treat this as the canonical source for visual/interaction consistency rules.
+- **User journey flows**: `Requirements/user-journeys.md`
+  - Identity model (local owner vs organizer vs Firebase UID)
+  - First-time setup, registration, guest joining flows
+  - Session creation with preference sharing
+  - Includes ASCII diagrams and implementation checklist
+  - **Always consult and update** when modifying identity or session flows.
 
 ## Requirements sources
 - The original inputs are stored as DOCX in `Requirements/`.
@@ -64,6 +70,12 @@
 - Keep files small and focused: do not exceed **180 lines of code** per file.
 - If a file approaches the limit, split it (extract subcomponents, hooks, services, or pure helpers).
 - Prefer pure logic in `apps/web/src/services` with unit tests; keep UI components lean.
+
+## Code reuse (hard guideline)
+- **Preferences UI**: The `PreferencesStepContent` component (`apps/web/src/components/steps/preferences/`) is the single source of truth for preference management UI. Any context needing preferences (wizard, guest session, etc.) must reuse this component - do not duplicate preferences logic.
+- **Session components**: Components in `apps/web/src/components/session/` are designed for both host and guest flows. Extract shared subcomponents to `createSessionDialog/` or similar subfolders.
+- **Hooks**: Prefer existing hooks in `apps/web/src/hooks/wizard/` for state management (usePreferencesState, useGamesState, etc.) rather than creating parallel state logic.
+- Before creating a new component, search for existing ones that can be extended or composed.
 
 
 ## Conventions for changes

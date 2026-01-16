@@ -19,5 +19,50 @@ service cloud.firestore {
     match /registrationInvites/{inviteId} {
       allow read, write: if false;
     }
+
+    // Shared games: read-only for authenticated users
+    // Writes handled by Cloud Functions (write-once, no overwrites)
+    match /games/{gameId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // Sessions: hosts and members can read
+    match /sessions/{sessionId} {
+      // Allow read if user is the creator or a member
+      allow read: if request.auth != null && (
+        resource.data.createdByUid == request.auth.uid ||
+        exists(/databases/$(database)/documents/sessions/$(sessionId)/members/$(request.auth.uid))
+      );
+      // Writes handled by Cloud Functions only
+      allow write: if false;
+
+      // Session games: same access as parent session
+      match /sessionGames/{gameId} {
+        allow read: if request.auth != null && (
+          get(/databases/$(database)/documents/sessions/$(sessionId)).data.createdByUid == request.auth.uid ||
+          exists(/databases/$(database)/documents/sessions/$(sessionId)/members/$(request.auth.uid))
+        );
+        allow write: if false;
+      }
+
+      // Participants: same access as parent session
+      match /participants/{participantId} {
+        allow read: if request.auth != null && (
+          get(/databases/$(database)/documents/sessions/$(sessionId)).data.createdByUid == request.auth.uid ||
+          exists(/databases/$(database)/documents/sessions/$(sessionId)/members/$(request.auth.uid))
+        );
+        allow write: if false;
+      }
+
+      // Members: same access as parent session
+      match /members/{uid} {
+        allow read: if request.auth != null && (
+          get(/databases/$(database)/documents/sessions/$(sessionId)).data.createdByUid == request.auth.uid ||
+          exists(/databases/$(database)/documents/sessions/$(sessionId)/members/$(request.auth.uid))
+        );
+        allow write: if false;
+      }
+    }
   }
 }

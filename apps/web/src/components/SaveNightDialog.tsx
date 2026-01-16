@@ -1,10 +1,13 @@
 import { useState } from 'react'
 import {
   Button,
+  Checkbox,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControlLabel,
+  FormGroup,
   Stack,
   TextField,
   Typography,
@@ -17,8 +20,9 @@ export interface SaveNightDialogProps {
   playerCount: number
   gameCount: number
   topPick: { game: GameRecord; score: number } | null
+  guestUsers?: { username: string; displayName: string }[]
   onClose: () => void
-  onSave: (name: string, description?: string) => Promise<void>
+  onSave: (name: string, description?: string, includeGuestUsernames?: string[]) => Promise<void>
 }
 
 export function SaveNightDialog({
@@ -26,20 +30,26 @@ export function SaveNightDialog({
   playerCount,
   gameCount,
   topPick,
+  guestUsers = [],
   onClose,
   onSave,
 }: SaveNightDialogProps) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const [includedGuests, setIncludedGuests] = useState<Record<string, boolean>>({})
 
   const handleSave = async () => {
     if (!name.trim()) return
     setIsSaving(true)
     try {
-      await onSave(name.trim(), description.trim() || undefined)
+      const selectedGuests = guestUsers
+        .filter((g) => includedGuests[g.username])
+        .map((g) => g.username)
+      await onSave(name.trim(), description.trim() || undefined, selectedGuests)
       setName('')
       setDescription('')
+      setIncludedGuests({})
       onClose()
     } finally {
       setIsSaving(false)
@@ -50,6 +60,7 @@ export function SaveNightDialog({
     if (!isSaving) {
       setName('')
       setDescription('')
+      setIncludedGuests({})
       onClose()
     }
   }
@@ -131,6 +142,33 @@ export function SaveNightDialog({
               </Typography>
             )}
           </Stack>
+
+          {guestUsers.length > 0 && (
+            <Stack spacing={1}>
+              <Typography variant="body2" color="text.secondary">
+                Include guests in saved night
+              </Typography>
+              <FormGroup>
+                {guestUsers.map((guest) => (
+                  <FormControlLabel
+                    key={guest.username}
+                    control={
+                      <Checkbox
+                        checked={Boolean(includedGuests[guest.username])}
+                        onChange={(e) =>
+                          setIncludedGuests((prev) => ({
+                            ...prev,
+                            [guest.username]: e.target.checked,
+                          }))
+                        }
+                      />
+                    }
+                    label={guest.displayName}
+                  />
+                ))}
+              </FormGroup>
+            </Stack>
+          )}
         </Stack>
       </DialogContent>
       <DialogActions>

@@ -1,4 +1,5 @@
 import { Box, ButtonBase, Paper, Stack, Typography, alpha, useMediaQuery, useTheme } from '@mui/material'
+import LockIcon from '@mui/icons-material/Lock'
 import { colors } from '../../theme/theme'
 import { MobileStepperNav } from './MobileStepperNav'
 import { wizardSteps } from './wizardSteps'
@@ -10,14 +11,16 @@ export function WizardStepperNav(props: {
   compactBadgeCount?: number
   canJumpTo: (stepIndex: number) => boolean
   onSelectStep: (stepIndex: number) => void
+  /** Steps that are locked (e.g., in session guest mode) - array of step indices */
+  lockedSteps?: number[]
 }) {
-  const { activeStep, completedSteps, stepSubtitles, compactBadgeCount, canJumpTo, onSelectStep } = props
+  const { activeStep, completedSteps, stepSubtitles, compactBadgeCount, canJumpTo, onSelectStep, lockedSteps = [] } = props
 
   const theme = useTheme()
   const isNarrow = useMediaQuery(theme.breakpoints.down('sm'))
 
   if (isNarrow) {
-    return <MobileStepperNav activeStep={activeStep} compactBadgeCount={compactBadgeCount} />
+    return <MobileStepperNav activeStep={activeStep} compactBadgeCount={compactBadgeCount} lockedSteps={lockedSteps} />
   }
 
   return (
@@ -50,7 +53,8 @@ export function WizardStepperNav(props: {
         {wizardSteps.map((label, index) => {
           const isActive = activeStep === index
           const isCompleted = !!completedSteps[index]
-          const disabled = !canJumpTo(index)
+          const isLocked = lockedSteps.includes(index)
+          const disabled = !canJumpTo(index) || isLocked
           const connectorIsDone = index < activeStep
 
           return (
@@ -69,17 +73,31 @@ export function WizardStepperNav(props: {
                   minHeight: 44,
                   border: 'none',
                   boxShadow:
-                    isActive
-                      ? `inset 0 0 0 2px ${colors.oceanBlue}`
-                      : isCompleted
-                        ? `inset 0 0 0 2px ${colors.sand}`
-                        : `inset 0 0 0 1px ${alpha(colors.oceanBlue, 0.25)}`,
-                  bgcolor: isActive ? colors.oceanBlue : 'transparent',
-                  color: isActive ? 'white' : 'text.primary',
+                    isLocked
+                      ? `inset 0 0 0 1px ${alpha(colors.oceanBlue, 0.15)}`
+                      : isActive
+                        ? `inset 0 0 0 2px ${colors.oceanBlue}`
+                        : isCompleted
+                          ? `inset 0 0 0 2px ${colors.sand}`
+                          : `inset 0 0 0 1px ${alpha(colors.oceanBlue, 0.25)}`,
+                  bgcolor: isLocked
+                    ? alpha(colors.navyBlue, 0.04)
+                    : isActive
+                      ? colors.oceanBlue
+                      : 'transparent',
+                  color: isLocked
+                    ? alpha(colors.navyBlue, 0.4)
+                    : isActive
+                      ? 'white'
+                      : 'text.primary',
                   transition: 'background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease',
                   transform: 'translateZ(0)',
                   '&:hover': {
-                    bgcolor: isActive ? colors.oceanBlue : alpha(colors.oceanBlue, 0.08),
+                    bgcolor: isLocked
+                      ? alpha(colors.navyBlue, 0.04)
+                      : isActive
+                        ? colors.oceanBlue
+                        : alpha(colors.oceanBlue, 0.08),
                     boxShadow: disabled
                       ? 'none'
                       : isActive
@@ -88,7 +106,8 @@ export function WizardStepperNav(props: {
                           ? `inset 0 0 0 2px ${colors.sand}`
                           : `inset 0 0 0 1px ${alpha(colors.oceanBlue, 0.35)}`,
                   },
-                  opacity: disabled ? 0.45 : 1,
+                  opacity: isLocked ? 0.6 : disabled ? 0.45 : 1,
+                  cursor: isLocked ? 'not-allowed' : disabled ? 'default' : 'pointer',
                 }}
               >
                 <Stack
@@ -105,14 +124,18 @@ export function WizardStepperNav(props: {
                       borderRadius: 999,
                       display: 'grid',
                       placeItems: 'center',
-                      bgcolor: isActive ? colors.sand : alpha(colors.sand, 0.45),
-                      color: colors.navyBlue,
+                      bgcolor: isLocked
+                        ? alpha(colors.navyBlue, 0.08)
+                        : isActive
+                          ? colors.sand
+                          : alpha(colors.sand, 0.45),
+                      color: isLocked ? alpha(colors.navyBlue, 0.4) : colors.navyBlue,
                       fontSize: '0.78rem',
                       fontWeight: 900,
                       flexShrink: 0,
                     }}
                   >
-                    {index + 1}
+                    {isLocked ? <LockIcon sx={{ fontSize: 14 }} /> : index + 1}
                   </Box>
 
                   <Typography

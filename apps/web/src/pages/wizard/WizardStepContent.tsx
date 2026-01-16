@@ -1,12 +1,24 @@
 import { PlayersStep, FiltersStep, PreferencesStep, ResultStep } from '../../components/steps'
 import type { WizardState, WizardActions } from '../../hooks/useWizardState'
+import type { UserRecord, UserPreferenceRecord } from '../../db/types'
+import type { GuestStatus } from '../../components/steps/preferences/types'
 
 export function WizardStepContent(props: {
   activeStep: number
   wizard: WizardState & WizardActions
   onOpenSaveDialog: () => void
+  /** Optional merged users (includes session guests) */
+  mergedUsers?: UserRecord[]
+  /** Optional merged preferences (includes session guest preferences) */
+  mergedPreferences?: Record<string, UserPreferenceRecord[]>
+  /** Optional guest statuses (for showing ready indicators on host) */
+  guestStatuses?: GuestStatus[]
 }) {
-  const { activeStep, wizard, onOpenSaveDialog } = props
+  const { activeStep, wizard, onOpenSaveDialog, mergedUsers, mergedPreferences, guestStatuses } = props
+
+  // Use merged data if provided, otherwise use wizard data
+  const usersForPrefs = mergedUsers ?? wizard.users
+  const preferencesForPrefs = mergedPreferences ?? wizard.preferences
 
   switch (activeStep) {
     case 0:
@@ -81,16 +93,17 @@ export function WizardStepContent(props: {
     case 2:
       return (
         <PreferencesStep
-          users={wizard.users}
+          users={usersForPrefs}
           games={wizard.filteredGames}
           gameOwners={wizard.gameOwners}
           layoutMode={wizard.layoutMode}
           onLayoutModeChange={wizard.setLayoutMode}
-          preferences={wizard.preferences}
+          preferences={preferencesForPrefs}
           userRatings={wizard.userRatings}
           onUpdatePreference={wizard.updatePreference}
           onClearPreference={wizard.clearPreference}
           onReorderPreferences={wizard.reorderPreferences}
+          guestStatuses={guestStatuses}
         />
       )
     case 3:

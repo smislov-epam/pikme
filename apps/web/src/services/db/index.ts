@@ -21,6 +21,7 @@ export {
   getOrganizer,
   getUser,
   setUserAsOrganizer,
+  updateUserLastPreferencesReviewedAt,
   updateUserLastSync,
   updateUserOwnedCount,
   upsertUser,

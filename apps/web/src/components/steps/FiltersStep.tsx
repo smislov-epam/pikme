@@ -1,4 +1,4 @@
-import { Box, Stack, Typography } from '@mui/material'
+import { Stack } from '@mui/material'
 import type { GameRecord, UserRecord } from '../../db/types'
 import { AdvancedFiltersAccordion } from './AdvancedFiltersAccordion'
 import { PlayerCountCard } from './filters/PlayerCountCard'
@@ -6,6 +6,7 @@ import { VibeCard } from './filters/VibeCard'
 import { TimeRangeCard } from './filters/TimeRangeCard'
 import { FiltersResultsSection } from './filters/FiltersResultsSection'
 import type { LayoutMode } from '../../services/storage/uiPreferences'
+import { SectionHeader } from '../ui/SectionHeader'
 
 export interface FiltersStepProps {
   games: GameRecord[]
@@ -63,16 +64,14 @@ export function FiltersStep({
   onUndoExcludeGameFromSession,
 }: FiltersStepProps) {
   return (
-    <Stack spacing={3}>
-      {/* Header */}
-      <Box>
-        <Typography variant="h5" gutterBottom sx={{ color: 'primary.dark' }}>
-          Set your constraints
-        </Typography>
-        <Typography color="text.secondary">
-          Filter games by what works for your group tonight
-        </Typography>
-      </Box>
+    <Stack spacing={2}>
+      <SectionHeader
+        title="Set your constraints"
+        subtitle="Filter games by what works for your group tonight"
+        titleVariant="h5"
+        subtitleVariant="caption"
+        titleColor="primary.dark"
+      />
 
       {/* Player Count */}
       <PlayerCountCard

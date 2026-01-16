@@ -42,11 +42,13 @@ export async function addGameToUser(
 
   if (existing) {
     // Update existing record
-    await db.userGames.update(existing.id!, {
-      rating,
-      addedAt: new Date().toISOString(),
-    })
-    return { ...existing, rating, addedAt: new Date().toISOString() }
+    const addedAt = new Date().toISOString()
+    const updates: Partial<UserGameRecord> = { addedAt }
+    if (rating !== undefined) {
+      updates.rating = rating
+    }
+    await db.userGames.update(existing.id!, updates)
+    return { ...existing, ...updates }
   }
 
   // Create new record

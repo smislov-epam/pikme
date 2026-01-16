@@ -53,6 +53,65 @@ Then open `http://localhost:5173/`.
 - `npm --prefix "apps/web" run lint`
 - `npm --prefix "apps/web" run test`
 
+## Security & Quality Checks
+
+This repo includes automated security and quality checks that run:
+1. **On every commit** (via Husky pre-commit hook)
+2. **On every push** (via Husky pre-push hook)
+3. **On every push to remote** (via GitHub Actions)
+
+### What Gets Checked
+
+#### Pre-Commit (Quick)
+- ✅ ESLint code quality checks
+
+#### Pre-Push (Comprehensive)
+- 🔐 **Secret Detection** - Scans for exposed API keys, tokens, passwords
+- 🔨 **TypeScript Compilation** - Both web app and functions
+- 🔍 **ESLint** - Code quality checks
+- 🧪 **Unit Tests** - Vitest tests for web app and functions
+- 🛡️ **Security Audit** - npm audit for vulnerabilities (moderate+)
+
+#### GitHub Actions (CI/CD)
+Runs the same checks as pre-push, plus:
+- 📦 **Dependency Review** - Checks for new vulnerable/restricted dependencies in PRs
+- ⚙️ **Matrix Testing** - Tests root, web, and functions workspaces in parallel
+- 🚫 **Blocks merges** if any check fails
+
+### Manual Security Checks
+
+Run security checks manually:
+```bash
+# Check everything
+npm run security:check
+
+# Individual checks
+npm run security:secrets      # Scan for exposed secrets
+npm run security:audit        # Root dependencies
+npm run security:web          # Web dependencies
+npm run security:functions    # Functions dependencies
+
+# Run all pre-push checks manually
+npm run pre-push:checks
+```
+
+### Bypassing Hooks (Not Recommended)
+
+Only in emergencies, you can bypass hooks:
+```bash
+git commit --no-verify        # Skip pre-commit
+git push --no-verify          # Skip pre-push
+```
+
+**Note:** GitHub Actions will still run and may block your PR!
+
+### Configuring Secret Detection
+
+If you get false positives:
+1. Review `tools/detect-secrets.mjs`
+2. Add patterns to `WHITELISTED_PATTERNS` array
+3. Use `.env.example` for API key placeholders
+
 ### Firebase emulators (Windows note: Java 21 required)
 
 Recent `firebase-tools` versions require **JDK 21+** for emulators.
@@ -106,20 +165,6 @@ Firebase is used for optional multi-user features (REQ-100+). It's **disabled by
 ### Emulator Data Persistence
 - Export: `npm run emulators:export`
 - Import on start: `npm run emulators:import`
-
-## Security
-For security policy and best practices, see [`SECURITY.md`](SECURITY.md).
-
-Run the security audit script before deploying:
-```bash
-bash scripts/security-audit.sh
-```
-
-This checks for:
-- Committed secrets or API keys
-- Hardcoded credentials
-- Vulnerable dependencies
-- Exposed sensitive data in logs
 
 ## Requirements extraction helper
 Source DOCX files are in `Requirements/`. To produce plain-text snapshots for diff/review:

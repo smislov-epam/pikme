@@ -5,7 +5,7 @@ import { createTheme, alpha } from '@mui/material/styles'
 // - Liquid blue primary (light to dark gradient)
 // - Off-white base for calmness
 
-const colors = {
+export const colors = {
   sand: '#F2C94C',      // Warm sand accent (more pronounced)
   skyBlue: '#A7D1FF',   // Light blue highlight
   oceanBlue: '#2F6FB2', // Primary blue (more pronounced)
@@ -289,6 +289,3 @@ export const theme = createTheme({
     },
   },
 })
-
-// Export colors for direct use in components
-export { colors }

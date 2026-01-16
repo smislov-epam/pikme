@@ -135,7 +135,26 @@ Rules:
 - Loading states are required for operations taking >300ms.
 - Error messages must be actionable.
 
-## 9) Add new games entry (Players step)
+## 9) Dialog and form guidelines
+Dialogs must be clean, scannable, and avoid visual clutter.
+
+### 9.1 Dialog structure
+- Header: colored background with icon + title; add bottom margin for visual separation from content.
+- Content: consistent vertical spacing (use `spacing={2}` as baseline).
+- Actions: standard button placement at bottom right.
+
+### 9.2 Form layout rules
+- **Summary first**: Show key context (e.g., filter summary, counts) at the top before interactive controls.
+- **Progressive disclosure**: Only show related options after user makes a choice (e.g., show title field only after selecting "Detailed Share").
+- **Expandable fields**: Optional inputs (e.g., scheduled time) should appear as clickable text links ("+ Add scheduled time") that expand into input fields with a close (X) button.
+- **Even spacing**: Use consistent `spacing` values throughout; avoid large gaps between related items.
+- **Inline options on desktop**: Related checkboxes (e.g., participant + include preferences) should appear on the same row on desktop, stacking vertically only on mobile.
+
+### 9.3 Expiry and metadata
+- Always show invite/session expiry information near the top.
+- Use caption-sized text for secondary metadata.
+
+## 10) Add new games entry (Players step)
 Adding games manually should be discoverable but not visually noisy.
 
 Rules:

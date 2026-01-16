@@ -116,17 +116,21 @@ export function useSavedNightsState(options: UseSavedNightsStateOptions): UseSav
   // ─────────────────────────────────────────────────────────────────────────
 
   const saveNight = useCallback(
-    async (name: string, description?: string) => {
+    async (name: string, description?: string, includeGuestUsernames?: string[]) => {
       if (!recommendation.topPick) return
 
       const excludedSet = new Set(excludedBggIds)
       const orgUsername = users.find((u) => u.isOrganizer)?.username
+      const includeGuestSet = new Set(includeGuestUsernames ?? [])
+      const usernamesToSave = users
+        .filter((u) => !u.username.startsWith('__guest_') || includeGuestSet.has(u.username))
+        .map((u) => u.username)
 
       await dbService.saveNight({
         name,
         description,
         organizerUsername: orgUsername,
-        usernames: users.map((u) => u.username),
+        usernames: usernamesToSave,
         gameIds: sessionGameIds.filter((id) => !excludedSet.has(id)),
         filters: {
           playerCount: filters.playerCount,

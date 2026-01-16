@@ -43,6 +43,17 @@ jobs:
           # Set this in GitHub: Repo Settings -> Secrets and variables -> Actions -> New repository secret
           # Name: VITE_GA_MEASUREMENT_ID (value like: G-XXXXXXXXXX)
           VITE_GA_MEASUREMENT_ID: ${{ secrets.VITE_GA_MEASUREMENT_ID }}
+          # Firebase feature toggle: Set ENABLE_FIREBASE variable in GitHub repo settings to '1' to enable.
+          # When enabled, Firebase secrets must also be configured.
+          # To quickly disable: set ENABLE_FIREBASE to '0' and push/re-deploy.
+          VITE_FEATURE_FIREBASE: ${{ vars.ENABLE_FIREBASE || '0' }}
+          # Firebase configuration (only used when VITE_FEATURE_FIREBASE=1)
+          VITE_FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
         run: npm run build
 
       - name: Setup Pages

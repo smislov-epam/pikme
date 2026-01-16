@@ -126,6 +126,99 @@ PIKME only enables analytics in production builds when a GA4 measurement ID is p
 
 On the next deploy, the build will include the measurement ID and analytics will initialize.
 
+## Optional: Enable Firebase backend for multi-user testing
+
+PIKME can connect to a Firebase backend for user authentication, session sharing, and multi-user preference sync. This is **disabled by default** in production builds.
+
+### Prerequisites
+
+1. A Firebase project (e.g., `pikme-online-dev`) with:
+   - Authentication enabled (Email/Password provider)
+   - Firestore database created
+   - Cloud Functions deployed
+2. Authorized domains configured in Firebase Console:
+   - Go to **Authentication → Settings → Authorized domains**
+   - Add `pikme.online` and `pikme.github.io`
+
+### Register a web app and get config values
+
+If you haven't registered a web app in Firebase yet:
+
+1. Go to [Firebase Console](https://console.firebase.google.com/) → select your project
+2. Click the **gear icon** → **Project settings**
+3. Scroll to **Your apps** section
+4. Click **Add app** → select **Web** (</> icon)
+5. Enter app nickname (e.g., `pikme-web`) and click **Register app**
+6. Copy the config values shown:
+
+   ```javascript
+   const firebaseConfig = {
+     apiKey: "...",           // → FIREBASE_API_KEY
+     authDomain: "...",       // → FIREBASE_AUTH_DOMAIN
+     projectId: "...",        // → FIREBASE_PROJECT_ID
+     storageBucket: "...",    // → FIREBASE_STORAGE_BUCKET
+     messagingSenderId: "...",// → FIREBASE_MESSAGING_SENDER_ID
+     appId: "..."             // → FIREBASE_APP_ID
+   };
+   ```
+
+7. Click **Continue to console**
+
+### Enable Firebase in production
+
+1. **Add Firebase secrets** in GitHub (Repo → Settings → Secrets and variables → Actions → Secrets):
+
+   | Secret name | Description |
+   |-------------|-------------|
+   | `FIREBASE_API_KEY` | Firebase Web API key |
+   | `FIREBASE_AUTH_DOMAIN` | e.g., `pikme-online-dev.firebaseapp.com` |
+   | `FIREBASE_PROJECT_ID` | e.g., `pikme-online-dev` |
+   | `FIREBASE_STORAGE_BUCKET` | e.g., `pikme-online-dev.appspot.com` |
+   | `FIREBASE_MESSAGING_SENDER_ID` | Numeric sender ID |
+   | `FIREBASE_APP_ID` | Firebase app ID |
+
+2. **Create the toggle variable** (Repo → Settings → Secrets and variables → Actions → Variables):
+   - Click **New repository variable**
+   - Name: `ENABLE_FIREBASE`
+   - Value: `1`
+
+3. **Push or trigger deploy** — the next build will include Firebase functionality.
+
+### Disable Firebase quickly
+
+To disable Firebase in production (e.g., for troubleshooting or cost control):
+
+1. Go to **Repo → Settings → Secrets and variables → Actions → Variables**
+2. Edit `ENABLE_FIREBASE` and set value to `0`
+3. Trigger a new deployment (push to `main` or manually dispatch workflow)
+
+Build + deploy takes ~2-3 minutes. During this time, existing users can still access the app in local-only mode.
+
+### Beta testing: User registration limit
+
+For beta testing, control user access by generating an invite with a limited number of uses:
+
+```bash
+# Generate a single invite link that can be used by up to 5 beta testers
+GOOGLE_APPLICATION_CREDENTIALS=./service-account.json \
+PIKME_APP_URL=https://pikme.online \
+node tools/generate-invite.mjs --maxUses 5 --expiresInDays 30
+```
+
+Share the generated link with beta testers. Once 5 users have registered with the link, it will no longer be valid.
+
+For local development with emulators:
+```bash
+FIRESTORE_EMULATOR_HOST=127.0.0.1:8081 \
+node tools/generate-invite.mjs --maxUses 5 --expiresInDays 30
+```
+
+### Security notes
+
+- All Firestore reads require authentication — unauthenticated users have zero backend access
+- All writes go through Cloud Functions (no direct client writes)
+- Firebase secrets are not exposed in client bundle (only config values like project ID)
+
 ## 5) Operational notes (local-first app)
 
 - PIKME stores data in IndexedDB per **origin**.

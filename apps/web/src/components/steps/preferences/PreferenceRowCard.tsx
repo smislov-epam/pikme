@@ -10,6 +10,7 @@ import ThumbDownOffAltIcon from '@mui/icons-material/ThumbDownOffAlt'
 import type { GameRecord } from '../../../db/types'
 import { colors } from '../../../theme/theme'
 import { StatPill } from '../../ui/StatPill'
+import { getGameImageOrPlaceholder } from '../../../services/ui/gameImage'
 
 export interface PreferenceRowCardProps {
   game: GameRecord
@@ -100,11 +101,15 @@ export function PreferenceRowCard({
 
       <Box
         component="img"
-        src={game.thumbnail || '/vite.svg'}
+        src={getGameImageOrPlaceholder(game)}
         alt={game.name}
         sx={{ width: 36, height: 36, borderRadius: '6px', objectFit: 'cover', bgcolor: 'grey.200', flexShrink: 0 }}
         onError={(e) => {
-          ;(e.target as HTMLImageElement).src = '/vite.svg'
+          const target = e.target as HTMLImageElement
+          const fallback = getGameImageOrPlaceholder(game)
+          if (target.src !== fallback) {
+            target.src = fallback
+          }
         }}
       />
 

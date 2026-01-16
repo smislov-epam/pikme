@@ -130,6 +130,57 @@ export class PikmeDb extends Dexie {
             }
           })
       })
+
+    this.version(6)
+      .stores({
+        games: 'bggId, name, lastFetchedAt',
+        gameNotes: '++id, bggId, createdAt',
+        users: 'username, internalId, isBggUser, isLocalOwner, firebaseUid, lastSyncAt',
+        userGames: '++id, [username+bggId], username, bggId, source, addedAt',
+        userPreferences: '++id, [username+bggId], username, bggId, updatedAt',
+        wizardState: 'id, updatedAt',
+        savedNights: '++id, createdAt',
+      })
+      .upgrade(async (tx) => {
+        // Initialize new identity fields
+        // Set the organizer or first user as the local owner
+        const users = await tx.table('users').toArray()
+        if (users.length === 0) return
+
+        // Find organizer or use first user
+        const organizer = users.find((u) => u.isOrganizer) ?? users[0]
+
+        for (const user of users) {
+          await tx.table('users').update(user.username, {
+            isLocalOwner: user.username === organizer.username,
+          })
+        }
+      })
+
+    // Version 7: Fix for users who already migrated to v6 with no local owner
+    this.version(7)
+      .stores({
+        games: 'bggId, name, lastFetchedAt',
+        gameNotes: '++id, bggId, createdAt',
+        users: 'username, internalId, isBggUser, isLocalOwner, firebaseUid, lastSyncAt',
+        userGames: '++id, [username+bggId], username, bggId, source, addedAt',
+        userPreferences: '++id, [username+bggId], username, bggId, updatedAt',
+        wizardState: 'id, updatedAt',
+        savedNights: '++id, createdAt',
+      })
+      .upgrade(async (tx) => {
+        // Check if any user has isLocalOwner = true
+        const users = await tx.table('users').toArray()
+        const hasLocalOwner = users.some((u) => u.isLocalOwner === true)
+
+        if (!hasLocalOwner && users.length > 0) {
+          // No local owner set - fix by setting organizer or first user
+          const organizer = users.find((u) => u.isOrganizer) ?? users[0]
+          await tx.table('users').update(organizer.username, {
+            isLocalOwner: true,
+          })
+        }
+      })
   }
 }
 
