@@ -25,7 +25,24 @@ coverage/
 # --- Local env files ---
 .env
 .env.*
+!.env.example
+
+# --- Firebase ---
+.firebase/
+.firebase-emulator-data/
+firebase-debug.log
+firebase-debug.*.log
+firestore-debug.log
+ui-debug.log
+functions/lib/
+
+# --- Service account keys (NEVER COMMIT) ---
+*-firebase-adminsdk-*.json
+service-account*.json
+
+# --- Tools folder (contains sensitive keys) ---
+tools/
 
 # --- Docs you asked not to publish ---
 Requirements/
-deploy-to-prod.md
+
