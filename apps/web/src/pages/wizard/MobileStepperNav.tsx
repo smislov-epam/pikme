@@ -1,4 +1,5 @@
 import { Box, Paper, Stack, Typography, alpha } from '@mui/material'
+import LockIcon from '@mui/icons-material/Lock'
 import { Fragment } from 'react'
 import { colors } from '../../theme/theme'
 import { wizardSteps, wizardStepsShort } from './wizardSteps'
@@ -6,6 +7,8 @@ import { wizardSteps, wizardStepsShort } from './wizardSteps'
 export interface MobileStepperNavProps {
   activeStep: number
   compactBadgeCount?: number
+  /** Steps that are locked (e.g., in session guest mode) - array of step indices */
+  lockedSteps?: number[]
 }
 
 /** Circle size and connector dimensions */
@@ -22,21 +25,24 @@ const LABEL_WIDTHS: Record<number, number> = {
 }
 
 /** Returns the background color for a step circle */
-function getCircleBgColor(stepIndex: number, activeStep: number): string {
+function getCircleBgColor(stepIndex: number, activeStep: number, isLocked: boolean): string {
+  if (isLocked) return alpha(colors.navyBlue, 0.08) // Locked
   if (stepIndex < activeStep) return colors.sand // Completed
   if (stepIndex === activeStep) return colors.oceanBlue // Active
   return 'transparent' // Upcoming
 }
 
 /** Returns the border color for a step circle */
-function getCircleBorderColor(stepIndex: number, activeStep: number): string {
+function getCircleBorderColor(stepIndex: number, activeStep: number, isLocked: boolean): string {
+  if (isLocked) return alpha(colors.oceanBlue, 0.15) // Locked
   if (stepIndex < activeStep) return colors.sand // Completed
   if (stepIndex === activeStep) return colors.oceanBlue // Active
   return alpha(colors.oceanBlue, 0.25) // Upcoming
 }
 
 /** Returns the text color for a step circle */
-function getCircleTextColor(stepIndex: number, activeStep: number): string {
+function getCircleTextColor(stepIndex: number, activeStep: number, isLocked: boolean): string {
+  if (isLocked) return alpha(colors.navyBlue, 0.4) // Locked
   if (stepIndex < activeStep) return colors.navyBlue // Completed
   if (stepIndex === activeStep) return '#FFFFFF' // Active
   return alpha(colors.oceanBlue, 0.45) // Upcoming
@@ -59,7 +65,7 @@ function getConnectorBg(leftIndex: number, activeStep: number): string {
   return alpha(colors.oceanBlue, 0.25)
 }
 
-export function MobileStepperNav({ activeStep, compactBadgeCount = 0 }: MobileStepperNavProps) {
+export function MobileStepperNav({ activeStep, compactBadgeCount = 0, lockedSteps = [] }: MobileStepperNavProps) {
   const shortLabel = wizardStepsShort[activeStep] ?? 'Step'
   const labelWidth = LABEL_WIDTHS[activeStep] ?? 48
 
@@ -84,6 +90,7 @@ export function MobileStepperNav({ activeStep, compactBadgeCount = 0 }: MobileSt
           {wizardSteps.map((_, stepIndex) => {
             const isActive = stepIndex === activeStep
             const isLast = stepIndex === wizardSteps.length - 1
+            const isLocked = lockedSteps.includes(stepIndex)
 
             return (
               <Fragment key={stepIndex}>
@@ -93,11 +100,12 @@ export function MobileStepperNav({ activeStep, compactBadgeCount = 0 }: MobileSt
                     display: 'flex',
                     alignItems: 'center',
                     borderRadius: 999,
-                    border: isActive ? `${BORDER_WIDTH}px solid ${colors.oceanBlue}` : 'none',
-                    pl: isActive ? 0.25 : 0,
-                    pr: isActive ? 1 : 0,
-                    py: isActive ? 0.25 : 0,
+                    border: isActive && !isLocked ? `${BORDER_WIDTH}px solid ${colors.oceanBlue}` : 'none',
+                    pl: isActive && !isLocked ? 0.25 : 0,
+                    pr: isActive && !isLocked ? 1 : 0,
+                    py: isActive && !isLocked ? 0.25 : 0,
                     flexShrink: 0,
+                    opacity: isLocked ? 0.6 : 1,
                   }}
                 >
                   <Box
@@ -107,21 +115,21 @@ export function MobileStepperNav({ activeStep, compactBadgeCount = 0 }: MobileSt
                       borderRadius: 999,
                       display: 'grid',
                       placeItems: 'center',
-                      bgcolor: getCircleBgColor(stepIndex, activeStep),
-                      border: isActive ? 'none' : `${BORDER_WIDTH}px solid`,
-                      borderColor: getCircleBorderColor(stepIndex, activeStep),
-                      color: getCircleTextColor(stepIndex, activeStep),
+                      bgcolor: getCircleBgColor(stepIndex, activeStep, isLocked),
+                      border: isActive && !isLocked ? 'none' : `${BORDER_WIDTH}px solid`,
+                      borderColor: getCircleBorderColor(stepIndex, activeStep, isLocked),
+                      color: getCircleTextColor(stepIndex, activeStep, isLocked),
                       fontSize: '0.95rem',
                       fontWeight: 900,
                       flexShrink: 0,
                       boxSizing: 'border-box',
                     }}
                   >
-                    {stepIndex + 1}
+                    {isLocked ? <LockIcon sx={{ fontSize: 14 }} /> : stepIndex + 1}
                   </Box>
 
                   {/* Active step label inside the bordered pill */}
-                  {isActive && (
+                  {isActive && !isLocked && (
                     <Typography
                       component="span"
                       sx={{

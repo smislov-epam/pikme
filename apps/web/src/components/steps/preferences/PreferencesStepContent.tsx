@@ -3,7 +3,9 @@ import {
   Box,
   Card,
   CardContent,
+  FormControlLabel,
   Stack,
+  Switch,
   Typography,
   useMediaQuery,
   useTheme,
@@ -17,12 +19,11 @@ import {
   closestCenter,
   useSensor,
   useSensors,
-  type DragEndEvent,
-  type DragStartEvent,
 } from '@dnd-kit/core'
-import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
+import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import type { GameRecord, UserPreferenceRecord, UserRecord } from '../../../db/types'
 import { PreferencesUserSelector } from './PreferencesUserSelector'
+import type { GuestStatus } from './types'
 import { GameCard } from '../PreferenceGameCard'
 import { DislikedSection, NeutralSection, RankedSection, type PreferenceGameRow, TopPicksSection } from './PreferencesSections'
 import { useToast } from '../../../services/toast'
@@ -30,17 +31,9 @@ import { GameDetailsDialog } from '../../gameDetails/GameDetailsDialog'
 import { LayoutToggle } from '../../LayoutToggle'
 import type { LayoutMode } from '../../../services/storage/uiPreferences'
 import { PreferenceRowCard } from './PreferenceRowCard'
-
-const TOP_PICKS_LIMIT = 3
-
-const DROPPABLE = {
-  top: 'prefs:top',
-  ranked: 'prefs:ranked',
-  neutral: 'prefs:neutral',
-  disliked: 'prefs:disliked',
-} as const
-
-type PreferenceBucket = keyof typeof DROPPABLE
+import { SectionHeader } from '../../ui/SectionHeader'
+import { usePreferencesDragDrop, DROPPABLE, TOP_PICKS_LIMIT } from './usePreferencesDragDrop'
+import { useNewGameIds } from './useNewGameIds'
 
 export interface PreferencesStepProps {
   users: UserRecord[]
@@ -57,6 +50,12 @@ export interface PreferencesStepProps {
   ) => void
   onReorderPreferences: (username: string, orderedBggIds: number[]) => void
   onClearPreference: (username: string, bggId: number) => void
+  /** Optional guest statuses (for showing ready indicators on host) */
+  guestStatuses?: GuestStatus[]
+  /** Force full tile layout even on mobile */
+  forceFullTiles?: boolean
+  /** Hide layout toggle (e.g., guest quick share) */
+  hideLayoutToggle?: boolean
 }
 
 export function PreferencesStepContent({
@@ -70,20 +69,36 @@ export function PreferencesStepContent({
   onUpdatePreference,
   onReorderPreferences,
   onClearPreference,
+  guestStatuses = [],
+  forceFullTiles = false,
+  hideLayoutToggle = false,
 }: PreferencesStepProps) {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const toast = useToast()
   const [selectedUserState, setSelectedUserState] = useState(users[0]?.username ?? '')
-  const [activeDragId, setActiveDragId] = useState<number | null>(null)
   const [detailsGame, setDetailsGame] = useState<GameRecord | null>(null)
+  const [showOnlyNewGames, setShowOnlyNewGames] = useState(false)
 
   const selectedUser = useMemo(() => {
     if (users.some((u) => u.username === selectedUserState)) return selectedUserState
     return users[0]?.username ?? ''
   }, [selectedUserState, users])
 
-  const effectiveLayoutMode: LayoutMode = isMobile ? 'simplified' : layoutMode
+  const effectiveLayoutMode: LayoutMode = isMobile && !forceFullTiles ? 'simplified' : layoutMode
+
+  const selectedUserRecord = useMemo(
+    () => users.find((u) => u.username === selectedUser) ?? null,
+    [selectedUser, users]
+  )
+
+  const { newGameIds } = useNewGameIds({
+    username: selectedUser,
+    gameIds: games.map((g) => g.bggId),
+    lastPreferencesReviewedAt: selectedUserRecord?.lastPreferencesReviewedAt,
+  })
+
+  const hasNewGames = newGameIds.size > 0
 
   const showNotice = useCallback((message: string) => {
     toast.info(message)
@@ -136,16 +151,35 @@ export function PreferencesStepContent({
     [gamesWithPrefs]
   )
 
+  const rankedIds = useMemo(() => ranked.map((g) => g.game.bggId), [ranked])
+  const topPickIds = useMemo(() => topPicks.map((g) => g.game.bggId), [topPicks])
+  const neutralIds = useMemo(() => neutral.map((g) => g.game.bggId), [neutral])
+  const dislikedIds = useMemo(() => disliked.map((g) => g.game.bggId), [disliked])
+
+  // Use the drag-and-drop hook
+  const { activeDragId, handleDragStart, handleDragEnd, handleDragCancel } = usePreferencesDragDrop({
+    selectedUser,
+    rankedIds,
+    topPickIds,
+    neutralIds,
+    dislikedIds,
+    topPicksCount: topPicks.length,
+    onUpdatePreference,
+    onReorderPreferences,
+    onClearPreference,
+    showNotice,
+  })
+
   const { topPicksForRender, dislikedForRender, neutralForRender } = useMemo(() => {
     if (activeDragId == null) return { topPicksForRender: topPicks, dislikedForRender: disliked, neutralForRender: neutral }
     const keep = (rows: PreferenceGameRow[]) => rows.filter((g) => g.game.bggId !== activeDragId)
     return { topPicksForRender: keep(topPicks), dislikedForRender: keep(disliked), neutralForRender: keep(neutral) }
   }, [activeDragId, disliked, neutral, topPicks])
 
-  const rankedIds = useMemo(() => ranked.map((g) => g.game.bggId), [ranked])
-  const topPickIds = useMemo(() => topPicks.map((g) => g.game.bggId), [topPicks])
-  const neutralIds = useMemo(() => neutral.map((g) => g.game.bggId), [neutral])
-  const dislikedIds = useMemo(() => disliked.map((g) => g.game.bggId), [disliked])
+  const neutralForDisplay = useMemo(() => {
+    if (!showOnlyNewGames) return neutralForRender
+    return neutralForRender.filter((row) => newGameIds.has(row.game.bggId))
+  }, [neutralForRender, newGameIds, showOnlyNewGames])
 
   const handleToggleTopPick = useCallback(
     (bggId: number, currentlyTopPick: boolean) => {
@@ -172,121 +206,6 @@ export function PreferencesStepContent({
     [onUpdatePreference, selectedUser]
   )
 
-  const handleDragEnd = useCallback(
-    (event: DragEndEvent) => {
-      const { active, over } = event
-      if (!over || active.id === over.id) return
-
-      if (typeof active.id !== 'number') return
-      const activeId = active.id
-
-      const bucketOf = (id: string | number): PreferenceBucket | null => {
-        if (typeof id === 'string') {
-          const match = (Object.keys(DROPPABLE) as PreferenceBucket[]).find((k) => DROPPABLE[k] === id)
-          return match ?? null
-        }
-
-        if (topPickIds.includes(id)) return 'top'
-        if (rankedIds.includes(id)) return 'ranked'
-        if (dislikedIds.includes(id)) return 'disliked'
-        if (neutralIds.includes(id)) return 'neutral'
-        return null
-      }
-
-      const source = bucketOf(activeId)
-      const target = bucketOf(over.id)
-      if (!source || !target) return
-
-      // Reorder within ranked list
-      if (source === 'ranked' && target === 'ranked') {
-        const oldIndex = rankedIds.indexOf(activeId)
-        if (oldIndex === -1) return
-
-        // Dropping on the ranked container means "move to end".
-        const newIndex = typeof over.id === 'number' ? rankedIds.indexOf(over.id) : rankedIds.length - 1
-        if (newIndex === -1) return
-
-        onReorderPreferences(selectedUser, arrayMove(rankedIds, oldIndex, newIndex))
-        return
-      }
-
-      // Enforce Top Picks limit on drop
-      if (target === 'top' && source !== 'top' && topPicks.length >= TOP_PICKS_LIMIT) {
-        showNotice(`Top Picks limited to ${TOP_PICKS_LIMIT}`)
-        return
-      }
-
-      // Moving into ranked: compute new ordering and let ranks drive the state.
-      if (target === 'ranked') {
-        const base = rankedIds.filter((id) => id !== activeId)
-        const insertAt =
-          typeof over.id === 'number' && rankedIds.includes(over.id)
-            ? Math.max(0, base.indexOf(over.id))
-            : base.length
-
-        const next = [...base]
-        next.splice(insertAt, 0, activeId)
-        onReorderPreferences(selectedUser, next)
-        return
-      }
-
-      // If leaving ranked, fix up ranks first.
-      if (source === 'ranked') {
-        onReorderPreferences(selectedUser, rankedIds.filter((id) => id !== activeId))
-      }
-
-      if (target === 'top') {
-        onUpdatePreference(selectedUser, activeId, { isTopPick: true })
-        return
-      }
-
-      if (target === 'disliked') {
-        onUpdatePreference(selectedUser, activeId, { isDisliked: true })
-        return
-      }
-
-      // Move to neutral: remove any existing preference record.
-      if (target === 'neutral') {
-        if (source === 'ranked') {
-          onClearPreference(selectedUser, activeId)
-          return
-        }
-
-        if (source === 'top') {
-          onUpdatePreference(selectedUser, activeId, { isTopPick: false })
-          return
-        }
-
-        if (source === 'disliked') {
-          onUpdatePreference(selectedUser, activeId, { isDisliked: false })
-          return
-        }
-      }
-    },
-    [
-      dislikedIds,
-      neutralIds,
-      onClearPreference,
-      onReorderPreferences,
-      onUpdatePreference,
-      rankedIds,
-      selectedUser,
-      showNotice,
-      topPickIds,
-      topPicks.length,
-    ]
-  )
-
-  const handleDragStart = useCallback((event: DragStartEvent) => {
-    if (typeof event.active.id === 'number') {
-      setActiveDragId(event.active.id)
-    }
-  }, [])
-
-  const handleDragCancel = useCallback(() => {
-    setActiveDragId(null)
-  }, [])
-
   if (users.length === 0) {
     return (
       <Card>
@@ -299,23 +218,41 @@ export function PreferencesStepContent({
 
   return (
     <Stack spacing={3}>
-      <Box>
-        <Box>
-          <Typography variant="h5" gutterBottom sx={{ color: 'primary.dark' }}>Share your preferences</Typography>
-          <Typography color="text.secondary">Each player can mark favorites and rank games</Typography>
-        </Box>
-      </Box>
+      <SectionHeader
+        title="Share your preferences"
+        subtitle="Each player can mark favorites and rank games"
+        titleVariant="h5"
+        titleColor="primary.dark"
+      />
 
       <PreferencesUserSelector
         users={users}
         selectedUser={selectedUser}
         isMobile={isMobile}
         onChange={setSelectedUserState}
+        preferences={preferences}
+        gameIds={games.map((g) => g.bggId)}
+        guestStatuses={guestStatuses}
       />
 
       {!isMobile ? (
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <LayoutToggle layoutMode={layoutMode} onChange={onLayoutModeChange} variant="icon" />
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, alignItems: 'center' }}>
+          {hasNewGames ? (
+            <FormControlLabel
+              label={`Only new games (${newGameIds.size})`}
+              control={
+                <Switch
+                  size="small"
+                  checked={showOnlyNewGames}
+                  onChange={(e) => setShowOnlyNewGames(e.target.checked)}
+                />
+              }
+              sx={{ mr: 0 }}
+            />
+          ) : null}
+          {!hideLayoutToggle && (
+            <LayoutToggle layoutMode={layoutMode} onChange={onLayoutModeChange} variant="icon" />
+          )}
         </Box>
       ) : null}
 
@@ -351,7 +288,7 @@ export function PreferencesStepContent({
           onToggleDisliked={handleToggleDisliked}
         />
         <NeutralSection
-          neutral={neutralForRender}
+          neutral={neutralForDisplay}
           nextRank={ranked.length + 1}
           droppableId={DROPPABLE.neutral}
           layoutMode={effectiveLayoutMode}

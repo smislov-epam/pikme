@@ -103,7 +103,7 @@ export interface WizardActions {
   // Results
   computeRecommendation: () => void
   promoteAlternativeToTopPick: (bggId: number) => void
-  saveNight: (name: string, description?: string) => Promise<void>
+  saveNight: (name: string, description?: string, includeGuestUsernames?: string[]) => Promise<void>
 
   // Saved nights
   savedNights: SavedNightRecord[]
@@ -1010,6 +1010,13 @@ export function useWizardState(): WizardState & WizardActions {
     void dbService.setUserPreferenceRanks(username, orderedBggIds).catch((err) => {
       console.error('Failed to persist preference ranks:', err)
     })
+
+    // Mark preferences as reviewed (used for "new games" filtering).
+    void dbService.updateUserLastPreferencesReviewedAt(username).catch((err) => {
+      console.error('Failed to update lastPreferencesReviewedAt:', err)
+    })
+
+    setUsers((prev) => prev.map((u) => (u.username === username ? { ...u, lastPreferencesReviewedAt: now } : u)))
   }, [])
 
   const autoSortByRating = useCallback(
@@ -1070,17 +1077,21 @@ export function useWizardState(): WizardState & WizardActions {
     setPromotedPickBggId(bggId)
   }, [])
 
-  const saveNight = useCallback(async (name: string, description?: string) => {
+  const saveNight = useCallback(async (name: string, description?: string, includeGuestUsernames?: string[]) => {
     if (!recommendation.topPick) return
 
     const excludedSet = new Set(excludedBggIds)
     const organizerUsername = users.find((u) => u.isOrganizer)?.username
+    const includeGuestSet = new Set(includeGuestUsernames ?? [])
+    const usernamesToSave = users
+      .filter((u) => !u.username.startsWith('__guest_') || includeGuestSet.has(u.username))
+      .map((u) => u.username)
 
     await dbService.saveNight({
       name,
       description,
       organizerUsername,
-      usernames: users.map((u) => u.username),
+      usernames: usernamesToSave,
       gameIds: sessionGameIds.filter((id) => !excludedSet.has(id)),
       filters: {
         playerCount: filters.playerCount,

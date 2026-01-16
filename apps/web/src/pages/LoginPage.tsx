@@ -16,6 +16,8 @@ import {
   Link,
 } from '@mui/material';
 import { useAuth } from '../hooks/useAuth';
+import { linkLocalOwnerToFirebase, createLocalOwner } from '../hooks/useLocalOwner';
+import { getLocalOwner } from '../services/db/localOwnerService';
 
 export function LoginPage() {
   const { signIn, firebaseReady } = useAuth();
@@ -30,7 +32,28 @@ export function LoginPage() {
     setLoading(true);
 
     try {
-      await signIn(email, password);
+      const userCredential = await signIn(email, password);
+
+      // Link local owner to Firebase UID (REQ-103 user journeys)
+      if (userCredential?.user) {
+        try {
+          const localOwner = await getLocalOwner();
+          if (localOwner) {
+            // Existing local owner - link to Firebase
+            await linkLocalOwnerToFirebase(userCredential.user.uid);
+          } else {
+            // No local owner yet - create one from Firebase profile
+            await createLocalOwner({
+              displayName: userCredential.user.displayName || 'User',
+            });
+            await linkLocalOwnerToFirebase(userCredential.user.uid);
+          }
+        } catch (linkError) {
+          // Non-fatal - log but don't fail login
+          console.warn('Failed to link local owner:', linkError);
+        }
+      }
+
       // Redirect to home on success
       window.location.href = '/';
     } catch (err) {

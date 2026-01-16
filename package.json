@@ -8,28 +8,33 @@
     "build": "npm --prefix apps/web run build",
     "lint": "npm --prefix apps/web run lint",
     "test": "npm --prefix apps/web run test",
-
     "w:dev": "npm --prefix apps/web run dev",
     "w:build": "npm --prefix apps/web run build",
     "w:lint": "npm --prefix apps/web run lint",
     "w:test": "npm --prefix apps/web run test",
-
     "functions:build": "npm --prefix functions run build",
     "functions:install": "npm --prefix functions install",
     "fn:build": "npm --prefix functions run build",
     "fn:lint": "npm --prefix functions run lint",
-
     "emulators": "firebase emulators:start",
     "emulators:import": "firebase emulators:start --import=./.firebase-emulator-data",
     "emulators:export": "firebase emulators:export ./.firebase-emulator-data",
-
     "emu": "firebase emulators:start",
     "emu:import": "firebase emulators:start --import=./.firebase-emulator-data",
     "emu:export": "firebase emulators:export ./.firebase-emulator-data",
-
-    "emu:j21": "node tools/run-emulators-java21.mjs emulators:start",
-    "emu:j21:import": "node tools/run-emulators-java21.mjs emulators:start --import=./.firebase-emulator-data",
-    "emu:j21:export": "node tools/run-emulators-java21.mjs emulators:export ./.firebase-emulator-data"
+    "emu:kill": "node tools/kill-emulator-ports.mjs",
+    "emu:j21": "node tools/kill-emulator-ports.mjs && node tools/run-emulators-java21.mjs emulators:start --import=./.firebase-emulator-data --export-on-exit=./.firebase-emulator-data",
+    "emu:j21:fresh": "node tools/kill-emulator-ports.mjs && node tools/run-emulators-java21.mjs emulators:start",
+    "emu:j21:import": "node tools/kill-emulator-ports.mjs && node tools/run-emulators-java21.mjs emulators:start --import=./.firebase-emulator-data",
+    "emu:j21:export": "node tools/run-emulators-java21.mjs emulators:export ./.firebase-emulator-data",
+    "prepare": "husky",
+    "security:check": "npm run security:secrets && npm run security:audit && npm run security:web && npm run security:functions",
+    "security:secrets": "node tools/detect-secrets.mjs",
+    "security:audit": "npm audit --audit-level=moderate",
+    "security:web": "npm --prefix apps/web audit --audit-level=moderate",
+    "security:functions": "npm --prefix functions audit --audit-level=moderate",
+    "pre-push:checks": "node tools/pre-push-checks.mjs",
+    "pre-commit:checks": "npm run lint"
   },
   "repository": {
     "type": "git",
@@ -37,6 +42,7 @@
   },
   "license": "MIT",
   "devDependencies": {
-    "firebase-admin": "^13.6.0"
+    "firebase-admin": "^13.6.0",
+    "husky": "^9.1.7"
   }
 }

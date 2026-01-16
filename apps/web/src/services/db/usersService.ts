@@ -106,6 +106,12 @@ export async function updateUserOwnedCount(
   await db.users.update(username, { ownedCount })
 }
 
+export async function updateUserLastPreferencesReviewedAt(username: string): Promise<void> {
+  await db.users.update(username, {
+    lastPreferencesReviewedAt: new Date().toISOString(),
+  })
+}
+
 export async function deleteUser(username: string): Promise<void> {
   await db.transaction('rw', [db.users, db.userGames, db.userPreferences], async () => {
     await db.userGames.where('username').equals(username).delete()

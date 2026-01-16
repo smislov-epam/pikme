@@ -64,7 +64,9 @@ export function useAuth(): UseAuthReturn {
 
       if (success) {
         unsubscribe = onAuthStateChange((authUser) => {
-          setUser(authUser);
+          // Anonymous auth is used for guest/session flows.
+          // It should not be treated as a "logged in / registered" user in the UI.
+          setUser(authUser?.isAnonymous ? null : authUser);
           setLoading(false);
         });
       } else {

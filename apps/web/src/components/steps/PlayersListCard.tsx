@@ -1,7 +1,8 @@
-import { Box, Card, CardContent, Chip, Stack, Typography } from '@mui/material'
+import { Box, Card, CardContent, Chip, Stack, Tooltip, Typography } from '@mui/material'
 import StarIcon from '@mui/icons-material/Star'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import PersonIcon from '@mui/icons-material/Person'
+import CloudDoneIcon from '@mui/icons-material/CloudDone'
 import type { UserRecord } from '../../db/types'
 import { colors } from '../../theme/theme'
 import { getDisambiguatedLabel } from '../../services/db/userIdService'
@@ -24,6 +25,7 @@ export function PlayersListCard(props: {
           {users.map((user) => {
             const userGameCount = Object.values(gameOwners).filter((owners) => owners.includes(user.username)).length
             const displayLabel = getDisambiguatedLabel(user, users)
+            const isLinkedToFirebase = !!user.firebaseUid
 
             return (
               <Chip
@@ -33,10 +35,25 @@ export function PlayersListCard(props: {
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                     {user.isOrganizer && <StarIcon sx={{ fontSize: 16, color: '#B8860B' }} />}
                     {displayLabel}
-                    {user.isOrganizer && (
+                    {user.isLocalOwner && (
+                      <Typography variant="caption" sx={{ opacity: 0.8, fontWeight: 600 }}>
+                        (Me)
+                      </Typography>
+                    )}
+                    {user.isOrganizer && !user.isLocalOwner && (
                       <Typography variant="caption" sx={{ opacity: 0.8, fontWeight: 600 }}>
                         (Host)
                       </Typography>
+                    )}
+                    {user.isOrganizer && user.isLocalOwner && (
+                      <Typography variant="caption" sx={{ opacity: 0.8, fontWeight: 600 }}>
+                        (Host)
+                      </Typography>
+                    )}
+                    {isLinkedToFirebase && (
+                      <Tooltip title="Linked to registered account" arrow>
+                        <CloudDoneIcon sx={{ fontSize: 14, color: 'success.main', ml: 0.25 }} />
+                      </Tooltip>
                     )}
                     {userGameCount > 0 && (
                       <Typography variant="caption" sx={{ opacity: 0.7 }}>
@@ -48,13 +65,25 @@ export function PlayersListCard(props: {
                 icon={user.isBggUser ? <RefreshIcon fontSize="small" /> : <PersonIcon fontSize="small" />}
                 onClick={() => !user.isOrganizer && onSetOrganizer(user.username)}
                 onDelete={() => onRequestDelete(user.username)}
-                title={user.isOrganizer ? 'Host - games belong to them' : 'Click to make host'}
+                title={
+                  user.isLocalOwner
+                    ? 'This is you (device owner)'
+                    : user.isOrganizer
+                      ? 'Host - games belong to them'
+                      : 'Click to make host'
+                }
                 sx={{
                   height: 28,
-                  bgcolor: user.isOrganizer ? colors.sand : user.isBggUser ? 'primary.light' : 'secondary.main',
+                  bgcolor: user.isLocalOwner
+                    ? colors.skyBlue
+                    : user.isOrganizer
+                      ? colors.sand
+                      : user.isBggUser
+                        ? 'primary.light'
+                        : 'secondary.main',
                   color: 'primary.dark',
                   cursor: user.isOrganizer ? 'default' : 'pointer',
-                  fontWeight: user.isOrganizer ? 600 : 400,
+                  fontWeight: user.isOrganizer || user.isLocalOwner ? 600 : 400,
                   '& .MuiChip-label': { px: 1, py: 0 },
                   '& .MuiChip-deleteIcon': { color: 'white', opacity: 0.9, '&:hover': { opacity: 1 } },
                 }}

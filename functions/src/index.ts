@@ -14,6 +14,22 @@ initializeApp();
 // REQ-101: Registration invites
 export { redeemRegistrationInvite } from './registration/index.js';
 
+// REQ-102: Session creation
+export { createSession } from './session/index.js';
+
+// REQ-103: Guest join flow
+export {
+  getSessionPreview,
+  claimSessionSlot,
+  setGuestReady,
+  getSessionGames,
+  getSessionMembers,
+  getSharedPreferences,
+  removeSessionGuest,
+  submitGuestPreferences,
+  getAllGuestPreferences,
+} from './session/index.js';
+
 /**
  * Health check endpoint for testing emulator connectivity.
  */

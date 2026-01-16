@@ -11,6 +11,7 @@ import EmojiEventsOutlinedIcon from '@mui/icons-material/EmojiEventsOutlined'
 import type { GameRecord } from '../../db/types'
 import { colors } from '../../theme/theme'
 import { StatPill } from '../ui/StatPill'
+import { getGameImageOrPlaceholder } from '../../services/ui/gameImage'
 
 export type GameTileVariant = 'default' | 'topPick' | 'disliked'
 
@@ -24,6 +25,7 @@ export function GameTile(props: {
   children?: ReactNode
 }) {
   const { game, variant = 'default', leading, trailing, actions, onClick, children } = props
+  const placeholderSrc = getGameImageOrPlaceholder(game)
 
   const borderColor =
     variant === 'disliked'
@@ -100,7 +102,7 @@ export function GameTile(props: {
 
         <Box
           component="img"
-          src={game.thumbnail || '/vite.svg'}
+          src={game.thumbnail || placeholderSrc}
           alt={game.name}
           sx={{
             width: 48,
@@ -111,7 +113,10 @@ export function GameTile(props: {
             flexShrink: 0,
           }}
           onError={(e) => {
-            ;(e.target as HTMLImageElement).src = '/vite.svg'
+            const target = e.target as HTMLImageElement
+            if (target.src !== placeholderSrc) {
+              target.src = placeholderSrc
+            }
           }}
         />
 
@@ -163,3 +168,4 @@ function formatPlayTime(game: GameRecord): string {
   if (avg) return `${avg}`
   return ''
 }
+

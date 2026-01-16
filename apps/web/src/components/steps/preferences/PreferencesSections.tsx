@@ -16,6 +16,7 @@ import { SortableGameCard } from '../PreferenceGameCard'
 import { DraggableGameCard } from '../DraggableGameCard'
 import { DraggablePreferenceRowCard, SortablePreferenceRowCard } from './PreferenceRowCard'
 import type { LayoutMode } from '../../../services/storage/uiPreferences'
+import { SectionHeader } from '../../ui/SectionHeader'
 
 export interface PreferenceGameRow {
   game: GameRecord
@@ -48,6 +49,7 @@ function DroppableList(props: {
       sx={{
         ...LIST_SCROLL_SX,
         minHeight: minHeight ?? 48,
+        p: 1,
         borderRadius: '8px',
         border: '2px dashed',
         borderColor: isOver ? outline : 'transparent',
@@ -73,16 +75,16 @@ export function TopPicksSection(props: {
   return (
     <Card sx={{ bgcolor: colors.sand + '30', border: `2px dashed ${colors.sand}` }}>
       <CardContent>
-        <Stack direction="row" alignItems="center" gap={1} mb={2}>
-          <StarIcon sx={{ color: colors.sand }} />
-          <Typography variant="subtitle1" fontWeight={600}>
-            Top Picks ({topPicks.length})
-          </Typography>
-        </Stack>
+        <SectionHeader
+          icon={<StarIcon sx={{ color: colors.sand }} />}
+          title={`Top Picks (${topPicks.length})`}
+          titleVariant="subtitle1"
+          sx={{ mb: 0.5 }}
+        />
 
         <DroppableList droppableId={droppableId} minHeight={120} highlightColor={colors.sand}>
           {topPicks.length === 0 ? (
-            <Typography color="text.secondary" variant="body2" sx={{ mt: 0.5 }}>
+            <Typography color="text.secondary" variant="body2" sx={{ mt: 0 }}>
               Drag games here or tap the star to pin favorites (max 3)
             </Typography>
           ) : (
@@ -135,12 +137,14 @@ export function DislikedSection(props: {
   return (
     <Card sx={{ border: '1px solid', borderColor: 'error.light' }}>
       <CardContent>
-        <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-          Disliked ({disliked.length})
-        </Typography>
+        <SectionHeader
+          title={`Disliked (${disliked.length})`}
+          titleVariant="subtitle1"
+          sx={{ mb: 0.5 }}
+        />
         <DroppableList droppableId={droppableId} minHeight={120} highlightColor={'#ef5350'}>
           {disliked.length === 0 ? (
-            <Typography color="text.secondary" variant="body2" sx={{ mt: 0.5 }}>
+            <Typography color="text.secondary" variant="body2" sx={{ mt: 0 }}>
               Drag games here to veto them
             </Typography>
           ) : (
@@ -192,12 +196,16 @@ export function RankedSection(props: {
   return (
     <Card>
       <CardContent>
-        <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-          Ranked ({ranked.length}) - drag to reorder
-        </Typography>
+        <SectionHeader
+          title={`Ranked (${ranked.length})`}
+          subtitle="Drag to reorder"
+          titleVariant="subtitle1"
+          subtitleVariant="caption"
+          sx={{ mb: 0.5 }}
+        />
         <DroppableList droppableId={droppableId} minHeight={160} highlightColor={colors.oceanBlue}>
           {ranked.length === 0 ? (
-            <Typography color="text.secondary" variant="body2" sx={{ mt: 0.5 }}>
+            <Typography color="text.secondary" variant="body2" sx={{ mt: 0 }}>
               Drag games here to rank them
             </Typography>
           ) : (
@@ -256,15 +264,16 @@ export function NeutralSection(props: {
   return (
     <Card>
       <CardContent>
-        <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-          Available Games ({neutral.length})
-        </Typography>
-        <Typography variant="body2" color="text.secondary" gutterBottom>
-          Tap a game for details. Use ★ / 👎 and the # button to set preferences.
-        </Typography>
+        <SectionHeader
+          title={`Available Games (${neutral.length})`}
+          subtitle="Tap a game for details. Use ★ / 👎 and the # button to set preferences."
+          titleVariant="subtitle1"
+          subtitleVariant="caption"
+          sx={{ mb: 0.5 }}
+        />
 
         <DroppableList droppableId={droppableId} minHeight={120} highlightColor={alpha(colors.oceanBlue, 0.35)}>
-          <Stack spacing={1} sx={{ mt: 2 }}>
+          <Stack spacing={1} sx={{ mt: 0 }}>
             {neutral.map(({ game, userRating, isDisliked, isTopPick }) => (
               layoutMode === 'simplified' ? (
                 <DraggablePreferenceRowCard

@@ -33,6 +33,13 @@ export interface UserRecord {
   displayName?: string
   isBggUser: boolean
   isOrganizer?: boolean
+  // Identity fields (REQ-103 user journeys)
+  isLocalOwner?: boolean // "This is ME on this device" - set once, never changes
+  firebaseUid?: string // Links to Firebase Auth UID when registered
+  linkedAt?: string // When Firebase link was established
+  // Preference tracking
+  lastPreferencesReviewedAt?: string // When user last reviewed all preferences
+  // Sync fields
   lastSyncAt?: string
   ownedCount?: number
   isDeleted?: boolean

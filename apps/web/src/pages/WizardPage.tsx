@@ -3,6 +3,8 @@ import {
   Box,
   Container,
   alpha,
+  Alert,
+  Button,
 } from '@mui/material'
 import { WizardHeader } from './wizard/WizardHeader'
 import { WizardFooter } from './wizard/WizardFooter'
@@ -14,7 +16,10 @@ import { BggApiKeyDialog } from '../components/BggApiKeyDialog'
 import { SaveNightDialog } from '../components/SaveNightDialog'
 import { HelpWalkthroughDialog } from '../components/HelpWalkthroughDialog'
 import { BackupRestoreDialog } from '../components/BackupRestoreDialog'
+import { CreateSessionDialog } from '../components/session'
 import { useWizardState } from '../hooks/useWizardState'
+import { useSessionGuestMode } from '../hooks/useSessionGuestMode'
+import { useAuth } from '../hooks/useAuth'
 import { clearAllData } from '../db/db'
 import { colors } from '../theme/theme'
 import { useToast } from '../services/toast'
@@ -28,9 +33,30 @@ export default function WizardPage() {
   const [showClearDialog, setShowClearDialog] = useState(false)
   const [showHelpDialog, setShowHelpDialog] = useState(false)
   const [showBackupDialog, setShowBackupDialog] = useState(false)
+  const [showSessionDialog, setShowSessionDialog] = useState(false)
 
   const wizard = useWizardState()
+  const { user } = useAuth()
   const toast = useToast()
+
+  // Session guest mode hook - handles all session-related state and merging
+  const {
+    sessionGuestMode,
+    hasGamesInSessionMode,
+    handleExitSessionMode,
+    mergedUsers,
+    mergedPreferences,
+    guestStatuses,
+    guestUsersForSave,
+    activeSessionId,
+    setActiveSessionId,
+    canCreateSession,
+    lockedSteps,
+  } = useSessionGuestMode({
+    wizard,
+    activeStep,
+    setActiveStep,
+  })
 
   useEffect(() => {
     if (!wizard.userError) return
@@ -74,9 +100,14 @@ export default function WizardPage() {
     }
   }, [activeStep, wizard.users, wizard.games, wizard.filteredGames, wizard.recommendation])
 
-  const canGoBack = activeStep > 0
-  const canGoNext = activeStep < wizardSteps.length - 1 && canProceed
-  const isLastStep = activeStep === wizardSteps.length - 1
+  // In session guest mode with games, can't go back from Preferences (step 2) since Players/Filters are locked
+  const canGoBack = hasGamesInSessionMode ? false : activeStep > 0
+  // In session guest mode with games, can't go next to Result (step 3) since it's locked
+  const canGoNext = hasGamesInSessionMode
+    ? false // Can't proceed to Result in session guest mode
+    : activeStep < wizardSteps.length - 1 && canProceed
+  // In session guest mode with games, Preferences is effectively the last step
+  const isLastStep = hasGamesInSessionMode ? activeStep === 2 : activeStep === wizardSteps.length - 1
 
   const markStepCompleted = (stepIndex: number) => {
     setCompletedSteps((prev) => {
@@ -88,9 +119,13 @@ export default function WizardPage() {
 
   const onNext = () => { markStepCompleted(activeStep); setActiveStep((s) => Math.min(s + 1, wizardSteps.length - 1)) }
   const onBack = () => setActiveStep((s) => Math.max(s - 1, 0))
-  const onSaveNight = async (name: string, description?: string) => {
+  const onSaveNight = async (
+    name: string,
+    description?: string,
+    includeGuestUsernames?: string[],
+  ) => {
     try {
-      await wizard.saveNight(name, description)
+      await wizard.saveNight(name, description, includeGuestUsernames)
       toast.success('Game night saved')
       trackGameNightSaved({
         playerCount: wizard.users.length,
@@ -109,7 +144,15 @@ export default function WizardPage() {
     setCompletedSteps(wizardSteps.map(() => false))
     await wizard.loadSavedNights()
   }
-  const canJumpTo = (stepIndex: number) => stepIndex <= activeStep || completedSteps[stepIndex - 1]
+  const canJumpTo = (stepIndex: number) => {
+    // In session guest mode WITH games, steps 0 (Players), 1 (Filters), and 3 (Result) are locked
+    // If no games yet, let user do normal onboarding (Players/Filters unlocked)
+    const hasGames = wizard.games.length > 0
+    if (sessionGuestMode && hasGames && (stepIndex === 0 || stepIndex === 1 || stepIndex === 3)) {
+      return false
+    }
+    return stepIndex <= activeStep || completedSteps[stepIndex - 1]
+  }
 
   const stepSubtitles = useMemo(() => {
     const sessionCount = wizard.sessionGameIds.length
@@ -177,6 +220,23 @@ export default function WizardPage() {
 
       {/* Main Content */}
       <Container maxWidth="md" sx={{ pb: 12, pt: 3, maxWidth: { lg: 1120 } }}>
+        {/* Session Guest Mode Banner - show different message based on whether user has games */}
+        {sessionGuestMode && (
+          <Alert
+            severity="info"
+            sx={{ mb: 2 }}
+            action={
+              <Button color="inherit" size="small" onClick={handleExitSessionMode}>
+                Exit Session
+              </Button>
+            }
+          >
+            {wizard.games.length > 0
+              ? "You're in a session. Set your preferences and the host will see your choices."
+              : "You're joining a session. Add your game collection first, then set your preferences."}
+          </Alert>
+        )}
+
         <Box
           sx={{
             position: 'sticky',
@@ -189,6 +249,7 @@ export default function WizardPage() {
           <WizardStepperNav
             activeStep={activeStep}
             completedSteps={completedSteps}
+            lockedSteps={lockedSteps}
             stepSubtitles={stepSubtitles}
             compactBadgeCount={compactBadgeCount}
             canJumpTo={canJumpTo}
@@ -200,6 +261,9 @@ export default function WizardPage() {
           activeStep={activeStep}
           wizard={wizard}
           onOpenSaveDialog={() => setShowSaveDialog(true)}
+          mergedUsers={mergedUsers}
+          mergedPreferences={mergedPreferences}
+          guestStatuses={guestStatuses}
         />
       </Container>
 
@@ -208,10 +272,15 @@ export default function WizardPage() {
         canGoNext={canGoNext}
         isLastStep={isLastStep}
         canSave={!!wizard.recommendation.topPick}
+        canShare={canCreateSession}
+        sessionGuestMode={hasGamesInSessionMode}
         onBack={onBack}
         onNext={onNext}
         onStartOver={onStartOver}
         onSave={() => setShowSaveDialog(true)}
+        onShare={() => setShowSessionDialog(true)}
+        onExitSession={handleExitSessionMode}
+        hasSession={activeSessionId !== null}
       />
 
       {/* Save Night Dialog */}
@@ -220,8 +289,25 @@ export default function WizardPage() {
         playerCount={wizard.users.length}
         gameCount={wizard.sessionGameIds.length}
         topPick={wizard.recommendation.topPick}
+        guestUsers={guestUsersForSave}
         onClose={() => setShowSaveDialog(false)}
         onSave={onSaveNight}
+      />
+
+      {/* Create Session Dialog - uses filtered games, not all games */}
+      <CreateSessionDialog
+        open={showSessionDialog}
+        games={wizard.filteredGames}
+        playerCount={wizard.filters.playerCount}
+        minPlayingTime={wizard.filters.timeRange.min}
+        maxPlayingTime={wizard.filters.timeRange.max}
+        hostDisplayName={user?.displayName || user?.email?.split('@')[0] || 'Host'}
+        users={wizard.users}
+        preferences={wizard.preferences}
+        existingSessionId={activeSessionId}
+        onClose={() => setShowSessionDialog(false)}
+        onSessionCreated={setActiveSessionId}
+        onSessionCancelled={() => setActiveSessionId(null)}
       />
     </Box>
   )

@@ -23,6 +23,8 @@ import {
   getRegistrationErrorCode,
   RegistrationErrorCodes,
 } from '../services/firebase';
+import { linkLocalOwnerToFirebase, createLocalOwner } from '../hooks/useLocalOwner';
+import { getLocalOwner } from '../services/db/localOwnerService';
 
 type RegistrationStep = 'loading' | 'create-account' | 'redeeming' | 'success' | 'error';
 
@@ -122,12 +124,31 @@ export function RegistrationPage() {
   }, [authLoading, firebaseReady, user, inviteToken]);
 
   async function redeemInvite() {
-    if (!inviteToken) return;
+    if (!inviteToken || !user) return;
 
     setState((s) => ({ ...s, step: 'redeeming', error: null }));
 
     try {
       await redeemRegistrationInvite(inviteToken);
+
+      // Link local owner to Firebase UID (REQ-103 user journeys)
+      try {
+        const localOwner = await getLocalOwner();
+        if (localOwner) {
+          // Existing local owner - link to Firebase
+          await linkLocalOwnerToFirebase(user.uid);
+        } else {
+          // No local owner yet - create one from Firebase profile
+          await createLocalOwner({
+            displayName: user.displayName || state.displayName || 'User',
+          });
+          await linkLocalOwnerToFirebase(user.uid);
+        }
+      } catch (linkError) {
+        // Non-fatal - log but don't fail registration
+        console.warn('Failed to link local owner:', linkError);
+      }
+
       setState((s) => ({ ...s, step: 'success' }));
     } catch (error) {
       setState((s) => ({

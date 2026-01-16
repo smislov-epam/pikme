@@ -1,0 +1,14 @@
+#!/usr/bin/env sh
+
+# Run quick checks before commit
+echo ""
+echo "🔍 Running pre-commit checks..."
+echo ""
+
+# Quick linting (staged files only would be better with lint-staged, but this works)
+echo "📝 Running ESLint..."
+npm run lint || exit 1
+
+echo ""
+echo "✅ Pre-commit checks passed!"
+echo ""

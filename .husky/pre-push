@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+
+# Run comprehensive security and quality checks before push
+echo ""
+echo "🔒 Running pre-push security checks..."
+echo ""
+
+npm run pre-push:checks
