@@ -1,0 +1,51 @@
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ],
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" run lint",
+        "npm --prefix \"$RESOURCE_DIR\" run build"
+      ]
+    }
+  ],
+  "emulators": {
+    "auth": {
+      "host": "127.0.0.1",
+      "port": 9098
+    },
+    "firestore": {
+      "host": "127.0.0.1",
+      "port": 8081
+    },
+    "functions": {
+      "host": "127.0.0.1",
+      "port": 5001
+    },
+    "hub": {
+      "host": "127.0.0.1",
+      "port": 4401
+    },
+    "logging": {
+      "host": "127.0.0.1",
+      "port": 4501
+    },
+    "ui": {
+      "enabled": true,
+      "host": "127.0.0.1",
+      "port": 4001
+    },
+    "singleProjectMode": true
+  }
+}

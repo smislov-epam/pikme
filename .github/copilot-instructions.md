@@ -5,11 +5,11 @@
 - Implementation code lives in `apps/web`; treat the docs in `Requirements/` as the source of truth.
 
 ## Source-of-truth docs (start here)
-- Product scope + UX flow: `Requirements/Product Requirements.md`
+- Product scope + UX flow: start in `Requirements/`
   - 4-step wizard: **Players → Filters → Preferences → Result**
   - Sticky bottom CTA, mobile-first layout, per-user tabs, drag/drop preferences, local "Save game night".
-- Architecture expectations: `Requirements/Solution Architecture Guidelines.md`
-  - Target stack called out in-doc: React 19 + MUI + Dexie + `fast-xml-parser` + `dnd-kit`.
+- Technical expectations: see the architecture guidance in `Requirements/`
+  - Target stack: React 19 + MUI + Dexie + `fast-xml-parser` + `dnd-kit`.
   - Key constraints: BGG 202 polling, local-first persistence, possible BGG CORS limitations.
 - UI/UX consistency guidelines: `ui-ux-guidelines.md`
   - Treat this as the canonical source for visual/interaction consistency rules.
@@ -67,11 +67,10 @@
 
 
 ## Conventions for changes
-- Prefer updating the canonical docs under `Requirements/` (the root `Product Requirements.md` is a pointer).
+- Prefer updating the canonical docs under `Requirements/`.
 - When adding any implementation later, keep it aligned with the wizard-first UX and local-first constraints described above (don't invent new flows not present in the PRD).
-- If something is unclear, reference the specific section in the PRD/architecture doc and propose a minimal clarification rather than guessing.
-- ALWAYS refer to Requirements for scope
-- ALWAYS refer to Solution Architecture Guidelines for technical approach
+- If something is unclear, propose a minimal clarification in the Requirements docs rather than guessing.
+- Always use Requirements as the source of scope and constraints.
 - Always assure proper testing is in place
 
 ## Conventions for changes
