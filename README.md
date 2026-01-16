@@ -2,10 +2,9 @@
 
 Local-first web app that helps a group pick a board game to play.
 
-## Docs-first repo
-The product scope and UX flow live in:
-- Requirements/Product Requirements.md
-- Requirements/Solution Architecture Guidelines.md
+## Documentation
+- Product/design docs live under `Requirements/`.
+- UI consistency rules live in `ui-ux-guidelines.md`.
 
 ## Deploy to production
 - GitHub Pages deploy is driven by `.github/workflows/deploy-pages.yml`.
@@ -54,13 +53,59 @@ Then open `http://localhost:5173/`.
 - `npm --prefix "apps/web" run lint`
 - `npm --prefix "apps/web" run test`
 
-## Architecture highlights
-- **Hooks composition**: Wizard state split into 6 single-responsibility hooks under `src/hooks/wizard/`
-- **Pure services**: Business logic in `src/services/` (recommendation scoring, filtering, BGG API)
-- **214+ tests**: Vitest + React Testing Library
-- **180-line limit**: Files kept focused and atomic
+### Firebase emulators (Windows note: Java 21 required)
 
-See [Requirements/Solution Architecture Guidelines.md](Requirements/Solution%20Architecture%20Guidelines.md) for details.
+Recent `firebase-tools` versions require **JDK 21+** for emulators.
+
+Quick commands from the repo root:
+- `npm run emu:j21` (recommended on Windows)
+- `npm run emu:j21:import` (loads from `./.firebase-emulator-data`)
+
+Short aliases for common tasks:
+- `npm run w:dev`, `npm run w:test`, `npm run w:lint`, `npm run w:build`
+- `npm run fn:build`, `npm run fn:lint`
+
+## Firebase (Optional Multi-User Features)
+Firebase is used for optional multi-user features (REQ-100+). It's **disabled by default**.
+
+### Prerequisites
+- Firebase CLI: `npm install -g firebase-tools`
+- Firebase project (create at https://console.firebase.google.com)
+
+### Local Development with Emulators
+1. Install Functions dependencies:
+   ```bash
+   npm --prefix functions install
+   ```
+
+2. Build Functions:
+   ```bash
+   npm --prefix functions run build
+   ```
+
+3. Start emulators:
+   ```bash
+   npm run emu:j21
+   ```
+   Emulator UI available at http://127.0.0.1:4001
+
+4. Configure the web app to use emulators - create `apps/web/.env.local`:
+   ```bash
+   VITE_FEATURE_FIREBASE=1
+   VITE_FIREBASE_USE_EMULATORS=1
+   VITE_FIREBASE_API_KEY=fake-api-key
+   VITE_FIREBASE_AUTH_DOMAIN=localhost
+   VITE_FIREBASE_PROJECT_ID=pikme-dev
+   ```
+
+5. Run the web app in another terminal:
+   ```bash
+   npm run dev
+   ```
+
+### Emulator Data Persistence
+- Export: `npm run emulators:export`
+- Import on start: `npm run emulators:import`
 
 ## Requirements extraction helper
 Source DOCX files are in `Requirements/`. To produce plain-text snapshots for diff/review:

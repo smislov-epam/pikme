@@ -39,6 +39,10 @@ jobs:
           VITE_BASE_PATH: /
           # IndexedDB is per-origin. Keep a single canonical hostname to avoid users "losing" data.
           VITE_CANONICAL_HOST: pikme.online
+          # Optional: enables GA instrumentation in production build.
+          # Set this in GitHub: Repo Settings -> Secrets and variables -> Actions -> New repository secret
+          # Name: VITE_GA_MEASUREMENT_ID (value like: G-XXXXXXXXXX)
+          VITE_GA_MEASUREMENT_ID: ${{ secrets.VITE_GA_MEASUREMENT_ID }}
         run: npm run build
 
       - name: Setup Pages

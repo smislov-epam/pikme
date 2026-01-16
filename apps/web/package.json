@@ -23,6 +23,7 @@
     "dexie": "^4.2.1",
     "fast-xml-parser": "^5.3.3",
     "fflate": "^0.8.2",
+    "firebase": "^12.8.0",
     "papaparse": "^5.4.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
