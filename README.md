@@ -107,6 +107,20 @@ Firebase is used for optional multi-user features (REQ-100+). It's **disabled by
 - Export: `npm run emulators:export`
 - Import on start: `npm run emulators:import`
 
+## Security
+For security policy and best practices, see [`SECURITY.md`](SECURITY.md).
+
+Run the security audit script before deploying:
+```bash
+bash scripts/security-audit.sh
+```
+
+This checks for:
+- Committed secrets or API keys
+- Hardcoded credentials
+- Vulnerable dependencies
+- Exposed sensitive data in logs
+
 ## Requirements extraction helper
 Source DOCX files are in `Requirements/`. To produce plain-text snapshots for diff/review:
 - `python tools/extract_docx_text.py`

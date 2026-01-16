@@ -1,0 +1,115 @@
+name: Security Audit
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    # Run weekly on Monday at 9am UTC
+    - cron: '0 9 * * 1'
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for git checks
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install dependencies (web)
+        working-directory: apps/web
+        run: npm ci
+
+      - name: Install dependencies (functions)
+        working-directory: functions
+        run: npm ci
+
+      - name: Run Security Audit Script
+        run: bash scripts/security-audit.sh
+
+      - name: npm audit (web) - detailed report
+        working-directory: apps/web
+        run: |
+          echo "## Web App Dependencies Audit" >> $GITHUB_STEP_SUMMARY
+          npm audit --json > audit.json || true
+          HIGH=$(jq -r '.metadata.vulnerabilities.high // 0' audit.json)
+          CRITICAL=$(jq -r '.metadata.vulnerabilities.critical // 0' audit.json)
+          echo "- Critical vulnerabilities: $CRITICAL" >> $GITHUB_STEP_SUMMARY
+          echo "- High vulnerabilities: $HIGH" >> $GITHUB_STEP_SUMMARY
+          if [ "$CRITICAL" -gt 0 ]; then
+            echo "⚠️ Critical vulnerabilities found in web dependencies" >> $GITHUB_STEP_SUMMARY
+            npm audit --audit-level=critical
+          fi
+
+      - name: npm audit (functions) - detailed report
+        working-directory: functions
+        run: |
+          echo "## Firebase Functions Dependencies Audit" >> $GITHUB_STEP_SUMMARY
+          npm audit --json > audit.json || true
+          HIGH=$(jq -r '.metadata.vulnerabilities.high // 0' audit.json)
+          CRITICAL=$(jq -r '.metadata.vulnerabilities.critical // 0' audit.json)
+          echo "- Critical vulnerabilities: $CRITICAL" >> $GITHUB_STEP_SUMMARY
+          echo "- High vulnerabilities: $HIGH" >> $GITHUB_STEP_SUMMARY
+          if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ]; then
+            echo "❌ Critical or high vulnerabilities found in functions" >> $GITHUB_STEP_SUMMARY
+            npm audit --audit-level=high
+            exit 1
+          fi
+
+      - name: Check for secrets in code
+        run: |
+          echo "## Secret Detection" >> $GITHUB_STEP_SUMMARY
+          # Check for common secret patterns
+          if grep -r -E "(api[_-]?key|apikey|secret[_-]?key|access[_-]?token)\s*[=:]\s*['\"][A-Za-z0-9]{20,}['\"]" \
+            --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" \
+            --exclude-dir=node_modules --exclude="*.test.*" . 2>/dev/null | \
+            grep -v "import.meta.env\|process.env\|example\|placeholder" | grep -q .; then
+            echo "❌ Potential hardcoded secrets found" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          else
+            echo "✅ No hardcoded secrets detected" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Verify .gitignore patterns
+        run: |
+          echo "## GitIgnore Verification" >> $GITHUB_STEP_SUMMARY
+          MISSING=0
+          if ! grep -q "\.env$" .gitignore 2>/dev/null; then
+            echo "❌ .gitignore missing .env pattern" >> $GITHUB_STEP_SUMMARY
+            MISSING=1
+          fi
+          if ! grep -q "firebase-adminsdk" .gitignore 2>/dev/null; then
+            echo "❌ .gitignore missing firebase-adminsdk pattern" >> $GITHUB_STEP_SUMMARY
+            MISSING=1
+          fi
+          if ! grep -q "service-account" .gitignore 2>/dev/null; then
+            echo "❌ .gitignore missing service-account pattern" >> $GITHUB_STEP_SUMMARY
+            MISSING=1
+          fi
+          if [ $MISSING -eq 0 ]; then
+            echo "✅ .gitignore has all required security patterns" >> $GITHUB_STEP_SUMMARY
+          else
+            exit 1
+          fi
+
+      - name: Security audit summary
+        if: success()
+        run: |
+          echo "## ✅ Security Audit Passed" >> $GITHUB_STEP_SUMMARY
+          echo "All security checks completed successfully." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Note**: Dev dependency vulnerabilities (vitest, vite) do not affect production builds." >> $GITHUB_STEP_SUMMARY
