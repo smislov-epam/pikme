@@ -66,22 +66,30 @@ export function useGuestPreferences(): UseGuestPreferencesResult {
     }
   });
 
-  // Load guest user from Dexie (create if needed)
-  // useLiveQuery returns undefined until the query completes
-  const guestUser = useLiveQuery(async () => {
-    let user = await db.users.get(GUEST_USERNAME);
-    if (!user) {
-      const displayName = localStorage.getItem('guestDisplayName') || 'Guest';
-      user = {
-        username: GUEST_USERNAME,
-        internalId: GUEST_USERNAME,
-        displayName,
-        isBggUser: false,
-      };
-      await db.users.put(user);
+  // Ensure guest user exists (write operation - separate from liveQuery)
+  const [guestUserCreated, setGuestUserCreated] = useState(false);
+  useEffect(() => {
+    async function ensureGuestUser() {
+      const existing = await db.users.get(GUEST_USERNAME);
+      if (!existing) {
+        const displayName = localStorage.getItem('guestDisplayName') || 'Guest';
+        await db.users.put({
+          username: GUEST_USERNAME,
+          internalId: GUEST_USERNAME,
+          displayName,
+          isBggUser: false,
+        });
+      }
+      setGuestUserCreated(true);
     }
-    return user;
+    ensureGuestUser();
   }, []);
+
+  // Load guest user from Dexie (read-only query, runs after user is created)
+  const guestUser = useLiveQuery(
+    async () => (guestUserCreated ? db.users.get(GUEST_USERNAME) : undefined),
+    [guestUserCreated]
+  );
 
   // Load session games from Dexie using the session game ID list.
   // useLiveQuery returns undefined until the query completes.
