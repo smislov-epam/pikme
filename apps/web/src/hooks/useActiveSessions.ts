@@ -1,0 +1,215 @@
+/**
+ * useActiveSessions (REQ-106)
+ *
+ * Hook for tracking and managing multiple active sessions.
+ * Provides session list, navigation, and exit functionality.
+ */
+
+import { useCallback, useEffect, useState } from 'react';
+import { useAuth } from './useAuth';
+import { getSessionPreview } from '../services/session';
+
+/** Information about an active session */
+export interface ActiveSessionInfo {
+  sessionId: string;
+  title: string;
+  hostName: string | null;
+  hostUid: string;
+  role: 'host' | 'guest';
+  scheduledFor: string | null;
+  status: 'open' | 'closed' | 'expired';
+}
+
+/** Key for storing active session IDs in localStorage */
+const ACTIVE_SESSIONS_KEY = 'activeSessionIds';
+const CURRENT_SESSION_KEY = 'activeSessionId';
+
+/**
+ * Get active session IDs from localStorage.
+ */
+function getStoredSessionIds(): string[] {
+  try {
+    const stored = localStorage.getItem(ACTIVE_SESSIONS_KEY);
+    if (!stored) {
+      // Backward compatibility: check for single activeSessionId
+      const single = localStorage.getItem(CURRENT_SESSION_KEY);
+      return single ? [single] : [];
+    }
+    const parsed = JSON.parse(stored);
+    return Array.isArray(parsed) ? parsed.filter((id) => typeof id === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Store active session IDs to localStorage.
+ */
+function storeSessionIds(ids: string[]): void {
+  if (ids.length === 0) {
+    localStorage.removeItem(ACTIVE_SESSIONS_KEY);
+    localStorage.removeItem(CURRENT_SESSION_KEY);
+  } else {
+    localStorage.setItem(ACTIVE_SESSIONS_KEY, JSON.stringify(ids));
+    // Also set the first one as current for backward compatibility
+    localStorage.setItem(CURRENT_SESSION_KEY, ids[0]);
+  }
+}
+
+export interface UseActiveSessionsResult {
+  /** List of active sessions with metadata */
+  sessions: ActiveSessionInfo[];
+  /** Currently focused session ID */
+  currentSessionId: string | null;
+  /** Whether sessions are loading */
+  isLoading: boolean;
+  /** Add a session to active list */
+  addSession: (sessionId: string) => void;
+  /** Remove a session from active list */
+  removeSession: (sessionId: string) => void;
+  /** Set current/focused session */
+  setCurrentSession: (sessionId: string) => void;
+  /** Refresh session metadata */
+  refreshSessions: () => Promise<void>;
+}
+
+export function useActiveSessions(): UseActiveSessionsResult {
+  const [sessionIds, setSessionIds] = useState<string[]>(() => getStoredSessionIds());
+  const [sessions, setSessions] = useState<ActiveSessionInfo[]>([]);
+  const [currentSessionId, setCurrentSessionIdState] = useState<string | null>(
+    () => localStorage.getItem(CURRENT_SESSION_KEY)
+  );
+  const [isLoading, setIsLoading] = useState(false);
+  const { user, firebaseReady } = useAuth();
+
+  // Sync sessionIds to localStorage
+  useEffect(() => {
+    storeSessionIds(sessionIds);
+  }, [sessionIds]);
+
+  // Sync currentSessionId to localStorage
+  useEffect(() => {
+    if (currentSessionId) {
+      localStorage.setItem(CURRENT_SESSION_KEY, currentSessionId);
+    }
+  }, [currentSessionId]);
+
+  // Fetch session metadata for all active sessions
+  const refreshSessions = useCallback(async () => {
+    if (!firebaseReady || sessionIds.length === 0) {
+      setSessions([]);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const sessionInfos = await Promise.all(
+        sessionIds.map(async (sessionId): Promise<ActiveSessionInfo | null> => {
+          try {
+            const preview = await getSessionPreview(sessionId);
+            // Determine role based on whether current user created the session
+            const isHost = user?.uid === preview.hostUid;
+            return {
+              sessionId,
+              title: preview.title,
+              hostName: preview.hostName ?? null,
+              hostUid: preview.hostUid ?? '',
+              role: isHost ? 'host' : 'guest',
+              scheduledFor: preview.scheduledFor ?? null,
+              status: preview.status,
+            };
+          } catch (err) {
+            console.warn(`[useActiveSessions] Failed to load session ${sessionId}:`, err);
+            // Session may have expired or been deleted
+            return null;
+          }
+        })
+      );
+
+      // Filter out failed/expired sessions and update state
+      const validSessions = sessionInfos.filter(
+        (s): s is ActiveSessionInfo => s !== null && s.status !== 'expired'
+      );
+
+      // Remove expired session IDs
+      const validIds = validSessions.map((s) => s.sessionId);
+      const expiredIds = sessionIds.filter((id) => !validIds.includes(id));
+      if (expiredIds.length > 0) {
+        setSessionIds(validIds);
+      }
+
+      // Sort by scheduled time (soonest first), then by title
+      validSessions.sort((a, b) => {
+        if (a.scheduledFor && b.scheduledFor) {
+          return new Date(a.scheduledFor).getTime() - new Date(b.scheduledFor).getTime();
+        }
+        if (a.scheduledFor) return -1;
+        if (b.scheduledFor) return 1;
+        return a.title.localeCompare(b.title);
+      });
+
+      setSessions(validSessions);
+    } catch (err) {
+      console.error('[useActiveSessions] Failed to refresh sessions:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [firebaseReady, sessionIds, user?.uid]);
+
+  // Initial load and refresh when sessionIds change
+  useEffect(() => {
+    refreshSessions();
+  }, [refreshSessions]);
+
+  const addSession = useCallback((sessionId: string) => {
+    setSessionIds((prev) => {
+      if (prev.includes(sessionId)) return prev;
+      return [...prev, sessionId];
+    });
+    setCurrentSessionIdState(sessionId);
+  }, []);
+
+  const removeSession = useCallback((sessionId: string) => {
+    setSessionIds((prev) => prev.filter((id) => id !== sessionId));
+    setSessions((prev) => prev.filter((s) => s.sessionId !== sessionId));
+    setCurrentSessionIdState((prev) => {
+      if (prev === sessionId) {
+        // Switch to another session or null
+        const remaining = sessionIds.filter((id) => id !== sessionId);
+        return remaining[0] ?? null;
+      }
+      return prev;
+    });
+    
+    // Clean up session-specific localStorage
+    const guestSessionId = localStorage.getItem('guestSessionId');
+    if (guestSessionId === sessionId) {
+      localStorage.removeItem('guestSessionId');
+      localStorage.removeItem('guestDisplayName');
+      localStorage.removeItem('guestParticipantId');
+      localStorage.removeItem('guestClaimedNamedSlot');
+      localStorage.removeItem('guestShareMode');
+      localStorage.removeItem('guestMode');
+      localStorage.removeItem('guestPreferenceSource');
+      localStorage.removeItem('sessionGuestMode');
+      sessionStorage.removeItem('guestInitialPreferences');
+      sessionStorage.removeItem('guestSessionGameIds');
+    }
+  }, [sessionIds]);
+
+  const setCurrentSession = useCallback((sessionId: string) => {
+    if (sessionIds.includes(sessionId)) {
+      setCurrentSessionIdState(sessionId);
+    }
+  }, [sessionIds]);
+
+  return {
+    sessions,
+    currentSessionId,
+    isLoading,
+    addSession,
+    removeSession,
+    setCurrentSession,
+    refreshSessions,
+  };
+}

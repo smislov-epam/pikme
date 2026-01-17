@@ -1,10 +1,11 @@
 /**
- * Session Service (REQ-102, REQ-103)
+ * Session Service (REQ-102, REQ-103, REQ-107)
  *
  * Client-side service for session creation and management.
+ * Uses retry logic for transient failure handling.
  */
 
-import { getFunctionsInstance, isFirebaseInitialized } from '../firebase';
+import { callFunction, callFunctionNoRetry } from '../firebase';
 import type {
   CreateSessionOptions,
   CreateSessionResult,
@@ -15,10 +16,19 @@ import type {
   SharedPreferencesResult,
   SharedGamePreference,
   NamedSlotInfo,
+  SessionGameInfo,
+  SessionMemberInfo,
+  GuestPreferencesData,
 } from './types';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Session Creation & Management
+// ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Create a new session via Cloud Function.
+ *
+ * Uses no-retry because session creation is not idempotent.
  *
  * @param options Session creation options
  * @returns Session ID and upload count
@@ -27,19 +37,7 @@ import type {
 export async function createSession(
   options: CreateSessionOptions
 ): Promise<CreateSessionResult> {
-  if (!isFirebaseInitialized()) {
-    throw new Error('Firebase is not initialized');
-  }
-
-  const functions = getFunctionsInstance();
-  if (!functions) {
-    throw new Error('Firebase Functions not available');
-  }
-
-  // Import httpsCallable dynamically
-  const { httpsCallable } = await import('firebase/functions');
-
-  const createSessionFn = httpsCallable<
+  const result = await callFunctionNoRetry<
     {
       title?: string;
       scheduledFor: string;
@@ -55,9 +53,7 @@ export async function createSession(
       namedParticipants?: NamedParticipantData[];
     },
     { ok: boolean; sessionId: string; gamesUploaded: number }
-  >(functions, 'createSession');
-
-  const result = await createSessionFn({
+  >('createSession', {
     title: options.title,
     scheduledFor: options.scheduledFor.toISOString(),
     capacity: options.capacity,
@@ -73,10 +69,14 @@ export async function createSession(
   });
 
   return {
-    sessionId: result.data.sessionId,
-    gamesUploaded: result.data.gamesUploaded,
+    sessionId: result.sessionId,
+    gamesUploaded: result.gamesUploaded,
   };
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Session Preview & Join
+// ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Get session preview for join page.
@@ -87,18 +87,7 @@ export async function createSession(
 export async function getSessionPreview(
   sessionId: string
 ): Promise<SessionPreview> {
-  if (!isFirebaseInitialized()) {
-    throw new Error('Firebase is not initialized');
-  }
-
-  const functions = getFunctionsInstance();
-  if (!functions) {
-    throw new Error('Firebase Functions not available');
-  }
-
-  const { httpsCallable } = await import('firebase/functions');
-
-  const fn = httpsCallable<
+  const result = await callFunction<
     { sessionId: string },
     {
       ok: boolean;
@@ -117,30 +106,30 @@ export async function getSessionPreview(
       namedSlots: NamedSlotInfo[];
       shareMode?: 'quick' | 'detailed';
     }
-  >(functions, 'getSessionPreview');
-
-  const result = await fn({ sessionId });
+  >('getSessionPreview', { sessionId });
 
   return {
-    sessionId: result.data.sessionId,
-    title: result.data.title,
-    scheduledFor: new Date(result.data.scheduledFor),
-    minPlayers: result.data.minPlayers,
-    maxPlayers: result.data.maxPlayers,
-    minPlayingTimeMinutes: result.data.minPlayingTimeMinutes,
-    maxPlayingTimeMinutes: result.data.maxPlayingTimeMinutes,
-    gameCount: result.data.gameCount,
-    status: result.data.status,
-    capacity: result.data.capacity,
-    claimedCount: result.data.claimedCount,
-    availableSlots: result.data.availableSlots,
-    namedSlots: result.data.namedSlots ?? [],
-    shareMode: result.data.shareMode ?? 'detailed',
+    sessionId: result.sessionId,
+    title: result.title,
+    scheduledFor: new Date(result.scheduledFor),
+    minPlayers: result.minPlayers,
+    maxPlayers: result.maxPlayers,
+    minPlayingTimeMinutes: result.minPlayingTimeMinutes,
+    maxPlayingTimeMinutes: result.maxPlayingTimeMinutes,
+    gameCount: result.gameCount,
+    status: result.status,
+    capacity: result.capacity,
+    claimedCount: result.claimedCount,
+    availableSlots: result.availableSlots,
+    namedSlots: result.namedSlots ?? [],
+    shareMode: result.shareMode ?? 'detailed',
   };
 }
 
 /**
  * Claim a session slot.
+ *
+ * Uses no-retry because slot claiming is not idempotent.
  *
  * @param sessionId The session ID
  * @param displayName Guest's display name
@@ -152,30 +141,21 @@ export async function claimSessionSlot(
   displayName: string,
   participantId?: string
 ): Promise<ClaimSlotResult> {
-  if (!isFirebaseInitialized()) {
-    throw new Error('Firebase is not initialized');
-  }
-
-  const functions = getFunctionsInstance();
-  if (!functions) {
-    throw new Error('Firebase Functions not available');
-  }
-
-  const { httpsCallable } = await import('firebase/functions');
-
-  const fn = httpsCallable<
+  const result = await callFunctionNoRetry<
     { sessionId: string; displayName: string; participantId?: string },
     { ok: boolean; participantId: string; sessionId: string; hasSharedPreferences: boolean }
-  >(functions, 'claimSessionSlot');
-
-  const result = await fn({ sessionId, displayName, participantId });
+  >('claimSessionSlot', { sessionId, displayName, participantId });
 
   return {
-    participantId: result.data.participantId,
-    sessionId: result.data.sessionId,
-    hasSharedPreferences: result.data.hasSharedPreferences,
+    participantId: result.participantId,
+    sessionId: result.sessionId,
+    hasSharedPreferences: result.hasSharedPreferences,
   };
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Guest Actions
+// ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Mark guest as ready.
@@ -183,23 +163,10 @@ export async function claimSessionSlot(
  * @param sessionId The session ID
  */
 export async function setGuestReady(sessionId: string): Promise<void> {
-  if (!isFirebaseInitialized()) {
-    throw new Error('Firebase is not initialized');
-  }
-
-  const functions = getFunctionsInstance();
-  if (!functions) {
-    throw new Error('Firebase Functions not available');
-  }
-
-  const { httpsCallable } = await import('firebase/functions');
-
-  const fn = httpsCallable<{ sessionId: string }, { ok: boolean }>(
-    functions,
-    'setGuestReady'
+  await callFunction<{ sessionId: string }, { ok: boolean }>(
+    'setGuestReady',
+    { sessionId }
   );
-
-  await fn({ sessionId });
 }
 
 /**
@@ -208,21 +175,8 @@ export async function setGuestReady(sessionId: string): Promise<void> {
  * @param sessionId The session ID
  * @returns Array of game data (without owner info)
  */
-export async function getSessionGames(
-  sessionId: string
-): Promise<import('./types').SessionGameInfo[]> {
-  if (!isFirebaseInitialized()) {
-    throw new Error('Firebase is not initialized');
-  }
-
-  const functions = getFunctionsInstance();
-  if (!functions) {
-    throw new Error('Firebase Functions not available');
-  }
-
-  const { httpsCallable } = await import('firebase/functions');
-
-  const fn = httpsCallable<
+export async function getSessionGames(sessionId: string): Promise<SessionGameInfo[]> {
+  const result = await callFunction<
     { sessionId: string },
     {
       ok: boolean;
@@ -239,89 +193,9 @@ export async function getSessionGames(
         source: 'bgg' | 'custom';
       }>;
     }
-  >(functions, 'getSessionGames');
+  >('getSessionGames', { sessionId });
 
-  const result = await fn({ sessionId });
-  return result.data.games;
-}
-
-/**
- * Get session members (host-only).
- *
- * @param sessionId The session ID
- * @returns Array of member info with ready status
- */
-export async function getSessionMembers(
-  sessionId: string
-): Promise<import('./types').SessionMemberInfo[]> {
-  if (!isFirebaseInitialized()) {
-    throw new Error('Firebase is not initialized');
-  }
-
-  const functions = getFunctionsInstance();
-  if (!functions) {
-    throw new Error('Firebase Functions not available');
-  }
-
-  const { httpsCallable } = await import('firebase/functions');
-
-  const fn = httpsCallable<
-    { sessionId: string },
-    {
-      ok: boolean;
-      members: Array<{
-        uid: string;
-        displayName: string;
-        role: 'host' | 'guest';
-        ready: boolean;
-        joinedAt: string;
-      }>;
-    }
-  >(functions, 'getSessionMembers');
-
-  const result = await fn({ sessionId });
-
-  return result.data.members.map((m) => ({
-    ...m,
-    joinedAt: new Date(m.joinedAt),
-  }));
-}
-
-/**
- * Remove a guest from a session (host-only).
- *
- * @param sessionId The session ID
- * @param guestUid The guest UID to remove
- */
-export async function removeSessionGuest(sessionId: string, guestUid: string): Promise<void> {
-  if (!isFirebaseInitialized()) {
-    throw new Error('Firebase is not initialized');
-  }
-
-  const functions = getFunctionsInstance();
-  if (!functions) {
-    throw new Error('Firebase Functions not available');
-  }
-
-  const { httpsCallable } = await import('firebase/functions');
-
-  const fn = httpsCallable<{ sessionId: string; guestUid: string }, { ok: boolean }>(
-    functions,
-    'removeSessionGuest'
-  );
-
-  await fn({ sessionId, guestUid });
-}
-
-/**
- * Generate a shareable session link.
- *
- * @param sessionId The session ID
- * @returns Full URL to join the session
- */
-export function getSessionLink(sessionId: string): string {
-  const baseUrl = window.location.origin;
-  return `${baseUrl}/session/${sessionId}`;
+  return result.games;
 }
 
 /**
@@ -330,21 +204,8 @@ export function getSessionLink(sessionId: string): string {
  * @param sessionId The session ID
  * @returns Shared preferences if they exist
  */
-export async function getSharedPreferences(
-  sessionId: string
-): Promise<SharedPreferencesResult> {
-  if (!isFirebaseInitialized()) {
-    throw new Error('Firebase is not initialized');
-  }
-
-  const functions = getFunctionsInstance();
-  if (!functions) {
-    throw new Error('Firebase Functions not available');
-  }
-
-  const { httpsCallable } = await import('firebase/functions');
-
-  const fn = httpsCallable<
+export async function getSharedPreferences(sessionId: string): Promise<SharedPreferencesResult> {
+  const result = await callFunction<
     { sessionId: string },
     {
       ok: boolean;
@@ -352,14 +213,12 @@ export async function getSharedPreferences(
       preferences: SharedGamePreference[];
       displayName: string | null;
     }
-  >(functions, 'getSharedPreferences');
-
-  const result = await fn({ sessionId });
+  >('getSharedPreferences', { sessionId });
 
   return {
-    hasPreferences: result.data.hasPreferences,
-    preferences: result.data.preferences,
-    displayName: result.data.displayName,
+    hasPreferences: result.hasPreferences,
+    preferences: result.preferences,
+    displayName: result.displayName,
   };
 }
 
@@ -374,27 +233,76 @@ export async function submitGuestPreferences(
   sessionId: string,
   preferences: SharedGamePreference[]
 ): Promise<{ preferencesCount: number }> {
-  if (!isFirebaseInitialized()) {
-    throw new Error('Firebase is not initialized');
-  }
-
-  const functions = getFunctionsInstance();
-  if (!functions) {
-    throw new Error('Firebase Functions not available');
-  }
-
-  const { httpsCallable } = await import('firebase/functions');
-
-  const fn = httpsCallable<
+  const result = await callFunction<
     { sessionId: string; preferences: SharedGamePreference[] },
     { ok: boolean; preferencesCount: number }
-  >(functions, 'submitGuestPreferences');
-
-  const result = await fn({ sessionId, preferences });
+  >('submitGuestPreferences', { sessionId, preferences });
 
   return {
-    preferencesCount: result.data.preferencesCount,
+    preferencesCount: result.preferencesCount,
   };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Host Actions
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Get session members (host-only).
+ *
+ * @param sessionId The session ID
+ * @returns Array of member info with ready status
+ */
+export async function getSessionMembers(sessionId: string): Promise<SessionMemberInfo[]> {
+  const result = await callFunction<
+    { sessionId: string },
+    {
+      ok: boolean;
+      members: Array<{
+        uid: string;
+        displayName: string;
+        role: 'host' | 'guest';
+        ready: boolean;
+        joinedAt: string;
+      }>;
+    }
+  >('getSessionMembers', { sessionId });
+
+  return result.members.map((m) => ({
+    ...m,
+    joinedAt: new Date(m.joinedAt),
+  }));
+}
+
+/**
+ * Remove a guest from a session (host-only).
+ *
+ * @param sessionId The session ID
+ * @param guestUid The guest UID to remove
+ */
+export async function removeSessionGuest(sessionId: string, guestUid: string): Promise<void> {
+  await callFunction<{ sessionId: string; guestUid: string }, { ok: boolean }>(
+    'removeSessionGuest',
+    { sessionId, guestUid }
+  );
+}
+
+/**
+ * Mark a participant as ready (host-only).
+ *
+ * Used when host marks a local player (sitting next to them) as ready.
+ *
+ * @param sessionId The session ID
+ * @param participantId The participant ID to mark as ready
+ */
+export async function markParticipantReady(
+  sessionId: string,
+  participantId: string
+): Promise<void> {
+  await callFunction<{ sessionId: string; participantId: string }, { ok: boolean }>(
+    'markParticipantReady',
+    { sessionId, participantId }
+  );
 }
 
 /**
@@ -403,21 +311,8 @@ export async function submitGuestPreferences(
  * @param sessionId The session ID
  * @returns Array of guest preferences data
  */
-export async function getAllGuestPreferences(
-  sessionId: string
-): Promise<import('./types').GuestPreferencesData[]> {
-  if (!isFirebaseInitialized()) {
-    throw new Error('Firebase is not initialized');
-  }
-
-  const functions = getFunctionsInstance();
-  if (!functions) {
-    throw new Error('Firebase Functions not available');
-  }
-
-  const { httpsCallable } = await import('firebase/functions');
-
-  const fn = httpsCallable<
+export async function getAllGuestPreferences(sessionId: string): Promise<GuestPreferencesData[]> {
+  const result = await callFunction<
     { sessionId: string },
     {
       ok: boolean;
@@ -430,9 +325,22 @@ export async function getAllGuestPreferences(
         updatedAt: string | null;
       }>;
     }
-  >(functions, 'getAllGuestPreferences');
+  >('getAllGuestPreferences', { sessionId });
 
-  const result = await fn({ sessionId });
+  return result.guests;
+}
 
-  return result.data.guests;
+// ─────────────────────────────────────────────────────────────────────────────
+// Utilities
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Generate a shareable session link.
+ *
+ * @param sessionId The session ID
+ * @returns Full URL to join the session
+ */
+export function getSessionLink(sessionId: string): string {
+  const baseUrl = window.location.origin;
+  return `${baseUrl}/session/${sessionId}`;
 }

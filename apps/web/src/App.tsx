@@ -8,6 +8,7 @@ import { LoginPage } from './pages/LoginPage'
 import { SessionJoinPage } from './pages/SessionJoinPage'
 import { DbGate } from './components/DbGate'
 import { LocalOwnerGate } from './components/gates/LocalOwnerGate'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { theme } from './theme/theme'
 import { ToastProvider } from './services/toast'
 
@@ -36,23 +37,25 @@ export default function App() {
       <CssBaseline />
       <LocalizationProvider dateAdapter={AdapterDateFns}>
         <ToastProvider>
-          {page === 'register' ? (
-            <RegistrationPage />
-          ) : page === 'login' ? (
-            <LoginPage />
-          ) : page === 'session' ? (
-            // Session join handles identity via invite flow (bypass local owner check)
-            <DbGate>
-              <SessionJoinPage />
-            </DbGate>
-          ) : (
-            // Main wizard requires local owner setup
-            <DbGate>
-              <LocalOwnerGate>
-                <WizardPage />
-              </LocalOwnerGate>
-            </DbGate>
-          )}
+          <ErrorBoundary>
+            {page === 'register' ? (
+              <RegistrationPage />
+            ) : page === 'login' ? (
+              <LoginPage />
+            ) : page === 'session' ? (
+              // Session join handles identity via invite flow (bypass local owner check)
+              <DbGate>
+                <SessionJoinPage />
+              </DbGate>
+            ) : (
+              // Main wizard requires local owner setup
+              <DbGate>
+                <LocalOwnerGate>
+                  <WizardPage />
+                </LocalOwnerGate>
+              </DbGate>
+            )}
+          </ErrorBoundary>
         </ToastProvider>
       </LocalizationProvider>
     </ThemeProvider>

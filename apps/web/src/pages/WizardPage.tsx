@@ -16,9 +16,10 @@ import { BggApiKeyDialog } from '../components/BggApiKeyDialog'
 import { SaveNightDialog } from '../components/SaveNightDialog'
 import { HelpWalkthroughDialog } from '../components/HelpWalkthroughDialog'
 import { BackupRestoreDialog } from '../components/BackupRestoreDialog'
-import { CreateSessionDialog } from '../components/session'
+import { CreateSessionDialog, ActiveSessionBanner } from '../components/session'
 import { useWizardState } from '../hooks/useWizardState'
 import { useSessionGuestMode } from '../hooks/useSessionGuestMode'
+import { useActiveSessions } from '../hooks/useActiveSessions'
 import { useAuth } from '../hooks/useAuth'
 import { clearAllData } from '../db/db'
 import { colors } from '../theme/theme'
@@ -57,6 +58,31 @@ export default function WizardPage() {
     activeStep,
     setActiveStep,
   })
+
+  // Active sessions hook for multi-session banner (REQ-106)
+  const {
+    sessions: activeSessions,
+    currentSessionId: activeSessionsCurrentId,
+    removeSession: handleRemoveActiveSession,
+    setCurrentSession: handleSetCurrentSession,
+  } = useActiveSessions()
+
+  // Navigate to a session (for banner clicks)
+  const handleNavigateToSession = (sessionId: string) => {
+    handleSetCurrentSession(sessionId)
+    // If this is a different session than the current one, we need to handle the transition
+    // For now, just update the current session ID
+    localStorage.setItem('activeSessionId', sessionId)
+    window.location.reload() // Reload to load the new session context
+  }
+
+  // Exit a session (for banner close)
+  const handleExitActiveSession = (sessionId: string) => {
+    handleRemoveActiveSession(sessionId)
+    if (sessionId === activeSessionId) {
+      handleExitSessionMode()
+    }
+  }
 
   useEffect(() => {
     if (!wizard.userError) return
@@ -184,6 +210,16 @@ export default function WizardPage() {
         background: `linear-gradient(180deg, ${alpha(colors.skyBlue, 0.1)} 0%, ${alpha(colors.sand, 0.05)} 100%)`,
       }}
     >
+      {/* Active Session Banner (REQ-106) - shows when user is in active session(s) */}
+      {activeSessions.length > 0 && (
+        <ActiveSessionBanner
+          sessions={activeSessions}
+          currentSessionId={activeSessionsCurrentId}
+          onNavigateToSession={handleNavigateToSession}
+          onExitSession={handleExitActiveSession}
+        />
+      )}
+
       <WizardHeader
         onOpenClearDialog={() => setShowClearDialog(true)}
         onOpenBackup={() => setShowBackupDialog(true)}

@@ -88,6 +88,10 @@ export interface SessionPreview {
   namedSlots: NamedSlotInfo[];
   /** Share mode (quick or detailed) */
   shareMode: 'quick' | 'detailed';
+  /** Host's display name */
+  hostName?: string;
+  /** Host's Firebase UID (for cross-device recognition) */
+  hostUid?: string;
 }
 
 /**

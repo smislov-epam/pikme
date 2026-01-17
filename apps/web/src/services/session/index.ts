@@ -14,6 +14,7 @@ export {
   getSharedPreferences,
   submitGuestPreferences,
   getAllGuestPreferences,
+  markParticipantReady,
 } from './sessionService';
 export {
   hydrateSessionGames,

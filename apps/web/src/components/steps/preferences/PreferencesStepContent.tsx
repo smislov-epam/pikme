@@ -56,6 +56,10 @@ export interface PreferencesStepProps {
   forceFullTiles?: boolean
   /** Hide layout toggle (e.g., guest quick share) */
   hideLayoutToggle?: boolean
+  /** Read-only mode for viewing other users' preferences (REQ-106) */
+  readOnly?: boolean
+  /** Username of the user whose preferences should be shown in read-only mode */
+  readOnlyUsername?: string
 }
 
 export function PreferencesStepContent({
@@ -72,6 +76,8 @@ export function PreferencesStepContent({
   guestStatuses = [],
   forceFullTiles = false,
   hideLayoutToggle = false,
+  readOnly = false,
+  readOnlyUsername,
 }: PreferencesStepProps) {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
@@ -80,10 +86,12 @@ export function PreferencesStepContent({
   const [detailsGame, setDetailsGame] = useState<GameRecord | null>(null)
   const [showOnlyNewGames, setShowOnlyNewGames] = useState(false)
 
+  // In read-only mode, always show the specified user's preferences
   const selectedUser = useMemo(() => {
+    if (readOnly && readOnlyUsername) return readOnlyUsername
     if (users.some((u) => u.username === selectedUserState)) return selectedUserState
     return users[0]?.username ?? ''
-  }, [selectedUserState, users])
+  }, [selectedUserState, users, readOnly, readOnlyUsername])
 
   const effectiveLayoutMode: LayoutMode = isMobile && !forceFullTiles ? 'simplified' : layoutMode
 
@@ -216,24 +224,55 @@ export function PreferencesStepContent({
     )
   }
 
+  // In read-only mode, disable all edit actions
+  const effectiveOnToggleTopPick = readOnly ? () => {} : handleToggleTopPick
+  const effectiveOnToggleDisliked = readOnly ? () => {} : handleToggleDisliked
+  const effectiveOnSetRank = readOnly ? () => {} : handleSetRank
+  
+  // Find the display name for the read-only user
+  const readOnlyUserDisplayName = readOnlyUsername 
+    ? users.find((u) => u.username === readOnlyUsername)?.displayName || readOnlyUsername
+    : ''
+
   return (
     <Stack spacing={3}>
+      {/* Read-only banner (REQ-106) */}
+      {readOnly && readOnlyUserDisplayName && (
+        <Box
+          sx={{
+            px: 2,
+            py: 1,
+            bgcolor: 'action.hover',
+            borderRadius: 1,
+            border: '1px solid',
+            borderColor: 'divider',
+          }}
+        >
+          <Typography variant="body2" color="text.secondary">
+            Viewing <strong>{readOnlyUserDisplayName}</strong>&apos;s preferences (read-only)
+          </Typography>
+        </Box>
+      )}
+
       <SectionHeader
-        title="Share your preferences"
-        subtitle="Each player can mark favorites and rank games"
+        title={readOnly ? `${readOnlyUserDisplayName}'s preferences` : 'Share your preferences'}
+        subtitle={readOnly ? 'View only - you cannot edit these preferences' : 'Each player can mark favorites and rank games'}
         titleVariant="h5"
         titleColor="primary.dark"
       />
 
-      <PreferencesUserSelector
-        users={users}
-        selectedUser={selectedUser}
-        isMobile={isMobile}
-        onChange={setSelectedUserState}
-        preferences={preferences}
-        gameIds={games.map((g) => g.bggId)}
-        guestStatuses={guestStatuses}
-      />
+      {/* Hide user selector in read-only mode */}
+      {!readOnly && (
+        <PreferencesUserSelector
+          users={users}
+          selectedUser={selectedUser}
+          isMobile={isMobile}
+          onChange={setSelectedUserState}
+          preferences={preferences}
+          gameIds={games.map((g) => g.bggId)}
+          guestStatuses={guestStatuses}
+        />
+      )}
 
       {!isMobile ? (
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, alignItems: 'center' }}>
@@ -257,35 +296,38 @@ export function PreferencesStepContent({
       ) : null}
 
       <DndContext
-        sensors={sensors}
+        sensors={readOnly ? [] : sensors}
         collisionDetection={closestCenter}
-        onDragStart={handleDragStart}
-        onDragCancel={handleDragCancel}
-        onDragEnd={handleDragEnd}
+        onDragStart={readOnly ? undefined : handleDragStart}
+        onDragCancel={readOnly ? undefined : handleDragCancel}
+        onDragEnd={readOnly ? undefined : handleDragEnd}
       >
         <TopPicksSection
           topPicks={topPicksForRender}
           droppableId={DROPPABLE.top}
           layoutMode={effectiveLayoutMode}
           onOpenDetails={(game) => setDetailsGame(game)}
-          onToggleTopPick={handleToggleTopPick}
-          onToggleDisliked={handleToggleDisliked}
+          onToggleTopPick={effectiveOnToggleTopPick}
+          onToggleDisliked={effectiveOnToggleDisliked}
+          readOnly={readOnly}
         />
         <DislikedSection
           disliked={dislikedForRender}
           droppableId={DROPPABLE.disliked}
           layoutMode={effectiveLayoutMode}
           onOpenDetails={(game) => setDetailsGame(game)}
-          onToggleTopPick={handleToggleTopPick}
-          onToggleDisliked={handleToggleDisliked}
+          onToggleTopPick={effectiveOnToggleTopPick}
+          onToggleDisliked={effectiveOnToggleDisliked}
+          readOnly={readOnly}
         />
         <RankedSection
           ranked={ranked}
           droppableId={DROPPABLE.ranked}
           layoutMode={effectiveLayoutMode}
           onOpenDetails={(game) => setDetailsGame(game)}
-          onToggleTopPick={handleToggleTopPick}
-          onToggleDisliked={handleToggleDisliked}
+          onToggleTopPick={effectiveOnToggleTopPick}
+          onToggleDisliked={effectiveOnToggleDisliked}
+          readOnly={readOnly}
         />
         <NeutralSection
           neutral={neutralForDisplay}
@@ -293,9 +335,10 @@ export function PreferencesStepContent({
           droppableId={DROPPABLE.neutral}
           layoutMode={effectiveLayoutMode}
           onOpenDetails={(game) => setDetailsGame(game)}
-          onToggleTopPick={handleToggleTopPick}
-          onToggleDisliked={handleToggleDisliked}
-          onSetRank={handleSetRank}
+          onToggleTopPick={effectiveOnToggleTopPick}
+          onToggleDisliked={effectiveOnToggleDisliked}
+          onSetRank={effectiveOnSetRank}
+          readOnly={readOnly}
         />
         <DragOverlay dropAnimation={null}>
           {activeDragId != null && rowByBggId.get(activeDragId) ? (
