@@ -1,5 +1,5 @@
 /**
- * Recommendation computation using modified Borda count scoring.
+ * Recommendation computation using Normalized Borda Count scoring.
  * 
  * This pure function computes game recommendations based on user preferences.
  * It handles veto (dislike) logic, top-pick bonuses, and ranking scores.
@@ -7,8 +7,11 @@
  * ## Scoring Algorithm
  * 
  * 1. **Veto check**: Any user marking a game as "disliked" removes it from consideration
- * 2. **Borda count**: For each user's ranked games, assign (m-1) to rank 1, (m-2) to rank 2, etc.
- * 3. **Top-pick bonus**: Games marked as top picks get +2 bonus points
+ * 2. **Normalized Borda count**: Each user's contribution is normalized to 0-1 scale:
+ *    - Rank 1 = 1.0 points, last rank = 0.0 points
+ *    - Formula: (m - 1 - index) / (m - 1) where m = number of ranked games
+ *    - This ensures all users contribute equally regardless of how many games they rank
+ * 3. **Top-pick bonus**: Games marked as top picks get +0.5 bonus points (50% of max)
  * 4. **Tie-breaking**: Games with equal scores maintain their relative order
  * 
  * ## Usage
@@ -29,8 +32,8 @@ import type { RecommendationResult, VetoedGame } from '../../hooks/wizard/types'
 import { isCoopGame } from '../filtering/filterConstants'
 import { promotePickInSortedGames } from './promotePick'
 
-/** Bonus points for games marked as top picks */
-const TOP_PICK_BONUS = 2
+/** Bonus points for games marked as top picks (0.5 = 50% of max normalized score) */
+const TOP_PICK_BONUS = 0.5
 
 /** Number of alternative games to include in results */
 const MAX_ALTERNATIVES = 5
@@ -120,7 +123,9 @@ function separateVetoedGames(
 }
 
 /**
- * Calculate Borda count scores for eligible games.
+ * Calculate Normalized Borda count scores for eligible games.
+ * Each user's contribution is normalized to 0-1 scale so all users
+ * have equal influence regardless of how many games they rank.
  */
 function calculateBordaScores(
   games: GameRecord[],
@@ -145,12 +150,17 @@ function calculateBordaScores(
 
     const m = rankedPrefs.length
 
-    // Apply Borda count: (m-1) points for rank 1, (m-2) for rank 2, etc.
+    // Apply Normalized Borda count:
+    // - Rank 1 gets 1.0, last rank gets 0.0
+    // - Formula: (m - 1 - index) / (m - 1)
+    // - When m = 1, the single ranked game gets 1.0 points
     rankedPrefs.forEach((pref, index) => {
       if (scores[pref.bggId] !== undefined) {
-        scores[pref.bggId] += m - 1 - index
+        // Normalized score: 1.0 for rank 1, 0.0 for last rank
+        const normalizedScore = m > 1 ? (m - 1 - index) / (m - 1) : 1.0
+        scores[pref.bggId] += normalizedScore
 
-        // Bonus for top picks
+        // Bonus for top picks (0.5 = 50% of max normalized score)
         if (pref.isTopPick) {
           scores[pref.bggId] += TOP_PICK_BONUS
         }

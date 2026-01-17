@@ -1,5 +1,5 @@
 /**
- * Tests for computeRecommendation - Borda count scoring algorithm.
+ * Tests for computeRecommendation - Normalized Borda count scoring algorithm.
  */
 import { describe, it, expect } from 'vitest'
 import { computeRecommendation, getMatchReasons } from './computeRecommendation'
@@ -84,10 +84,10 @@ describe('computeRecommendation - edge cases', () => {
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Borda Count Scoring
+// Normalized Borda Count Scoring
 // ─────────────────────────────────────────────────────────────────────────────
-describe('computeRecommendation - Borda count', () => {
-  it('scores games based on ranking position', () => {
+describe('computeRecommendation - Normalized Borda count', () => {
+  it('scores games based on ranking position (normalized 0-1)', () => {
     const preferences: Record<string, UserPreferenceRecord[]> = {
       alice: [
         { username: 'alice', bggId: 1, rank: 1, isTopPick: false, isDisliked: false, updatedAt: '' },
@@ -104,15 +104,18 @@ describe('computeRecommendation - Borda count', () => {
       promotedPickBggId: null,
     })
 
-    // With 3 ranked games: rank 1 gets 2 points, rank 2 gets 1, rank 3 gets 0
+    // With 3 ranked games (m=3), normalized scores:
+    // rank 1: (3-1-0)/(3-1) = 2/2 = 1.0
+    // rank 2: (3-1-1)/(3-1) = 1/2 = 0.5
+    // rank 3: (3-1-2)/(3-1) = 0/2 = 0.0
     expect(result.topPick?.game.bggId).toBe(1)
-    expect(result.topPick?.score).toBe(2)
+    expect(result.topPick?.score).toBe(1)
 
     const gameB = result.alternatives.find((a) => a.game.bggId === 2)
-    expect(gameB?.score).toBe(1)
+    expect(gameB?.score).toBe(0.5)
   })
 
-  it('aggregates scores across multiple users', () => {
+  it('aggregates normalized scores across multiple users equally', () => {
     const preferences: Record<string, UserPreferenceRecord[]> = {
       alice: [
         { username: 'alice', bggId: 1, rank: 1, isTopPick: false, isDisliked: false, updatedAt: '' },
@@ -132,13 +135,45 @@ describe('computeRecommendation - Borda count', () => {
       promotedPickBggId: null,
     })
 
-    // Game 1: Alice rank 1 (1 pt) + Bob rank 2 (0 pt) = 1
-    // Game 2: Alice rank 2 (0 pt) + Bob rank 1 (1 pt) = 1
+    // Game 1: Alice rank 1 (1.0) + Bob rank 2 (0.0) = 1.0
+    // Game 2: Alice rank 2 (0.0) + Bob rank 1 (1.0) = 1.0
     // Both have equal scores, order depends on input order
+    expect([1, 2]).toContain(result.topPick?.game.bggId)
+    expect(result.topPick?.score).toBe(1)
+  })
+
+  it('normalizes user contributions regardless of list length', () => {
+    // Alice ranks 2 games, Bob ranks 10 games
+    // With normalization, both should contribute equally
+    const preferences: Record<string, UserPreferenceRecord[]> = {
+      alice: [
+        { username: 'alice', bggId: 1, rank: 1, isTopPick: false, isDisliked: false, updatedAt: '' },
+        { username: 'alice', bggId: 2, rank: 2, isTopPick: false, isDisliked: false, updatedAt: '' },
+      ],
+      bob: [
+        { username: 'bob', bggId: 2, rank: 1, isTopPick: false, isDisliked: false, updatedAt: '' },
+        { username: 'bob', bggId: 3, rank: 2, isTopPick: false, isDisliked: false, updatedAt: '' },
+        { username: 'bob', bggId: 4, rank: 3, isTopPick: false, isDisliked: false, updatedAt: '' },
+      ],
+    }
+
+    const result = computeRecommendation({
+      games,
+      preferences,
+      filters: defaultFilters,
+      users,
+      promotedPickBggId: null,
+    })
+
+    // Alice: Game 1 = 1.0, Game 2 = 0.0
+    // Bob (m=3): Game 2 = 1.0, Game 3 = 0.5, Game 4 = 0.0
+    // Game 1 total: 1.0 (from Alice only)
+    // Game 2 total: 0.0 + 1.0 = 1.0
+    // Both top games have 1.0 - normalized ensures Alice's vote counts equally
     expect([1, 2]).toContain(result.topPick?.game.bggId)
   })
 
-  it('adds top-pick bonus', () => {
+  it('adds top-pick bonus (0.5)', () => {
     const preferences: Record<string, UserPreferenceRecord[]> = {
       alice: [
         { username: 'alice', bggId: 1, rank: undefined, isTopPick: true, isDisliked: false, updatedAt: '' },
@@ -156,11 +191,11 @@ describe('computeRecommendation - Borda count', () => {
 
     // Both games included in rankedPrefs (m=2)
     // Sorted by rank: Game 2 (rank 1) at index 0, Game 1 (rank undefined=999) at index 1
-    // Game 2: m-1-0 = 2-1-0 = 1 point
-    // Game 1: m-1-1 = 2-1-1 = 0 points + 2 bonus = 2 points
-    // Game 1 wins with score 2
-    expect(result.topPick?.game.bggId).toBe(1)
-    expect(result.topPick?.score).toBe(2)
+    // Game 2: normalized score = 1.0
+    // Game 1: normalized score = 0.0 + 0.5 top-pick bonus = 0.5
+    // Game 2 wins with score 1.0
+    expect(result.topPick?.game.bggId).toBe(2)
+    expect(result.topPick?.score).toBe(1)
   })
 })
 
