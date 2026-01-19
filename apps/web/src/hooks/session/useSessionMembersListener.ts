@@ -162,6 +162,7 @@ export function useSessionMembersListener(
         // Host-only guard: guestPreferences reads require the caller to be the session creator.
         // Only proceed if we can CONFIRM the user is the host; otherwise skip entirely.
         let isHost = false;
+        let sessionCreatedByUid: string | undefined;
         try {
           const sessionRef = doc(firestore, 'sessions', currentSessionId);
           const sessionSnap = await getDoc(sessionRef);
@@ -170,8 +171,14 @@ export function useSessionMembersListener(
             setIsLoading(false);
             return;
           }
-          const createdByUid = (sessionSnap.data() as { createdByUid?: unknown })?.createdByUid;
-          isHost = typeof createdByUid === 'string' && createdByUid === auth.currentUser.uid;
+          sessionCreatedByUid = (sessionSnap.data() as { createdByUid?: unknown })?.createdByUid as string | undefined;
+          isHost = typeof sessionCreatedByUid === 'string' && sessionCreatedByUid === auth.currentUser.uid;
+          console.debug('[useSessionMembersListener] Host check:', {
+            sessionId: currentSessionId,
+            createdByUid: sessionCreatedByUid,
+            currentUid: auth.currentUser.uid,
+            isHost,
+          });
         } catch (err) {
           // Any error reading session means we can't verify host status → skip listener
           console.debug('[useSessionMembersListener] Could not verify host role, skipping listener:', err);
@@ -184,6 +191,8 @@ export function useSessionMembersListener(
           setIsLoading(false);
           return;
         }
+
+        console.debug('[useSessionMembersListener] Host verified, currentUser.uid:', auth.currentUser.uid);
 
         // Listen to guestPreferences subcollection
         const guestPrefsRef = collection(
