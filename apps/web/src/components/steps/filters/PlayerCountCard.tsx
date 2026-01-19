@@ -8,12 +8,13 @@ type Props = {
   sessionUserCount: number
   playerCount: number
   onPlayerCountChange: (count: number) => void
+  disabled?: boolean
 }
 
 const BASE_COUNTS = Array.from({ length: 11 }, (_, i) => i + 2) // 2..12
 const EXTENDED_COUNTS = Array.from({ length: 8 }, (_, i) => i + 13) // 13..20
 
-export function PlayerCountCard({ sessionUserCount, playerCount, onPlayerCountChange }: Props) {
+export function PlayerCountCard({ sessionUserCount, playerCount, onPlayerCountChange, disabled = false }: Props) {
   const [expanded, setExpanded] = useState<boolean>(playerCount >= 13)
   const [manualOverride, setManualOverride] = useState(false)
   const prevSessionUserCountRef = useRef<number | null>(null)
@@ -100,6 +101,7 @@ export function PlayerCountCard({ sessionUserCount, playerCount, onPlayerCountCh
             <Chip
               key={count}
               label={count}
+              disabled={disabled}
               onClick={() => {
                 setManualOverride(true)
                 onPlayerCountChange(count)
@@ -111,6 +113,7 @@ export function PlayerCountCard({ sessionUserCount, playerCount, onPlayerCountCh
 
           <Chip
             label="12+"
+            disabled={disabled}
             onClick={() => {
               // When a 13+ count is selected, keep the extended range visible
               // so the selected chip remains in view.
@@ -142,6 +145,7 @@ export function PlayerCountCard({ sessionUserCount, playerCount, onPlayerCountCh
               <Chip
                 key={count}
                 label={count}
+                disabled={disabled}
                 onClick={() => {
                   setManualOverride(true)
                   onPlayerCountChange(count)

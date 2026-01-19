@@ -18,6 +18,19 @@ export interface ActiveSessionInfo {
   role: 'host' | 'guest';
   scheduledFor: string | null;
   status: 'open' | 'closed' | 'expired';
+  /** Whether the current caller has marked Ready (guests only) */
+  callerReady?: boolean;
+  /** Selected game (can be present even while status is 'open') */
+  selectedGame?: {
+    gameId: string;
+    name: string;
+    thumbnail: string | null;
+    image: string | null;
+    score: number;
+    minPlayers: number | null;
+    maxPlayers: number | null;
+    playingTimeMinutes: number | null;
+  };
 }
 
 /** Key for storing active session IDs in localStorage */
@@ -44,15 +57,18 @@ function getStoredSessionIds(): string[] {
 
 /**
  * Store active session IDs to localStorage.
+ * Note: Does NOT auto-set activeSessionId - that should be managed explicitly
+ * to avoid overriding user's chosen session (REQ-108 fix).
  */
 function storeSessionIds(ids: string[]): void {
   if (ids.length === 0) {
     localStorage.removeItem(ACTIVE_SESSIONS_KEY);
-    localStorage.removeItem(CURRENT_SESSION_KEY);
+    // Don't clear CURRENT_SESSION_KEY - let explicit setCurrentSession handle it
   } else {
     localStorage.setItem(ACTIVE_SESSIONS_KEY, JSON.stringify(ids));
-    // Also set the first one as current for backward compatibility
-    localStorage.setItem(CURRENT_SESSION_KEY, ids[0]);
+    // REQ-108 FIX: Removed auto-setting first session as current.
+    // This was causing user's explicitly chosen session to be overwritten.
+    // The activeSessionId is now managed exclusively by setCurrentSession().
   }
 }
 
@@ -91,6 +107,8 @@ export function useActiveSessions(): UseActiveSessionsResult {
   useEffect(() => {
     if (currentSessionId) {
       localStorage.setItem(CURRENT_SESSION_KEY, currentSessionId);
+    } else {
+      localStorage.removeItem(CURRENT_SESSION_KEY);
     }
   }, [currentSessionId]);
 
@@ -107,15 +125,19 @@ export function useActiveSessions(): UseActiveSessionsResult {
         sessionIds.map(async (sessionId): Promise<ActiveSessionInfo | null> => {
           try {
             const preview = await getSessionPreview(sessionId);
-            // Determine role based on whether current user created the session
-            const isHost = user?.uid === preview.hostUid;
+            // Determine role based on Cloud Function (works for anonymous/guest flows too)
+            const isHost = preview.callerRole === 'host';
             return {
               sessionId,
               title: preview.title,
               hostName: preview.hostName ?? null,
               hostUid: preview.hostUid ?? '',
               role: isHost ? 'host' : 'guest',
-              scheduledFor: preview.scheduledFor ?? null,
+              callerReady: preview.callerReady,
+              selectedGame: preview.selectedGame,
+              scheduledFor: preview.scheduledFor
+                ? preview.scheduledFor.toISOString()
+                : null,
               status: preview.status,
             };
           } catch (err) {
@@ -126,9 +148,10 @@ export function useActiveSessions(): UseActiveSessionsResult {
         })
       );
 
-      // Filter out failed/expired sessions and update state
+      // Filter out failed/expired/closed sessions and update state
+      // Sessions with 'closed' status are finished (host revealed results and saved)
       const validSessions = sessionInfos.filter(
-        (s): s is ActiveSessionInfo => s !== null && s.status !== 'expired'
+        (s): s is ActiveSessionInfo => s !== null && s.status === 'open'
       );
 
       // Remove expired session IDs

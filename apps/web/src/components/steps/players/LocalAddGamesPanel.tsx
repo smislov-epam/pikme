@@ -11,6 +11,7 @@ export function LocalAddGamesPanel(props: {
   gameUrlInput: string
   onGameUrlInputChange: (value: string) => void
   onAddGameFromUrl: () => void
+  onOpenManualGameDialog?: () => void
   isLoading: boolean
   searchQuery: string
   onSearchQueryChange: (value: string) => void
@@ -18,7 +19,6 @@ export function LocalAddGamesPanel(props: {
   isSearching: boolean
   searchResults: Array<{ bggId: number; name: string; yearPublished?: number }>
   onAddGame: (bggId: number) => void
-  onClose: () => void
 }) {
   const {
     open,
@@ -29,6 +29,7 @@ export function LocalAddGamesPanel(props: {
     gameUrlInput,
     onGameUrlInputChange,
     onAddGameFromUrl,
+    onOpenManualGameDialog,
     isLoading,
     searchQuery,
     onSearchQueryChange,
@@ -36,12 +37,11 @@ export function LocalAddGamesPanel(props: {
     isSearching,
     searchResults,
     onAddGame,
-    onClose,
   } = props
 
   return (
     <Collapse in={open} mountOnEnter unmountOnExit>
-      <Box sx={{ mt: 1 }}>
+      <Box sx={{ mt: 0 }}>
         <LocalPlayersGamesCard
           localUsers={localUsers}
           selectedLocalUsers={selectedLocalUsers}
@@ -50,6 +50,7 @@ export function LocalAddGamesPanel(props: {
           gameUrlInput={gameUrlInput}
           onGameUrlInputChange={onGameUrlInputChange}
           onAddGameFromUrl={onAddGameFromUrl}
+          onOpenManualGameDialog={onOpenManualGameDialog}
           isLoading={isLoading}
           searchQuery={searchQuery}
           onSearchQueryChange={onSearchQueryChange}
@@ -57,7 +58,6 @@ export function LocalAddGamesPanel(props: {
           isSearching={isSearching}
           searchResults={searchResults}
           onAddGame={onAddGame}
-          onClose={onClose}
         />
       </Box>
     </Collapse>

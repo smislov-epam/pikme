@@ -9,6 +9,7 @@ import {
   getSharedPreferences,
   hydrateSessionGames,
 } from '../../services/session';
+import { trackSessionJoined } from '../../services/analytics/googleAnalytics';
 
 export interface SessionJoinActions {
   handleJoin: (participantId?: string) => void;
@@ -22,7 +23,6 @@ export function useSessionJoinActions(data: SessionJoinData): SessionJoinActions
     displayName,
     preview,
     sessionId,
-    hasLocalPreferences,
     localOwner,
     hasSharedPreferences,
     sharedPreferences,
@@ -62,6 +62,13 @@ export function useSessionJoinActions(data: SessionJoinData): SessionJoinActions
         const claimResult = await claimSessionSlot(sessionId, nameToUse, participantId);
         const claimedSlot = Boolean(participantId);
         setClaimedNamedSlot(claimedSlot);
+
+        // Track session join in analytics
+        trackSessionJoined({
+          sessionId,
+          joinMethod: claimedSlot ? 'named_slot' : 'open_slot',
+          isReturningUser: Boolean(localOwner),
+        });
 
         // Prevent preference/rank leakage between sessions.
         // Guests should start with no local preferences unless explicitly seeded.
@@ -116,7 +123,10 @@ export function useSessionJoinActions(data: SessionJoinData): SessionJoinActions
           return;
         }
 
-        if (localOwner && hasLocalPreferences) {
+        // Show preference-source selection if user has local data (local owner exists).
+        // This allows them to choose between "Join as Guest" and "Use My Preferences".
+        // Only show mode-select for brand-new users with no local data.
+        if (localOwner) {
           setState('preference-source');
         } else {
           setState('mode-select');
@@ -130,7 +140,6 @@ export function useSessionJoinActions(data: SessionJoinData): SessionJoinActions
     },
     [
       displayName,
-      hasLocalPreferences,
       localOwner,
       preview?.namedSlots,
       preview?.shareMode,
@@ -188,43 +197,50 @@ export function useSessionJoinActions(data: SessionJoinData): SessionJoinActions
           }
           setState('preferences');
         } else {
-          // "Use My Preferences" - redirect to full wizard with session restrictions
-          // REQ-106: This flow should use the full wizard view with locked tabs,
-          // NOT the simplified GuestPreferencesView.
+          // "Use My Preferences" - redirect to dedicated SessionGuestPage
+          // REQ-106: This provides a focused session experience separate from wizard
           
-          // Sync session games into the returning user's local collection first
+          // Parse session game IDs
+          const rawIds = localStorage.getItem('guestSessionGameIds');
+          const parsed = rawIds ? (JSON.parse(rawIds) as unknown) : [];
+          const sessionGameIds = Array.isArray(parsed)
+            ? parsed
+                .map((id) => (typeof id === 'number' ? id : Number(id)))
+                .filter((id) => Number.isFinite(id))
+            : [];
+          
+          // Sync session games into the returning user's local collection
           try {
-            if (localOwner) {
-              const rawIds = localStorage.getItem('guestSessionGameIds');
-              const parsed = rawIds ? (JSON.parse(rawIds) as unknown) : [];
-              const sessionGameIds = Array.isArray(parsed)
-                ? parsed
-                    .map((id) => (typeof id === 'number' ? id : Number(id)))
-                    .filter((id) => Number.isFinite(id))
-                : [];
-
-              if (sessionGameIds.length > 0) {
-                const { addGameToUser } = await import('../../services/db/userGamesService');
-                for (const bggId of sessionGameIds) {
-                  await addGameToUser(localOwner.username, bggId);
-                }
-                console.log(`[SessionJoinPage] Synced ${sessionGameIds.length} session games to ${localOwner.username}`);
+            if (localOwner && sessionGameIds.length > 0) {
+              const { addGameToUser } = await import('../../services/db/userGamesService');
+              for (const bggId of sessionGameIds) {
+                await addGameToUser(localOwner.username, bggId);
               }
+              console.log(`[SessionJoinPage] Synced ${sessionGameIds.length} session games to ${localOwner.username}`);
             }
           } catch (syncErr) {
             console.warn('[SessionJoinPage] Failed to sync session games into local collection:', syncErr);
           }
 
-          // Set session guest mode flags for the wizard
-          // sessionGuestMode='local' tells the wizard to apply tab restrictions
+          // Set session context for SessionGuestPage
           const effectiveSessionId = sessionId ?? localStorage.getItem('guestSessionId');
-          localStorage.setItem('sessionGuestMode', 'local');
           if (effectiveSessionId) {
             localStorage.setItem('activeSessionId', effectiveSessionId);
+            try {
+              const stored = localStorage.getItem('activeSessionIds');
+              const parsed = stored ? (JSON.parse(stored) as unknown) : [];
+              const ids = Array.isArray(parsed)
+                ? parsed.filter((id) => typeof id === 'string')
+                : [];
+              if (!ids.includes(effectiveSessionId)) ids.push(effectiveSessionId);
+              localStorage.setItem('activeSessionIds', JSON.stringify(ids));
+            } catch {
+              localStorage.setItem('activeSessionIds', JSON.stringify([effectiveSessionId]));
+            }
           }
           
-          // Redirect to wizard - it will detect sessionGuestMode and apply restrictions
-          window.location.href = '/';
+          // Redirect to dedicated session guest page
+          window.location.href = `/session/${effectiveSessionId}/preferences`;
           return; // Don't call setIsSelectingSource since we're redirecting
         }
       } catch (err) {

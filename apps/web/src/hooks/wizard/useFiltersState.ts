@@ -56,6 +56,10 @@ export function useFiltersState(options: UseFiltersStateOptions): UseFiltersStat
     setFilters((prev) => ({ ...prev, mode }))
   }, [])
 
+  const setRequireBestWithPlayerCount = useCallback((enabled: boolean) => {
+    setFilters((prev) => ({ ...prev, requireBestWithPlayerCount: enabled }))
+  }, [])
+
   const setExcludeLowRated = useCallback((threshold: number | null) => {
     setFilters((prev) => ({ ...prev, excludeLowRatedThreshold: threshold }))
   }, [])
@@ -81,6 +85,7 @@ export function useFiltersState(options: UseFiltersStateOptions): UseFiltersStat
     setPlayerCount,
     setTimeRange,
     setMode,
+    setRequireBestWithPlayerCount,
     setExcludeLowRated,
     setAgeRange,
     setComplexityRange,

@@ -10,6 +10,7 @@ import {
 import { colors } from '../../../theme/theme';
 import { SessionPreviewCard } from '../SessionPreviewCard';
 import { GuestPreferencesView } from '../GuestPreferencesView';
+import { GuestWaitingView } from '../GuestWaitingView';
 import { GuestModeSelection } from '../GuestModeSelection';
 import { LocalWizardRedirect } from '../LocalWizardRedirect';
 import { PreferenceSourceSelection } from '../PreferenceSourceSelection';
@@ -46,7 +47,7 @@ export function SessionJoinView({
       sx={{
         minHeight: '100vh',
         bgcolor: colors.warmWhite,
-        pt: 4,
+        pt: 0,
         pb: 8,
       }}
     >
@@ -103,7 +104,7 @@ export function SessionJoinView({
         {state === 'preference-source' && (
           <PreferenceSourceSelection
             sessionTitle={preview?.title ?? 'Game Night'}
-            displayName={localOwner?.displayName ?? displayName}
+            displayName={claimedNamedSlot ? (localOwner?.displayName ?? displayName) : displayName}
             hasSharedPreferences={hasSharedPreferences}
             onSelectSource={handlePreferenceSourceSelect}
             isSelecting={isSelectingSource}
@@ -118,7 +119,11 @@ export function SessionJoinView({
           <LocalWizardRedirect sessionId={effectiveSessionId} />
         )}
 
-        {(state === 'preferences' || state === 'local-wizard') &&
+        {state === 'waiting' && effectiveSessionId && (
+          <GuestWaitingView sessionId={effectiveSessionId} />
+        )}
+
+        {(state === 'preferences' || state === 'local-wizard' || state === 'waiting') &&
           !effectiveSessionId && (
             <Alert severity="error">
               Session information is missing. Please reopen the invite link.

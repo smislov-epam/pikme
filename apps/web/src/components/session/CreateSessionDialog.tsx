@@ -4,7 +4,7 @@
  * Dialog for hosts to create a new session and share games with guests.
  */
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   Alert,
   Button,
@@ -25,6 +25,7 @@ import { SessionViewContent } from './SessionViewContent';
 import { CreateSessionForm } from './createSessionDialog/CreateSessionForm';
 import { toSessionGameData } from './createSessionDialog/toSessionGameData';
 import type { NamedParticipantData, SharedGamePreference } from '../../services/session';
+import { trackSessionCreated } from '../../services/analytics/googleAnalytics';
 
 export interface CreateSessionDialogProps {
   open: boolean;
@@ -39,6 +40,8 @@ export interface CreateSessionDialogProps {
   preferences?: Record<string, UserPreferenceRecord[]>;
   /** Existing session ID (if viewing an existing invite) */
   existingSessionId?: string | null;
+  /** Force starting in create mode even if existingSessionId is set */
+  forceCreateNew?: boolean;
   onClose: () => void;
   /** Called when a new session is created */
   onSessionCreated?: (sessionId: string) => void;
@@ -58,16 +61,19 @@ export function CreateSessionDialog({
   users = [],
   preferences = {},
   existingSessionId,
+  forceCreateNew = false,
   onClose,
   onSessionCreated,
   onSessionCancelled,
 }: CreateSessionDialogProps) {
   // Compute initial step based on whether we have an existing session
+  // forceCreateNew overrides to show form even if session exists
   const getInitialStep = (): DialogStep =>
-    existingSessionId ? 'view' : 'form';
+    (existingSessionId && !forceCreateNew) ? 'view' : 'form';
 
   const [step, setStep] = useState<DialogStep>(getInitialStep);
   const [shareMode, setShareMode] = useState<'quick' | 'detailed'>('quick');
+  const [showOtherParticipantsPicks, setShowOtherParticipantsPicks] = useState(true);
   const [title, setTitle] = useState('');
   const [scheduledFor, setScheduledFor] = useState(() => {
     // Default to tomorrow at 7 PM
@@ -89,19 +95,27 @@ export function CreateSessionDialog({
 
   // Get non-host users (exclude local owner who is the host)
   const nonHostUsers = users.filter((u) => !u.isLocalOwner);
+  // Get host user (local owner)
+  const hostUser = users.find((u) => u.isLocalOwner);
 
   // When dialog opens with existing session, show view mode
   const effectiveSessionId = sessionId ?? existingSessionId;
 
-  // Reset state when dialog opens/closes or existingSessionId changes
-  useEffect(() => {
-    if (open && existingSessionId) {
-      // Intentional: sync internal state with props on dialog open
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+  const handleEnter = () => {
+    // Dialog just opened - determine initial step.
+    // NOTE: done in onEnter (not useEffect) to satisfy react-hooks/set-state-in-effect.
+    if (forceCreateNew) {
+      setStep('form');
+      setSessionId(null);
+    } else if (existingSessionId) {
       setStep('view');
       setSessionId(existingSessionId);
+    } else {
+      setStep('form');
+      setSessionId(null);
     }
-  }, [open, existingSessionId]);
+    setError(null);
+  };
 
   // Build named participants data for session creation
   const buildNamedParticipants = (): NamedParticipantData[] => {
@@ -136,6 +150,22 @@ export function CreateSessionDialog({
       });
   };
 
+  // Build host preferences for session creation (so guests can see them)
+  const buildHostPreferences = (): SharedGamePreference[] => {
+    if (!hostUser) return [];
+    const sharedGameIds = new Set(games.map((g) => g.bggId));
+    const hostPrefs = preferences[hostUser.username] ?? [];
+    
+    return hostPrefs
+      .filter((p) => sharedGameIds.has(p.bggId))
+      .map((p) => ({
+        bggId: p.bggId,
+        rank: p.rank,
+        isTopPick: p.isTopPick,
+        isDisliked: p.isDisliked,
+      }));
+  };
+
   const handleCreate = async () => {
     setStep('creating');
     setError(null);
@@ -146,6 +176,7 @@ export function CreateSessionDialog({
         ? scheduledFor
         : new Date(Date.now() + 24 * 60 * 60 * 1000);
       const namedParticipants = buildNamedParticipants();
+      const hostPreferences = buildHostPreferences();
       const result = await createSession({
         title: title.trim() || undefined,
         scheduledFor: effectiveScheduledFor,
@@ -156,14 +187,24 @@ export function CreateSessionDialog({
         maxPlayingTimeMinutes: maxPlayingTime,
         hostDisplayName,
         shareMode,
+        showOtherParticipantsPicks: shareMode === 'detailed' ? showOtherParticipantsPicks : false,
         games: games.map(toSessionGameData),
         namedParticipants,
+        hostPreferences,
       });
 
       setSessionId(result.sessionId);
       setGamesUploaded(result.gamesUploaded);
       setStep('success');
       onSessionCreated?.(result.sessionId);
+
+      // Track session creation in analytics
+      trackSessionCreated({
+        sessionId: result.sessionId,
+        gameCount: games.length,
+        namedSlots: namedParticipants.length,
+        openSlots: Math.max(0, effectivePlayerCount - namedParticipants.length - 1),
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create session');
       setStep('error');
@@ -191,6 +232,7 @@ export function CreateSessionDialog({
       tomorrow.setHours(19, 0, 0, 0);
       setScheduledFor(tomorrow);
       setAddTargetNight(false);
+      setShowOtherParticipantsPicks(true);
       setSessionId(null);
       setGamesUploaded(0);
       setError(null);
@@ -200,7 +242,13 @@ export function CreateSessionDialog({
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      maxWidth="sm"
+      fullWidth
+      TransitionProps={{ onEnter: handleEnter }}
+    >
       <DialogTitle
         sx={{
           bgcolor: colors.oceanBlue,
@@ -213,10 +261,10 @@ export function CreateSessionDialog({
       >
         <ShareIcon />
         {step === 'view'
-          ? 'Game Night Invite'
+          ? 'Session Invite'
           : step === 'success'
-            ? 'Session Created!'
-            : 'Create Session'}
+            ? 'Session Invite Created!'
+            : 'Create Session Invite'}
       </DialogTitle>
 
       <DialogContent sx={{ pt: 3, pb: 2 }}>
@@ -224,6 +272,8 @@ export function CreateSessionDialog({
           <CreateSessionForm
             shareMode={shareMode}
             onShareModeChange={setShareMode}
+            showOtherParticipantsPicks={showOtherParticipantsPicks}
+            onShowOtherParticipantsPicksChange={setShowOtherParticipantsPicks}
             addTargetNight={addTargetNight}
             onAddTargetNightChange={setAddTargetNight}
             title={title}

@@ -70,6 +70,13 @@ export interface WizardStateRecord {
   updatedAt: string
 }
 
+export interface SessionWizardStateRecord {
+  /** Session ID or special context id (e.g. 'draft') */
+  id: string
+  data: unknown
+  updatedAt: string
+}
+
 export interface SavedNightData {
   name: string // User-provided name for the game night
   description?: string // Optional description

@@ -4,6 +4,7 @@ export type {
   GameRecord,
   SavedNightData,
   SavedNightRecord,
+  SessionWizardStateRecord,
   UserGameRecord,
   UserPreferenceRecord,
   UserRecord,

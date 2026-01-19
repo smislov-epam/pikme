@@ -1,10 +1,13 @@
 import { useCallback, useMemo, useState } from 'react'
 import HistoryIcon from '@mui/icons-material/History'
 import CloseIcon from '@mui/icons-material/Close'
+import SportsEsportsIcon from '@mui/icons-material/SportsEsports'
 import {
   Autocomplete,
   Box,
   Button,
+  Card,
+  Checkbox,
   Dialog,
   DialogActions,
   DialogContent,
@@ -28,12 +31,13 @@ type SavedNightOption = {
 
 export function SavedNightPicker(props: {
   savedNights: SavedNightRecord[]
-  onLoadSavedNight: (id: number) => Promise<void>
+  onLoadSavedNight: (id: number, options?: { includeGames?: boolean }) => Promise<void>
   onAfterLoad?: () => void
 }) {
   const { savedNights, onLoadSavedNight, onAfterLoad } = props
 
   const [pendingSavedNightId, setPendingSavedNightId] = useState<number | null>(null)
+  const [includeGames, setIncludeGames] = useState(true)
 
   const savedNightOptions: SavedNightOption[] = useMemo(
     () =>
@@ -116,23 +120,58 @@ export function SavedNightPicker(props: {
         </DialogTitle>
         <DialogContent dividers>
           {pendingNight ? (
-            <Stack spacing={1}>
-              <Typography fontWeight={700}>{pendingNight.label}</Typography>
-              <Typography variant="body2" color="text.secondary">
-                Players: {pendingNight.players.join(', ')}
-              </Typography>
-              {pendingNight.organizerUsername ? (
+            <Stack spacing={2}>
+              <Stack spacing={1}>
+                <Typography fontWeight={700}>{pendingNight.label}</Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Host: {pendingNight.organizerUsername}
+                  Players: {pendingNight.players.join(', ')}
                 </Typography>
-              ) : null}
-              <Typography variant="body2" color="text.secondary">
-                Games: {pendingNight.gameCount}
-              </Typography>
-              {pendingNight.description ? (
-                <Typography variant="body2" color="text.secondary">
-                  {pendingNight.description}
-                </Typography>
+                {pendingNight.organizerUsername ? (
+                  <Typography variant="body2" color="text.secondary">
+                    Host: {pendingNight.organizerUsername}
+                  </Typography>
+                ) : null}
+                {pendingNight.description ? (
+                  <Typography variant="body2" color="text.secondary">
+                    {pendingNight.description}
+                  </Typography>
+                ) : null}
+              </Stack>
+
+              {/* Games loading option tile */}
+              {pendingNight.gameCount > 0 ? (
+                <Card
+                  variant="outlined"
+                  sx={{
+                    p: 1.5,
+                    cursor: 'pointer',
+                    bgcolor: includeGames ? 'primary.50' : 'background.paper',
+                    borderColor: includeGames ? 'primary.main' : 'divider',
+                    '&:hover': { borderColor: 'primary.main' },
+                  }}
+                  onClick={() => setIncludeGames((v) => !v)}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                    <Checkbox
+                      checked={includeGames}
+                      onChange={(e) => setIncludeGames(e.target.checked)}
+                      onClick={(e) => e.stopPropagation()}
+                      size="small"
+                      sx={{ p: 0, mt: 0.25 }}
+                    />
+                    <Box sx={{ flex: 1 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                        <SportsEsportsIcon fontSize="small" color="action" />
+                        <Typography variant="body2" fontWeight={500}>
+                          Load games from this night
+                        </Typography>
+                      </Box>
+                      <Typography variant="caption" color="text.secondary">
+                        {pendingNight.gameCount} game{pendingNight.gameCount === 1 ? '' : 's'} will be added to your session
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Card>
               ) : null}
             </Stack>
           ) : null}
@@ -143,8 +182,9 @@ export function SavedNightPicker(props: {
             variant="contained"
             onClick={async () => {
               if (!pendingNight) return
-              await onLoadSavedNight(pendingNight.id)
+              await onLoadSavedNight(pendingNight.id, { includeGames })
               setPendingSavedNightId(null)
+              setIncludeGames(true) // Reset for next use
               onAfterLoad?.()
             }}
           >

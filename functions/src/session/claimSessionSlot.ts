@@ -18,6 +18,10 @@ import type {
 } from './types.js';
 import { selectOpenUnclaimedSlotDoc } from './selectOpenUnclaimedSlot.js';
 
+function normalizeDisplayName(name: string): string {
+  return name.trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
 /**
  * Claim a session slot.
  */
@@ -44,6 +48,8 @@ export const claimSessionSlot = onCall(async (request) => {
   const sessionId = req.sessionId.trim();
   const displayName = req.displayName.trim();
   const targetParticipantId = req.participantId?.trim();
+
+  const normalizedDisplayName = normalizeDisplayName(displayName);
 
   if (displayName.length < 2 || displayName.length > 30) {
     throw new HttpsError(
@@ -105,9 +111,14 @@ export const claimSessionSlot = onCall(async (request) => {
         data: () => participant,
       };
     } else {
-      // Find an unclaimed OPEN slot only (do not auto-claim reserved named slots).
-      // We query unclaimed participants and then pick an OPEN one to avoid requiring
-      // a composite index on (claimed, slotType).
+      // If the guest typed a name that matches a reserved named slot, claim it.
+      // Otherwise, fall back to an OPEN slot.
+      //
+      // We query unclaimed participants and then pick either:
+      // 1) a unique named slot with matching displayName, or
+      // 2) an OPEN slot.
+      //
+      // This avoids requiring a composite index on (claimed, slotType).
       const unclaimedSnap = await transaction.get(
         participantsRef.where('claimed', '==', false).limit(50)
       );
@@ -116,21 +127,36 @@ export const claimSessionSlot = onCall(async (request) => {
         throw new HttpsError('resource-exhausted', 'Session is full');
       }
 
-      const picked = selectOpenUnclaimedSlotDoc(
-        unclaimedSnap.docs.map((doc) => ({
-          id: doc.id,
-          ref: doc.ref,
-          data: () => doc.data() as Participant,
-        }))
-      );
-      if (!picked) {
+      const unclaimedDocs = unclaimedSnap.docs.map((doc) => ({
+        id: doc.id,
+        ref: doc.ref,
+        data: () => doc.data() as Participant,
+      }));
+
+      const matchingNamed = unclaimedDocs.filter((d) => {
+        const p = d.data();
+        if (p.slotType !== 'named') return false;
+        if (!p.displayName) return false;
+        return normalizeDisplayName(p.displayName) === normalizedDisplayName;
+      });
+
+      if (matchingNamed.length === 1) {
+        slotDoc = matchingNamed[0];
+      } else if (matchingNamed.length > 1) {
         throw new HttpsError(
           'failed-precondition',
-          'No open slots are available. Please select your reserved name, or ask the host to add more spots.'
+          'Multiple reserved slots match that name. Please select your reserved name explicitly.'
         );
+      } else {
+        const picked = selectOpenUnclaimedSlotDoc(unclaimedDocs);
+        if (!picked) {
+          throw new HttpsError(
+            'failed-precondition',
+            'No open slots are available. Please select your reserved name, or ask the host to add more spots.'
+          );
+        }
+        slotDoc = picked;
       }
-
-      slotDoc = picked;
     }
 
     const participantId = slotDoc.id;

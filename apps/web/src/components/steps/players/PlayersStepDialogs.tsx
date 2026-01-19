@@ -1,7 +1,6 @@
 import type { UserRecord } from '../../../db/types'
 import { BggUserNotFoundDialog } from './BggUserNotFoundDialog'
 import { DuplicateUserNameDialog } from './DuplicateUserNameDialog'
-import { ReusePreviousGamesDialog } from './ReusePreviousGamesDialog'
 
 export interface PendingDuplicateUser {
   name: string
@@ -12,9 +11,6 @@ export function PlayersStepDialogs(props: {
   pendingBggUserNotFoundUsername: string | null
   onConfirmAddBggUserAnyway: () => void
   onCancelAddBggUserAnyway: () => void
-  pendingReuseGamesNight: { id: number; name: string; gameCount: number } | null
-  onConfirmReuseGamesFromNight: () => void
-  onDismissReuseGamesPrompt: () => void
   pendingDuplicateUser: PendingDuplicateUser | null
   onSelectExistingUser: (user: UserRecord) => void
   onCreateNewDuplicateUser: () => void
@@ -25,9 +21,6 @@ export function PlayersStepDialogs(props: {
     pendingBggUserNotFoundUsername,
     onConfirmAddBggUserAnyway,
     onCancelAddBggUserAnyway,
-    pendingReuseGamesNight,
-    onConfirmReuseGamesFromNight,
-    onDismissReuseGamesPrompt,
     pendingDuplicateUser,
     onSelectExistingUser,
     onCreateNewDuplicateUser,
@@ -44,17 +37,6 @@ export function PlayersStepDialogs(props: {
           isLoading={isLoading}
           onCancel={onCancelAddBggUserAnyway}
           onConfirm={onConfirmAddBggUserAnyway}
-        />
-      ) : null}
-
-      {pendingReuseGamesNight ? (
-        <ReusePreviousGamesDialog
-          open={true}
-          nightName={pendingReuseGamesNight.name}
-          gameCount={pendingReuseGamesNight.gameCount}
-          isLoading={isLoading}
-          onDismiss={onDismissReuseGamesPrompt}
-          onConfirm={onConfirmReuseGamesFromNight}
         />
       ) : null}
 

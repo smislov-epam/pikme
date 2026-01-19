@@ -145,11 +145,16 @@ describe('retryWrapper', () => {
 
       const promise = callWithRetry(fn, { maxAttempts: 3, baseDelayMs: 100, jitterFactor: 0 })
 
+      // Attach a handler immediately to avoid unhandled rejection warnings
+      const handled = promise.catch(() => undefined)
+
       // Run all timers to exhaust all attempts
       await vi.runAllTimersAsync()
 
       await expect(promise).rejects.toEqual(error)
       expect(fn).toHaveBeenCalledTimes(3)
+
+      await handled
     })
 
     it('calls onRetry callback before each retry', async () => {
@@ -235,6 +240,9 @@ describe('retryWrapper', () => {
         onRetry,
       })
 
+      // Attach a handler immediately to avoid unhandled rejection warnings
+      const handled = promise.catch(() => undefined)
+
       // Run all timers to exhaust all attempts
       await vi.runAllTimersAsync()
 
@@ -249,6 +257,8 @@ describe('retryWrapper', () => {
       expect(onRetry).toHaveBeenNthCalledWith(2, 2, error, 8000)  // 5000 * 2^1 = 10000 -> capped at 8000
       expect(onRetry).toHaveBeenNthCalledWith(3, 3, error, 8000)  // Same cap
       expect(onRetry).toHaveBeenNthCalledWith(4, 4, error, 8000)  // Same cap
+
+      await handled
     })
   })
 })

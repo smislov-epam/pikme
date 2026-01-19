@@ -5,7 +5,7 @@
  * Sets up local owner, imports preferences, and redirects to wizard.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { CircularProgress, Stack, Typography } from '@mui/material';
 
 export interface LocalWizardRedirectProps {
@@ -17,12 +17,18 @@ export interface LocalWizardRedirectProps {
  * 1. Creates local owner if needed (using display name from slot)
  * 2. Imports shared preferences if user claimed a named slot
  * 3. Adds session games to local owner's collection
- * 4. Redirects to wizard at preferences step
+ * 4. Redirects to session preferences
  */
 export function LocalWizardRedirect({ sessionId }: LocalWizardRedirectProps) {
   const [status, setStatus] = useState<string>('Setting up...');
+  const didRunRef = useRef(false);
 
   useEffect(() => {
+    // In dev, React StrictMode may run effects twice.
+    // Guard to prevent duplicate setup and accidental duplicate local-owner creation.
+    if (didRunRef.current) return;
+    didRunRef.current = true;
+
     async function setupLocalOwnerAndRedirect() {
       try {
         const { db } = await import('../../db');
@@ -43,6 +49,11 @@ export function LocalWizardRedirect({ sessionId }: LocalWizardRedirectProps) {
           // Create local owner with the display name from the claimed slot
           localOwner = await createLocalOwner({ displayName });
           console.log('[LocalWizardRedirect] Created local owner:', localOwner.username);
+        } else if (localOwner.displayName !== displayName) {
+          // Update local owner's display name if it differs (user entered a new name)
+          await db.users.update(localOwner.username, { displayName });
+          localOwner = { ...localOwner, displayName };
+          console.log('[LocalWizardRedirect] Updated local owner display name to:', displayName);
         }
 
         // If user claimed a named slot with shared preferences, import them to the local owner
@@ -102,18 +113,29 @@ export function LocalWizardRedirect({ sessionId }: LocalWizardRedirectProps) {
           }
         }
 
+        // Wizard state is initialized on load from local owner + session guest context.
+
         // Store the session context for the wizard
         localStorage.setItem('sessionGuestMode', 'local');
         localStorage.setItem('activeSessionId', sessionId);
+        try {
+          const stored = localStorage.getItem('activeSessionIds');
+          const parsed = stored ? (JSON.parse(stored) as unknown) : [];
+          const ids = Array.isArray(parsed) ? parsed.filter((id) => typeof id === 'string') : [];
+          if (!ids.includes(sessionId)) ids.push(sessionId);
+          localStorage.setItem('activeSessionIds', JSON.stringify(ids));
+        } catch {
+          localStorage.setItem('activeSessionIds', JSON.stringify([sessionId]));
+        }
 
-        // Redirect to wizard - it will show preferences step
-        window.location.href = '/';
+        // Redirect to the focused session preferences page
+        window.location.href = `/session/${sessionId}/preferences`;
       } catch (err) {
         console.error('[LocalWizardRedirect] Setup failed:', err);
         setStatus('Setup failed. Redirecting...');
         // Still try to redirect on error
         setTimeout(() => {
-          window.location.href = '/';
+          window.location.href = `/session/${sessionId}/preferences`;
         }, 1000);
       }
     }

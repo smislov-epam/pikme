@@ -34,6 +34,8 @@ import { PreferenceRowCard } from './PreferenceRowCard'
 import { SectionHeader } from '../../ui/SectionHeader'
 import { usePreferencesDragDrop, DROPPABLE, TOP_PICKS_LIMIT } from './usePreferencesDragDrop'
 import { useNewGameIds } from './useNewGameIds'
+import { usePreferencesUserSelection } from './usePreferencesUserSelection'
+import type { UserSyncStatus } from './types'
 
 export interface PreferencesStepProps {
   users: UserRecord[]
@@ -60,6 +62,12 @@ export interface PreferencesStepProps {
   readOnly?: boolean
   /** Username of the user whose preferences should be shown in read-only mode */
   readOnlyUsername?: string
+  /** Usernames that are read-only (e.g., session guests - host cannot edit their preferences) */
+  readOnlyUsernames?: string[]
+  /** Sync statuses for users in active session */
+  syncStatuses?: UserSyncStatus[]
+  /** Callback when user clicks sync button in tab */
+  onSyncUser?: (username: string) => void
 }
 
 export function PreferencesStepContent({
@@ -78,20 +86,27 @@ export function PreferencesStepContent({
   hideLayoutToggle = false,
   readOnly = false,
   readOnlyUsername,
+  readOnlyUsernames = [],
+  syncStatuses = [],
+  onSyncUser,
 }: PreferencesStepProps) {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const toast = useToast()
-  const [selectedUserState, setSelectedUserState] = useState(users[0]?.username ?? '')
+
+  const {
+    selectedUser,
+    setSelectedUser,
+    isSelectedUserReadOnly,
+  } = usePreferencesUserSelection({
+    users,
+    readOnly,
+    readOnlyUsername,
+    readOnlyUsernames,
+  })
+
   const [detailsGame, setDetailsGame] = useState<GameRecord | null>(null)
   const [showOnlyNewGames, setShowOnlyNewGames] = useState(false)
-
-  // In read-only mode, always show the specified user's preferences
-  const selectedUser = useMemo(() => {
-    if (readOnly && readOnlyUsername) return readOnlyUsername
-    if (users.some((u) => u.username === selectedUserState)) return selectedUserState
-    return users[0]?.username ?? ''
-  }, [selectedUserState, users, readOnly, readOnlyUsername])
 
   const effectiveLayoutMode: LayoutMode = isMobile && !forceFullTiles ? 'simplified' : layoutMode
 
@@ -224,20 +239,20 @@ export function PreferencesStepContent({
     )
   }
 
-  // In read-only mode, disable all edit actions
-  const effectiveOnToggleTopPick = readOnly ? () => {} : handleToggleTopPick
-  const effectiveOnToggleDisliked = readOnly ? () => {} : handleToggleDisliked
-  const effectiveOnSetRank = readOnly ? () => {} : handleSetRank
+  // In read-only mode (explicit or selected guest user), disable all edit actions
+  const effectiveOnToggleTopPick = isSelectedUserReadOnly ? () => {} : handleToggleTopPick
+  const effectiveOnToggleDisliked = isSelectedUserReadOnly ? () => {} : handleToggleDisliked
+  const effectiveOnSetRank = isSelectedUserReadOnly ? () => {} : handleSetRank
   
   // Find the display name for the read-only user
-  const readOnlyUserDisplayName = readOnlyUsername 
-    ? users.find((u) => u.username === readOnlyUsername)?.displayName || readOnlyUsername
+  const readOnlyUserDisplayName = isSelectedUserReadOnly
+    ? users.find((u) => u.username === selectedUser)?.displayName || selectedUser
     : ''
 
   return (
     <Stack spacing={3}>
-      {/* Read-only banner (REQ-106) */}
-      {readOnly && readOnlyUserDisplayName && (
+      {/* Read-only banner when viewing a guest's preferences (REQ-106) */}
+      {isSelectedUserReadOnly && readOnlyUserDisplayName && (
         <Box
           sx={{
             px: 2,
@@ -255,22 +270,25 @@ export function PreferencesStepContent({
       )}
 
       <SectionHeader
-        title={readOnly ? `${readOnlyUserDisplayName}'s preferences` : 'Share your preferences'}
-        subtitle={readOnly ? 'View only - you cannot edit these preferences' : 'Each player can mark favorites and rank games'}
+        title={isSelectedUserReadOnly ? `${readOnlyUserDisplayName}'s preferences` : 'Share your preferences'}
+        subtitle={isSelectedUserReadOnly ? 'View only - you cannot edit these preferences' : 'Each player can mark favorites and rank games'}
         titleVariant="h5"
         titleColor="primary.dark"
       />
 
-      {/* Hide user selector in read-only mode */}
+      {/* Hide user selector only in explicit read-only mode (locked to one user) */}
       {!readOnly && (
         <PreferencesUserSelector
           users={users}
           selectedUser={selectedUser}
           isMobile={isMobile}
-          onChange={setSelectedUserState}
+          onChange={setSelectedUser}
           preferences={preferences}
           gameIds={games.map((g) => g.bggId)}
           guestStatuses={guestStatuses}
+          readOnlyUsernames={readOnlyUsernames}
+          syncStatuses={syncStatuses}
+          onSyncUser={onSyncUser}
         />
       )}
 
@@ -309,7 +327,6 @@ export function PreferencesStepContent({
           onOpenDetails={(game) => setDetailsGame(game)}
           onToggleTopPick={effectiveOnToggleTopPick}
           onToggleDisliked={effectiveOnToggleDisliked}
-          readOnly={readOnly}
         />
         <DislikedSection
           disliked={dislikedForRender}
@@ -318,7 +335,6 @@ export function PreferencesStepContent({
           onOpenDetails={(game) => setDetailsGame(game)}
           onToggleTopPick={effectiveOnToggleTopPick}
           onToggleDisliked={effectiveOnToggleDisliked}
-          readOnly={readOnly}
         />
         <RankedSection
           ranked={ranked}
@@ -327,7 +343,6 @@ export function PreferencesStepContent({
           onOpenDetails={(game) => setDetailsGame(game)}
           onToggleTopPick={effectiveOnToggleTopPick}
           onToggleDisliked={effectiveOnToggleDisliked}
-          readOnly={readOnly}
         />
         <NeutralSection
           neutral={neutralForDisplay}
@@ -338,7 +353,6 @@ export function PreferencesStepContent({
           onToggleTopPick={effectiveOnToggleTopPick}
           onToggleDisliked={effectiveOnToggleDisliked}
           onSetRank={effectiveOnSetRank}
-          readOnly={readOnly}
         />
         <DragOverlay dropAnimation={null}>
           {activeDragId != null && rowByBggId.get(activeDragId) ? (

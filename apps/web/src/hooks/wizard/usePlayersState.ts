@@ -12,7 +12,7 @@
  * })
  * ```
  */
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback, useEffect, useRef } from 'react'
 import type { GameRecord, UserRecord, UserPreferenceRecord } from '../../db/types'
 import type { PlayersState, PlayersActions } from './types'
 import * as dbService from '../../services/db'
@@ -49,6 +49,13 @@ export function usePlayersState(options: UsePlayersStateOptions = {}): UsePlayer
   const { onUserAdded, onUserRemoved, onNeedsApiKey, initialUsers } = options
 
   const [users, setUsers] = useState<UserRecord[]>(initialUsers ?? [])
+  const usersRef = useRef<UserRecord[]>(users)
+  const pendingAddUsernamesRef = useRef<Set<string>>(new Set())
+
+  useEffect(() => {
+    usersRef.current = users
+  }, [users])
+
   const [existingLocalUsers, setExistingLocalUsers] = useState<UserRecord[]>([])
   const [isLoadingUser, setIsLoadingUser] = useState(false)
   const [userError, setUserError] = useState<string | null>(null)
@@ -153,9 +160,11 @@ export function usePlayersState(options: UsePlayersStateOptions = {}): UsePlayer
   // Local User Management
   // ─────────────────────────────────────────────────────────────────────────
   const addLocalUser = useCallback(
-    async (nameOrUsername: string, isOrganizer?: boolean) => {
+    async (nameOrUsername: string, isOrganizer?: boolean, options?: { forceNew?: boolean }) => {
+      let pendingCleanupUsername: string | null = null
       try {
-        const existingUser = await dbService.getUser(nameOrUsername)
+        const forceNew = options?.forceNew ?? false
+        const existingUser = forceNew ? null : await dbService.getUser(nameOrUsername)
         let user: UserRecord
 
         if (existingUser) {
@@ -179,18 +188,26 @@ export function usePlayersState(options: UsePlayersStateOptions = {}): UsePlayer
           }
         } else {
           user = await dbService.createLocalUser(nameOrUsername, undefined, isOrganizer)
-          setExistingLocalUsers((prev) => [...prev, user])
+          setExistingLocalUsers((prev) => (prev.some((u) => u.username === user.username) ? prev : [...prev, user]))
         }
 
-        if (users.some((u) => u.username === user.username)) {
-          return // Already in session
+        const username = user.username
+        if (pendingAddUsernamesRef.current.has(username)) {
+          return
+        }
+        pendingAddUsernamesRef.current.add(username)
+        pendingCleanupUsername = username
+
+        // Avoid duplicate adds even if this is called multiple times before state settles.
+        if (usersRef.current.some((u) => u.username === username)) {
+          return
         }
 
-        setUsers((prev) => [...prev, user])
+        setUsers((prev) => (prev.some((u) => u.username === username) ? prev : [...prev, user]))
 
         // Load preferences and ratings
-        const userPrefs = await dbService.getUserPreferences(user.username)
-        const userGameRecords = await dbService.getUserGames(user.username)
+        const userPrefs = await dbService.getUserPreferences(username)
+        const userGameRecords = await dbService.getUserGames(username)
         const ratings: Record<number, number | undefined> = {}
         for (const ug of userGameRecords) {
           ratings[ug.bggId] = ug.rating
@@ -200,7 +217,7 @@ export function usePlayersState(options: UsePlayersStateOptions = {}): UsePlayer
         let userGames: GameRecord[] = []
         let owners: Record<number, string[]> = {}
         if (userGameRecords.length > 0) {
-          userGames = await dbService.getGamesForUsers([user.username])
+          userGames = await dbService.getGamesForUsers([username])
           const bggIds = userGames.map((g) => g.bggId)
           owners = await dbService.getGameOwners(bggIds)
         }
@@ -208,9 +225,13 @@ export function usePlayersState(options: UsePlayersStateOptions = {}): UsePlayer
         onUserAdded?.(user, userGames, ratings, userPrefs, owners)
       } catch (err) {
         setUserError(err instanceof Error ? err.message : 'Failed to add user')
+      } finally {
+        if (pendingCleanupUsername) {
+          pendingAddUsernamesRef.current.delete(pendingCleanupUsername)
+        }
       }
     },
-    [users, onUserAdded],
+    [onUserAdded],
   )
 
   const setOrganizer = useCallback(async (username: string) => {

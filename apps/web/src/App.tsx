@@ -6,6 +6,8 @@ import WizardPage from './pages/WizardPage'
 import { RegistrationPage } from './pages/RegistrationPage'
 import { LoginPage } from './pages/LoginPage'
 import { SessionJoinPage } from './pages/SessionJoinPage'
+import { SessionGuestPage } from './pages/SessionGuestPage'
+import { SessionsPage } from './pages/SessionsPage'
 import { DbGate } from './components/DbGate'
 import { LocalOwnerGate } from './components/gates/LocalOwnerGate'
 import { ErrorBoundary } from './components/ErrorBoundary'
@@ -15,13 +17,20 @@ import { ToastProvider } from './services/toast'
 /**
  * Simple path-based routing (no react-router needed for a few pages).
  */
-function getPage(): 'wizard' | 'register' | 'login' | 'session' {
+function getPage(): 'wizard' | 'register' | 'login' | 'session' | 'session-guest' | 'sessions' {
   const path = window.location.pathname;
   if (path === '/register' || path === '/register/') {
     return 'register';
   }
   if (path === '/login' || path === '/login/') {
     return 'login';
+  }
+  if (path === '/sessions' || path === '/sessions/') {
+    return 'sessions';
+  }
+  // Check for session guest preferences page first (more specific path)
+  if (path.match(/^\/session\/[^/]+\/preferences\/?$/)) {
+    return 'session-guest';
   }
   if (path.startsWith('/session/')) {
     return 'session';
@@ -42,6 +51,18 @@ export default function App() {
               <RegistrationPage />
             ) : page === 'login' ? (
               <LoginPage />
+            ) : page === 'sessions' ? (
+              // Sessions management page
+              <DbGate>
+                <SessionsPage />
+              </DbGate>
+            ) : page === 'session-guest' ? (
+              // Session guest preferences page for returning users
+              <DbGate>
+                <LocalOwnerGate>
+                  <SessionGuestPage />
+                </LocalOwnerGate>
+              </DbGate>
             ) : page === 'session' ? (
               // Session join handles identity via invite flow (bypass local owner check)
               <DbGate>

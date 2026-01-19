@@ -19,6 +19,7 @@ import type {
   SessionGameInfo,
   SessionMemberInfo,
   GuestPreferencesData,
+  ParticipantPreferencesInfo,
 } from './types';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -48,9 +49,11 @@ export async function createSession(
       maxPlayingTimeMinutes?: number | null;
       hostDisplayName: string;
       shareMode?: 'quick' | 'detailed';
+      showOtherParticipantsPicks?: boolean;
       gameIds: string[];
       games: SessionGameData[];
       namedParticipants?: NamedParticipantData[];
+      hostPreferences?: SharedGamePreference[];
     },
     { ok: boolean; sessionId: string; gamesUploaded: number }
   >('createSession', {
@@ -63,9 +66,11 @@ export async function createSession(
     maxPlayingTimeMinutes: options.maxPlayingTimeMinutes,
     hostDisplayName: options.hostDisplayName,
     shareMode: options.shareMode,
+    showOtherParticipantsPicks: options.showOtherParticipantsPicks,
     gameIds: options.games.map((g) => g.gameId),
     games: options.games,
     namedParticipants: options.namedParticipants,
+    hostPreferences: options.hostPreferences,
   });
 
   return {
@@ -93,6 +98,7 @@ export async function getSessionPreview(
       ok: boolean;
       sessionId: string;
       title: string;
+      hostName?: string;
       scheduledFor: string;
       minPlayers: number | null;
       maxPlayers: number | null;
@@ -105,12 +111,39 @@ export async function getSessionPreview(
       availableSlots: number;
       namedSlots: NamedSlotInfo[];
       shareMode?: 'quick' | 'detailed';
+      showOtherParticipantsPicks?: boolean;
+      hostUid: string;
+      callerRole: 'host' | 'member' | 'guest' | null;
+      callerParticipantId?: string;
+      callerReady?: boolean;
+      selectedGame?: {
+        gameId: string;
+        name: string;
+        thumbnail: string | null;
+        image: string | null;
+        score: number;
+        minPlayers: number | null;
+        maxPlayers: number | null;
+        playingTimeMinutes: number | null;
+      };
+      selectedAt?: string;
+      result?: {
+        gameId: string;
+        name: string;
+        thumbnail: string | null;
+        image: string | null;
+        score: number;
+        minPlayers: number | null;
+        maxPlayers: number | null;
+        playingTimeMinutes: number | null;
+      };
     }
   >('getSessionPreview', { sessionId });
 
   return {
     sessionId: result.sessionId,
     title: result.title,
+    hostName: result.hostName,
     scheduledFor: new Date(result.scheduledFor),
     minPlayers: result.minPlayers,
     maxPlayers: result.maxPlayers,
@@ -123,6 +156,14 @@ export async function getSessionPreview(
     availableSlots: result.availableSlots,
     namedSlots: result.namedSlots ?? [],
     shareMode: result.shareMode ?? 'detailed',
+    showOtherParticipantsPicks: result.showOtherParticipantsPicks,
+    hostUid: result.hostUid,
+    callerRole: result.callerRole,
+    callerParticipantId: result.callerParticipantId,
+    callerReady: result.callerReady,
+    selectedGame: result.selectedGame,
+    selectedAt: result.selectedAt ? new Date(result.selectedAt) : undefined,
+    result: result.result,
   };
 }
 
@@ -227,16 +268,18 @@ export async function getSharedPreferences(sessionId: string): Promise<SharedPre
  *
  * @param sessionId The session ID
  * @param preferences Array of game preferences
+ * @param forLocalUser Optional: host submitting on behalf of a local user
  * @returns Number of preferences submitted
  */
 export async function submitGuestPreferences(
   sessionId: string,
-  preferences: SharedGamePreference[]
+  preferences: SharedGamePreference[],
+  forLocalUser?: { participantId: string; displayName: string }
 ): Promise<{ preferencesCount: number }> {
   const result = await callFunction<
-    { sessionId: string; preferences: SharedGamePreference[] },
+    { sessionId: string; preferences: SharedGamePreference[]; forLocalUser?: { participantId: string; displayName: string } },
     { ok: boolean; preferencesCount: number }
-  >('submitGuestPreferences', { sessionId, preferences });
+  >('submitGuestPreferences', { sessionId, preferences, forLocalUser });
 
   return {
     preferencesCount: result.preferencesCount,
@@ -328,6 +371,120 @@ export async function getAllGuestPreferences(sessionId: string): Promise<GuestPr
   >('getAllGuestPreferences', { sessionId });
 
   return result.guests;
+}
+
+/**
+ * Get preferences of all ready participants in a session.
+ * Available to any authenticated session member.
+ *
+ * @param sessionId The session ID
+ * @returns Array of participant preferences (excludes calling user)
+ */
+export async function getReadyParticipantPreferences(sessionId: string): Promise<ParticipantPreferencesInfo[]> {
+  const result = await callFunction<
+    { sessionId: string },
+    {
+      ok: boolean;
+      participants: ParticipantPreferencesInfo[];
+    }
+  >('getReadyParticipantPreferences', { sessionId });
+
+  return result.participants;
+}
+
+/**
+ * Tonight's Pick result to send when closing session.
+ */
+export interface CloseSessionResult {
+  /** BGG game ID of the winning game */
+  gameId: string;
+  /** Game name */
+  name: string;
+  /** Thumbnail URL */
+  thumbnail: string | null;
+  /** Full-size image URL */
+  image: string | null;
+  /** Final score */
+  score: number;
+  /** Min players */
+  minPlayers: number | null;
+  /** Max players */
+  maxPlayers: number | null;
+  /** Playing time in minutes */
+  playingTimeMinutes: number | null;
+}
+
+/**
+ * Set the selected game on an open session (host only).
+ * This notifies guests via realtime session doc updates.
+ */
+export async function setSessionSelectedGame(
+  sessionId: string,
+  selectedGame: CloseSessionResult
+): Promise<{
+  sessionId: string;
+  status: 'open';
+  selectedAt: Date;
+}> {
+  const response = await callFunction<
+    { sessionId: string; selectedGame: CloseSessionResult },
+    {
+      ok: boolean;
+      sessionId: string;
+      status: 'open';
+      selectedAt: string;
+    }
+  >('setSessionSelectedGame', { sessionId, selectedGame });
+
+  return {
+    sessionId: response.sessionId,
+    status: response.status,
+    selectedAt: new Date(response.selectedAt),
+  };
+}
+
+/**
+ * Close a session (host only).
+ * This marks the session as closed and notifies guests.
+ *
+ * @param sessionId The session ID
+ * @param result Optional Tonight's Pick result to store
+ * @returns Close result with status
+ */
+export async function closeSession(
+  sessionId: string,
+  result?: CloseSessionResult
+): Promise<{
+  sessionId: string;
+  status: 'closed';
+  closedAt: Date;
+}> {
+  const response = await callFunction<
+    { sessionId: string; result?: CloseSessionResult },
+    {
+      ok: boolean;
+      sessionId: string;
+      status: 'closed';
+      closedAt: string;
+    }
+  >('closeSession', { sessionId, result });
+
+  return {
+    sessionId: response.sessionId,
+    status: response.status,
+    closedAt: new Date(response.closedAt),
+  };
+}
+
+/**
+ * Permanently delete a session (host only).
+ *
+ * @param sessionId The session ID
+ */
+export async function deleteSession(sessionId: string): Promise<void> {
+  await callFunction<{ sessionId: string }, { ok: boolean; sessionId: string }>('deleteSession', {
+    sessionId,
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -50,9 +50,6 @@ describe('PlayersStep', () => {
         pendingBggUserNotFoundUsername={null}
         onConfirmAddBggUserAnyway={vi.fn().mockResolvedValue(undefined)}
         onCancelAddBggUserAnyway={vi.fn()}
-        pendingReuseGamesNight={null}
-        onConfirmReuseGamesFromNight={vi.fn().mockResolvedValue(undefined)}
-        onDismissReuseGamesPrompt={vi.fn()}
         onAddBggUser={vi.fn().mockResolvedValue(undefined)}
         onAddLocalUser={vi.fn().mockResolvedValue(undefined)}
         onRemoveUser={vi.fn()}
@@ -93,7 +90,7 @@ describe('PlayersStep', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Load' }))
 
     await waitFor(() => {
-      expect(onLoadSavedNight).toHaveBeenCalledWith(1)
+      expect(onLoadSavedNight).toHaveBeenCalledWith(1, { includeGames: true })
     })
   })
 
@@ -113,9 +110,6 @@ describe('PlayersStep', () => {
         pendingBggUserNotFoundUsername={null}
         onConfirmAddBggUserAnyway={vi.fn().mockResolvedValue(undefined)}
         onCancelAddBggUserAnyway={vi.fn()}
-        pendingReuseGamesNight={null}
-        onConfirmReuseGamesFromNight={vi.fn().mockResolvedValue(undefined)}
-        onDismissReuseGamesPrompt={vi.fn()}
         onAddBggUser={vi.fn().mockResolvedValue(undefined)}
         onAddLocalUser={vi.fn().mockResolvedValue(undefined)}
         onRemoveUser={vi.fn()}
@@ -139,16 +133,17 @@ describe('PlayersStep', () => {
       />,
     )
 
-    expect(screen.queryByText('Add games for local players')).not.toBeInTheDocument()
+    expect(screen.queryByText('Select users to add games to:')).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Add New Games to Collection' }))
 
-    expect(await screen.findByText('Add games for local players')).toBeInTheDocument()
+    expect(await screen.findByText('Select users to add games to:')).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Close' }))
+    // Close by toggling the expandable header again
+    fireEvent.click(screen.getByRole('button', { name: 'Add New Games to Collection' }))
 
     await waitFor(() => {
-      expect(screen.queryByText('Add games for local players')).not.toBeInTheDocument()
+      expect(screen.queryByText('Select users to add games to:')).not.toBeInTheDocument()
     })
   })
 
@@ -169,9 +164,6 @@ describe('PlayersStep', () => {
         pendingBggUserNotFoundUsername="ghost_user"
         onConfirmAddBggUserAnyway={onConfirmAddBggUserAnyway}
         onCancelAddBggUserAnyway={onCancelAddBggUserAnyway}
-        pendingReuseGamesNight={null}
-        onConfirmReuseGamesFromNight={vi.fn().mockResolvedValue(undefined)}
-        onDismissReuseGamesPrompt={vi.fn()}
         onAddBggUser={vi.fn().mockResolvedValue(undefined)}
         onAddLocalUser={vi.fn().mockResolvedValue(undefined)}
         onRemoveUser={vi.fn()}
@@ -203,58 +195,5 @@ describe('PlayersStep', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Add anyway' }))
     await waitFor(() => expect(onConfirmAddBggUserAnyway).toHaveBeenCalledTimes(1))
-  })
-
-  it('prompts to reuse previous night games and allows dismiss/confirm', async () => {
-    const onConfirmReuseGamesFromNight = vi.fn().mockResolvedValue(undefined)
-    const onDismissReuseGamesPrompt = vi.fn()
-
-    renderWithProviders(
-      <PlayersStep
-        users={[]}
-        games={[]}
-        sessionGames={[]}
-        gameOwners={{}}
-        layoutMode="standard"
-        onLayoutModeChange={vi.fn()}
-        existingLocalUsers={[]}
-        savedNights={[]}
-        pendingBggUserNotFoundUsername={null}
-        onConfirmAddBggUserAnyway={vi.fn().mockResolvedValue(undefined)}
-        onCancelAddBggUserAnyway={vi.fn()}
-        pendingReuseGamesNight={{ id: 1, name: 'Friday Night', gameCount: 12 }}
-        onConfirmReuseGamesFromNight={onConfirmReuseGamesFromNight}
-        onDismissReuseGamesPrompt={onDismissReuseGamesPrompt}
-        onAddBggUser={vi.fn().mockResolvedValue(undefined)}
-        onAddLocalUser={vi.fn().mockResolvedValue(undefined)}
-        onRemoveUser={vi.fn()}
-        onDeleteUser={vi.fn().mockResolvedValue(undefined)}
-        onSetOrganizer={vi.fn().mockResolvedValue(undefined)}
-        onSearchGame={vi.fn().mockResolvedValue([])}
-        onAddGameToUser={vi.fn().mockResolvedValue(undefined)}
-        onRemoveGameFromUser={vi.fn().mockResolvedValue(undefined)}
-        onAddGameToSession={vi.fn()}
-        onRemoveGameFromSession={vi.fn()}
-        onExcludeGameFromSession={vi.fn()}
-        onUndoExcludeGameFromSession={vi.fn()}
-        onAddOwnerToGame={vi.fn().mockResolvedValue(undefined)}
-        onLoadSavedNight={vi.fn().mockResolvedValue(undefined)}
-        onFetchGameInfo={vi.fn().mockResolvedValue({ bggId: 1 })}
-        onAddGameManually={vi.fn().mockResolvedValue(undefined)}
-        onEditGame={vi.fn().mockResolvedValue(undefined)}
-        onRefreshGameFromBgg={vi.fn().mockResolvedValue({ bggId: 1, name: 'X', lastFetchedAt: '' })}
-        isLoading={false}
-        error={null}
-      />,
-    )
-
-    expect(screen.getByText('Load games from your previous night?')).toBeInTheDocument()
-    expect(screen.getByText(/Friday Night/)).toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole('button', { name: 'Not now' }))
-    expect(onDismissReuseGamesPrompt).toHaveBeenCalledTimes(1)
-
-    fireEvent.click(screen.getByRole('button', { name: 'Load games' }))
-    await waitFor(() => expect(onConfirmReuseGamesFromNight).toHaveBeenCalledTimes(1))
   })
 })

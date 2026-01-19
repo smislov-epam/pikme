@@ -5,7 +5,6 @@ import { renderHook, act, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { useSavedNightsState } from './useSavedNightsState'
 import * as dbService from '../../services/db'
-import { findReusableNight } from '../../services/savedNights/findReusableNight'
 import {
   mockUsers,
   mockGames,
@@ -15,10 +14,8 @@ import {
 } from './__tests__/fixtures'
 
 vi.mock('../../services/db')
-vi.mock('../../services/savedNights/findReusableNight')
 
 const mockedDb = vi.mocked(dbService)
-const mockedFindReusableNight = vi.mocked(findReusableNight)
 
 function createDefaultOptions() {
   return {
@@ -35,7 +32,6 @@ describe('useSavedNightsState', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockedDb.getSavedNights.mockResolvedValue(mockSavedNights)
-    mockedFindReusableNight.mockReturnValue(null)
   })
 
   describe('initialization', () => {
@@ -216,93 +212,6 @@ describe('useSavedNightsState', () => {
 
       expect(consoleSpy).toHaveBeenCalledWith('Saved night not found')
       consoleSpy.mockRestore()
-    })
-  })
-
-  describe('reuse games prompt', () => {
-    it('sets pendingReuseGamesNight when reusable night found and session empty', async () => {
-      mockedFindReusableNight.mockReturnValue(mockSavedNights[0])
-      const options = {
-        ...createDefaultOptions(),
-        sessionGameIds: [],
-      }
-
-      const { result } = renderHook(() => useSavedNightsState(options))
-
-      await waitFor(() => {
-        expect(result.current.pendingReuseGamesNight).toEqual({
-          id: 1,
-          name: 'Friday Night',
-          gameCount: 2,
-        })
-      })
-    })
-
-    it('does not show prompt if session has games', async () => {
-      mockedFindReusableNight.mockReturnValue(mockSavedNights[0])
-      const options = {
-        ...createDefaultOptions(),
-        sessionGameIds: [1],
-      }
-
-      const { result } = renderHook(() => useSavedNightsState(options))
-
-      await waitFor(() => {
-        expect(result.current.pendingReuseGamesNight).toBeNull()
-      })
-    })
-
-    it('dismissReuseGamesPrompt clears the prompt', async () => {
-      mockedFindReusableNight.mockReturnValue(mockSavedNights[0])
-      const options = {
-        ...createDefaultOptions(),
-        sessionGameIds: [],
-      }
-
-      const { result } = renderHook(() => useSavedNightsState(options))
-
-      await waitFor(() => {
-        expect(result.current.pendingReuseGamesNight).not.toBeNull()
-      })
-
-      act(() => {
-        result.current.dismissReuseGamesPrompt()
-      })
-
-      expect(result.current.pendingReuseGamesNight).toBeNull()
-    })
-
-    it('confirmReuseGamesFromNight loads games and calls onLoadNight', async () => {
-      mockedFindReusableNight.mockReturnValue(mockSavedNights[0])
-      mockedDb.getGames.mockResolvedValue(mockGames)
-      mockedDb.getGameOwners.mockResolvedValue({ 1: ['alice'] })
-
-      const onLoadNight = vi.fn()
-      const options = {
-        ...createDefaultOptions(),
-        sessionGameIds: [],
-        onLoadNight,
-      }
-
-      const { result } = renderHook(() => useSavedNightsState(options))
-
-      await waitFor(() => {
-        expect(result.current.pendingReuseGamesNight).not.toBeNull()
-      })
-
-      await act(async () => {
-        await result.current.confirmReuseGamesFromNight()
-      })
-
-      expect(mockedDb.getGames).toHaveBeenCalledWith([1, 2])
-      expect(onLoadNight).toHaveBeenCalledWith(
-        expect.objectContaining({
-          games: mockGames,
-          sessionGameIds: [1, 2],
-          gameOwners: { 1: ['alice'] },
-        }),
-      )
-      expect(result.current.pendingReuseGamesNight).toBeNull()
     })
   })
 

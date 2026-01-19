@@ -58,7 +58,7 @@ export function HelpWalkthroughSections(props: {
             </>,
           )}
           {bullet(<>If a BGG username can’t be confirmed, you can still add it “anyway” (useful for typos to fix later).</>)}
-          {bullet(<>Use “Add New Games to Collection” to paste a BGG link and add games to local players.</>)}
+          {bullet(<>Use “Add New Games to Collection” to paste a BGG link or use Manual entry (including an image URL) to add games to local players.</>)}
           {bullet(<>You can start from a saved night to reuse players and optionally reuse last time’s games.</>)}
         </Stack>
 

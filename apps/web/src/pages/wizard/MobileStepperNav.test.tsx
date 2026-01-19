@@ -47,12 +47,10 @@ describe('MobileStepperNav', () => {
     it('applies completed style (yellow) to steps before active', () => {
       renderWithTheme(<MobileStepperNav activeStep={2} />)
 
-      // Step 1 and 2 should be completed (yellow background)
-      // Check that the first step circle contains "1" and is styled appropriately
-      const stepOne = screen.getByText('1')
-      expect(stepOne).toBeInTheDocument()
-      // The parent Box should exist with styling applied via MUI sx
-      expect(stepOne.parentElement).toBeInTheDocument()
+      // Step 1 and 2 should be completed (shown as check icons, not numbers)
+      // Check that check icons are rendered for completed steps
+      const checkIcons = screen.getAllByTestId('CheckIcon')
+      expect(checkIcons).toHaveLength(2) // Two completed steps
     })
 
     it('renders active step with label', () => {

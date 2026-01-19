@@ -29,6 +29,7 @@ export interface ManualGameData {
   maxPlayTimeMinutes?: number
   minAge?: number
   thumbnail?: string
+  image?: string
   averageRating?: number
   weight?: number
   categories?: string[]
@@ -76,25 +77,28 @@ interface ManualGameDialogProps {
   open: boolean
   game: ManualGameData
   isLoading?: boolean
+  mode?: 'bgg' | 'manual'
   onGameChange: (game: ManualGameData) => void
   onClose: () => void
   onSubmit: () => void
 }
 
 export function ManualGameDialog({
-  open, game, isLoading, onGameChange, onClose, onSubmit,
+  open, game, isLoading, mode = 'bgg', onGameChange, onClose, onSubmit,
 }: ManualGameDialogProps) {
   const hasName = !!game.name?.trim()
+  const hasBggId = Number.isInteger(game.bggId) && game.bggId > 0
   const hasPlayers = !!game.minPlayers && !!game.maxPlayers
   const hasTime = !!game.minPlayTimeMinutes || !!game.maxPlayTimeMinutes || !!game.playingTimeMinutes
   const hasExtraData = !!game.bestWith || !!game.averageRating || !!game.weight || (game.categories && game.categories.length > 0)
   const allFound = hasName && hasPlayers && hasTime
   const bggUrl = game.bggId > 0 ? `https://boardgamegeek.com/boardgame/${game.bggId}` : null
+  const imageUrlValue = game.image || game.thumbnail || ''
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        Add Game from BGG
+        {mode === 'manual' ? 'Add Game Manually' : 'Add Game from BGG'}
         {bggUrl && (
           <Link href={bggUrl} target="_blank" rel="noopener" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, fontSize: '0.875rem' }}>
             View on BGG <OpenInNewIcon sx={{ fontSize: 16 }} />
@@ -113,7 +117,11 @@ export function ManualGameDialog({
         ) : (
           <Stack spacing={2} sx={{ mt: 1 }}>
             {/* Status message */}
-            {allFound && hasExtraData ? (
+            {mode === 'manual' ? (
+              <Alert severity="info" sx={{ py: 0.5 }}>
+                BGG ID is required and helps PIKME sync/refresh this game in the future.
+              </Alert>
+            ) : allFound && hasExtraData ? (
               <Alert severity="success" sx={{ py: 0.5 }}>
                 ✅ All game details extracted successfully!
               </Alert>
@@ -189,6 +197,23 @@ export function ManualGameDialog({
 
             {/* Form fields */}
             <TextField
+              label="BGG ID"
+              type="number"
+              value={game.bggId || ''}
+              onChange={(e) => onGameChange({ ...game, bggId: parseInt(e.target.value, 10) || 0 })}
+              required
+              fullWidth
+              disabled={mode !== 'manual'}
+              error={!hasBggId}
+              helperText={!hasBggId ? 'Required (BoardGameGeek numeric ID)' : undefined}
+              size="small"
+              inputProps={{ min: 1 }}
+              InputProps={{
+                endAdornment: hasBggId ? <CheckCircleIcon color="success" sx={{ fontSize: 18 }} /> : undefined,
+              }}
+            />
+
+            <TextField
               label="Game Name"
               value={game.name}
               onChange={(e) => onGameChange({ ...game, name: e.target.value })}
@@ -200,6 +225,23 @@ export function ManualGameDialog({
               InputProps={{
                 endAdornment: hasName ? <CheckCircleIcon color="success" sx={{ fontSize: 18 }} /> : undefined,
               }}
+            />
+
+            <TextField
+              label="Image URL"
+              value={imageUrlValue}
+              onChange={(e) => {
+                const url = e.target.value
+                onGameChange({
+                  ...game,
+                  image: url || undefined,
+                  thumbnail: url || undefined,
+                })
+              }}
+              fullWidth
+              size="small"
+              placeholder="Paste a link to a game image"
+              helperText="Optional"
             />
 
             <Stack direction="row" spacing={2}>
@@ -272,7 +314,7 @@ export function ManualGameDialog({
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} disabled={isLoading}>Cancel</Button>
-        <Button variant="contained" onClick={onSubmit} disabled={!game.name?.trim() || isLoading}>
+        <Button variant="contained" onClick={onSubmit} disabled={!game.name?.trim() || !hasBggId || isLoading}>
           Add Game
         </Button>
       </DialogActions>

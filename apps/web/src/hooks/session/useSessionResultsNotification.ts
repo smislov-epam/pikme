@@ -57,7 +57,7 @@ export function useSessionResultsNotification({
       ) {
         hasNotifiedRef.current = true;
         toast.info("🎲 Host has revealed Tonight's Pick!", {
-          autoHideDuration: 8000,
+          autoHideMs: 8000,
         });
         onResultsRevealed?.();
       }

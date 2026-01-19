@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { useEffect } from 'react'
 import { vi } from 'vitest'
 import { useWizardState } from './useWizardState'
 
@@ -56,6 +57,19 @@ vi.mock('../services/storage/wizardStateStorage', () => ({
 function Harness() {
   const wizard = useWizardState()
   const pref = (wizard.preferences.u1 ?? []).find((p) => p.bggId === 1)
+
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      await wizard.addLocalUser('u1')
+      if (cancelled) return
+      wizard.setPlayerCount(2)
+      wizard.addGameToSession(1)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [wizard])
 
   return (
     <div>

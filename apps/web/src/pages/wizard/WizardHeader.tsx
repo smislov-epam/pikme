@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import {
   AppBar,
+  Badge,
   Box,
   Chip,
   IconButton,
@@ -18,6 +19,7 @@ import BackupIcon from '@mui/icons-material/Backup'
 import PersonIcon from '@mui/icons-material/Person'
 import LoginIcon from '@mui/icons-material/Login'
 import LogoutIcon from '@mui/icons-material/Logout'
+import EventNoteIcon from '@mui/icons-material/EventNote'
 import { colors } from '../../theme/theme'
 import { useAuth } from '../../hooks/useAuth'
 
@@ -26,13 +28,20 @@ export function WizardHeader(props: {
   onOpenBackup: () => void
   onOpenSettings: () => void
   onOpenHelp: () => void
+  /** Force blue header chrome even when not authenticated */
+  variant?: 'auto' | 'blue'
+  /** Number of active sessions for badge */
+  activeSessionCount?: number
+  /** Callback when sessions icon is clicked */
+  onOpenSessions?: () => void
 }) {
-  const { onOpenClearDialog, onOpenBackup, onOpenSettings, onOpenHelp } = props
+  const { onOpenClearDialog, onOpenBackup, onOpenSettings, onOpenHelp, variant = 'auto', activeSessionCount = 0, onOpenSessions } = props
   const { user, firebaseReady, signOut } = useAuth()
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
 
   // Show user is authenticated
   const isLoggedIn = firebaseReady && user !== null
+  const useBlueChrome = variant === 'blue' || isLoggedIn
   const userEmail = user?.email ?? ''
   const userName = user?.displayName || userEmail.split('@')[0] || 'User'
 
@@ -58,8 +67,8 @@ export function WizardHeader(props: {
     width: 40,
     height: 40,
     borderRadius: 2,
-    color: isLoggedIn ? 'white' : 'text.secondary',
-    '&:hover': { bgcolor: isLoggedIn ? alpha('#fff', 0.15) : 'action.hover' },
+    color: useBlueChrome ? 'white' : 'text.secondary',
+    '&:hover': { bgcolor: useBlueChrome ? alpha('#fff', 0.15) : 'action.hover' },
   } as const
 
   return (
@@ -67,10 +76,10 @@ export function WizardHeader(props: {
       position="sticky"
       elevation={0}
       sx={{
-        bgcolor: isLoggedIn ? colors.oceanBlue : alpha(colors.warmWhite, 0.95),
+        bgcolor: useBlueChrome ? colors.oceanBlue : alpha(colors.warmWhite, 0.95),
         backdropFilter: 'blur(8px)',
         borderBottom: '1px solid',
-        borderColor: isLoggedIn ? alpha('#fff', 0.2) : 'divider',
+        borderColor: useBlueChrome ? alpha('#fff', 0.2) : 'divider',
         transition: 'background-color 0.3s ease',
       }}
     >
@@ -81,7 +90,7 @@ export function WizardHeader(props: {
               width: 36,
               height: 36,
               borderRadius: 2,
-              bgcolor: isLoggedIn ? alpha('#fff', 0.2) : colors.oceanBlue,
+              bgcolor: useBlueChrome ? alpha('#fff', 0.2) : colors.oceanBlue,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -95,7 +104,7 @@ export function WizardHeader(props: {
             variant="h6"
             sx={{
               fontWeight: 700,
-              color: isLoggedIn ? 'white' : 'primary.dark',
+              color: useBlueChrome ? 'white' : 'primary.dark',
               letterSpacing: '-0.02em',
             }}
           >
@@ -104,6 +113,34 @@ export function WizardHeader(props: {
         </Box>
 
         <Box sx={{ flexGrow: 1 }} />
+
+        {/* Sessions icon with badge - first in row */}
+        <Tooltip title={activeSessionCount > 0 ? `${activeSessionCount} active session${activeSessionCount > 1 ? 's' : ''}` : 'My Sessions'}>
+          <IconButton
+            aria-label="Sessions"
+            onClick={onOpenSessions}
+            sx={{
+              ...iconButtonSx,
+              color: useBlueChrome ? 'white' : colors.oceanBlue,
+            }}
+          >
+            <Badge
+              badgeContent={activeSessionCount}
+              color="error"
+              max={9}
+              sx={{
+                '& .MuiBadge-badge': {
+                  fontSize: '0.65rem',
+                  minWidth: 16,
+                  height: 16,
+                  padding: '0 4px',
+                },
+              }}
+            >
+              <EventNoteIcon fontSize="small" />
+            </Badge>
+          </IconButton>
+        </Tooltip>
 
         <Tooltip title="Clear all data">
           <IconButton onClick={onOpenClearDialog} sx={{ ...iconButtonSx, color: isLoggedIn ? '#ffcdd2' : '#d32f2f' }}>

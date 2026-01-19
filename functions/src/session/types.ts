@@ -46,6 +46,8 @@ export interface Session {
   sessionId: string;
   /** Session title */
   title: string;
+  /** Host display name (registered user who created the invite) */
+  hostDisplayName: string;
   /** When the session was created */
   createdAt: Timestamp;
   /** UID of the host who created the session */
@@ -68,6 +70,38 @@ export interface Session {
   expiresAt: Timestamp;
   /** Share mode (quick or detailed) */
   shareMode: 'quick' | 'detailed';
+  /** Detailed share only: whether guests can see Other Participants' Picks */
+  showOtherParticipantsPicks?: boolean;
+  /** When the session was closed */
+  closedAt?: Timestamp;
+  /** Tonight's Pick selected game (does NOT close the session) */
+  selectedGame?: SessionResult;
+  /** When the pick was selected */
+  selectedAt?: Timestamp;
+  /** Tonight's Pick result (set when session is closed) */
+  result?: SessionResult;
+}
+
+/**
+ * Tonight's Pick result stored when session is closed.
+ */
+export interface SessionResult {
+  /** BGG game ID of the winning game */
+  gameId: string;
+  /** Game name */
+  name: string;
+  /** Thumbnail URL */
+  thumbnail: string | null;
+  /** Full-size image URL */
+  image: string | null;
+  /** Final score */
+  score: number;
+  /** Min players */
+  minPlayers: number | null;
+  /** Max players */
+  maxPlayers: number | null;
+  /** Playing time in minutes */
+  playingTimeMinutes: number | null;
 }
 
 /**
@@ -176,12 +210,16 @@ export interface CreateSessionRequest {
   hostDisplayName: string;
   /** Share mode (quick or detailed) */
   shareMode?: 'quick' | 'detailed';
+  /** Detailed share only: whether guests can see Other Participants' Picks */
+  showOtherParticipantsPicks?: boolean;
   /** BGG game IDs to include in the session */
   gameIds: string[];
   /** Game data for each game (to upload if missing) */
   games: GameUploadData[];
   /** Named participants with optional shared preferences */
   namedParticipants?: NamedParticipantData[];
+  /** Host's preferences (for detailed share mode) */
+  hostPreferences?: SharedGamePreference[];
 }
 
 /**
@@ -248,6 +286,8 @@ export interface GetSessionPreviewResponse {
   ok: true;
   sessionId: string;
   title: string;
+  /** Host display name (registered users only can create sessions) */
+  hostName?: string;
   scheduledFor: string;
   minPlayers: number | null;
   maxPlayers: number | null;
@@ -262,6 +302,28 @@ export interface GetSessionPreviewResponse {
   namedSlots: NamedSlotInfo[];
   /** Share mode (quick or detailed) */
   shareMode: 'quick' | 'detailed';
+  /** Detailed share only: whether guests can see Other Participants' Picks */
+  showOtherParticipantsPicks?: boolean;
+  /** Host UID for ownership check */
+  hostUid: string;
+  /**
+   * Caller's role relative to this session:
+   * - 'host': caller is the session creator
+   * - 'member': caller has already joined this session
+   * - 'guest': caller is not yet a member (new invite)
+   * - null: caller is not authenticated
+   */
+  callerRole: 'host' | 'member' | 'guest' | null;
+  /** Member's participant ID if they're already a member */
+  callerParticipantId?: string;
+  /** Whether caller has marked Ready (only when authenticated and already a member/host) */
+  callerReady?: boolean;
+  /** Selected game (present when host picked a game, even if session is still open) */
+  selectedGame?: SessionResult;
+  /** When selectedGame was set (ISO string) */
+  selectedAt?: string;
+  /** Tonight's Pick result (only present when status is 'closed') */
+  result?: SessionResult;
 }
 
 /**
@@ -397,6 +459,17 @@ export interface GetSharedPreferencesResponse {
 export interface SubmitGuestPreferencesRequest {
   sessionId: string;
   preferences: SharedGamePreference[];
+  /**
+   * Optional: For hosts submitting on behalf of a local user.
+   * If provided, the preferences will be saved under this participantId
+   * in sharedPreferences, allowing other participants to see them.
+   */
+  forLocalUser?: {
+    /** Unique participantId for this local user (e.g., the local username) */
+    participantId: string;
+    /** Display name to show in participant lists */
+    displayName: string;
+  };
 }
 
 /**

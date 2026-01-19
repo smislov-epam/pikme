@@ -65,26 +65,44 @@ export interface CreateLocalOwnerParams {
 export async function createLocalOwner(params: CreateLocalOwnerParams): Promise<UserRecord> {
   const { displayName, isBggUser = false, bggUsername } = params
 
-  // Check if local owner already exists
-  const existing = await db.users.filter((u) => u.isLocalOwner === true).first()
-  if (existing) {
-    throw new Error('Local owner already exists. Cannot create another.')
-  }
+  // Atomic + idempotent: avoid creating multiple local owners if this is
+  // called more than once (e.g., React StrictMode double-invokes effects).
+  return db.transaction('rw', db.users, async () => {
+    const existingOwners = await db.users
+      .filter((u) => u.isLocalOwner === true && !u.isDeleted)
+      .toArray()
 
-  const username = isBggUser && bggUsername ? bggUsername : generateInternalId(displayName)
-  const internalId = isBggUser && bggUsername ? bggUsername : username
+    if (existingOwners.length > 0) {
+      // If duplicates exist, keep one deterministically and demote the rest.
+      const keeper =
+        existingOwners.find((u) => Boolean(u.firebaseUid)) ??
+        existingOwners.find((u) => Boolean(u.linkedAt)) ??
+        existingOwners.sort((a, b) => a.username.localeCompare(b.username))[0]
 
-  const newUser: UserRecord = {
-    username,
-    internalId,
-    displayName,
-    isBggUser,
-    isLocalOwner: true,
-    isOrganizer: true, // Default to organizer for their own game nights
-  }
+      await Promise.all(
+        existingOwners
+          .filter((u) => u.username !== keeper.username)
+          .map((u) => db.users.update(u.username, { isLocalOwner: false }))
+      )
 
-  await db.users.add(newUser)
-  return newUser
+      return keeper
+    }
+
+    const username = isBggUser && bggUsername ? bggUsername : generateInternalId(displayName)
+    const internalId = isBggUser && bggUsername ? bggUsername : username
+
+    const newUser: UserRecord = {
+      username,
+      internalId,
+      displayName,
+      isBggUser,
+      isLocalOwner: true,
+      isOrganizer: true, // Default to organizer for their own game nights
+    }
+
+    await db.users.add(newUser)
+    return newUser
+  })
 }
 
 /**

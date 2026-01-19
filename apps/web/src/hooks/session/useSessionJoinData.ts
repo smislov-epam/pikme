@@ -16,6 +16,7 @@ export type JoinPageState =
   | 'preference-source'
   | 'preferences'
   | 'local-wizard'
+  | 'waiting'
   | 'error';
 
 export interface SessionJoinData {
@@ -44,6 +45,7 @@ export interface SessionJoinData {
   localOwner: UserRecord | null;
   hasLocalPreferences: boolean;
   sessionId: string | null;
+  callerRole: 'host' | 'member' | 'guest' | null;
 }
 
 export function useSessionJoinData(): SessionJoinData {
@@ -60,6 +62,7 @@ export function useSessionJoinData(): SessionJoinData {
   const [claimedNamedSlot, setClaimedNamedSlot] = useState(false);
   const [localOwner, setLocalOwner] = useState<UserRecord | null>(null);
   const [hasLocalPreferences, setHasLocalPreferences] = useState(false);
+  const [callerRole, setCallerRole] = useState<'host' | 'member' | 'guest' | null>(null);
 
   const sessionId = useMemo(
     () => getSessionIdFromPath(window.location.pathname).sessionId,
@@ -136,6 +139,49 @@ export function useSessionJoinData(): SessionJoinData {
       try {
         const data = await getSessionPreview(sessionId);
         setPreview(data);
+        setCallerRole(data.callerRole);
+
+        // Route based on caller's role in the session
+        if (data.callerRole === 'host') {
+          // Host should go to wizard with this session active
+          window.location.href = `/?session=${sessionId}`;
+          return;
+        }
+
+        if (data.callerRole === 'member') {
+          // Member has already joined - check if they're done with preferences
+          // For now, take them to preferences view (they can see waiting state there)
+          // Store session info for preferences view
+          localStorage.setItem('guestSessionId', sessionId);
+          if (data.callerParticipantId) {
+            localStorage.setItem('guestParticipantId', data.callerParticipantId);
+          }
+          
+          // Load games and go to preferences
+          setState('loading-games');
+          try {
+            const games = await getSessionGames(sessionId);
+            const ids = games
+              .map((g) => parseInt(g.gameId, 10))
+              .filter((id) => !Number.isNaN(id));
+            localStorage.setItem('guestSessionGameIds', JSON.stringify(ids));
+            await hydrateSessionGames(games, false);
+            
+            // Check if member marked as ready (waiting for results)
+            const isReady = localStorage.getItem('guestIsReady') === 'true';
+            if (isReady) {
+              setState('waiting');
+            } else {
+              setState('preferences');
+            }
+          } catch (err) {
+            console.warn('[SessionJoinPage] Failed to load games for member:', err);
+            setState('preferences');
+          }
+          return;
+        }
+
+        // Guest or unauthenticated - show preview/join flow
         setState('preview');
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to load session';
@@ -173,5 +219,6 @@ export function useSessionJoinData(): SessionJoinData {
     localOwner,
     hasLocalPreferences,
     sessionId,
+    callerRole,
   };
 }

@@ -14,7 +14,6 @@ import {
 import LinkIcon from '@mui/icons-material/Link'
 import SearchIcon from '@mui/icons-material/Search'
 import StarIcon from '@mui/icons-material/Star'
-import CloseIcon from '@mui/icons-material/Close'
 import type { UserRecord } from '../../db/types'
 import { colors } from '../../theme/theme'
 
@@ -26,6 +25,7 @@ export function LocalPlayersGamesCard(props: {
   gameUrlInput: string
   onGameUrlInputChange: (value: string) => void
   onAddGameFromUrl: () => void
+  onOpenManualGameDialog?: () => void
   isLoading: boolean
   searchQuery: string
   onSearchQueryChange: (value: string) => void
@@ -33,7 +33,6 @@ export function LocalPlayersGamesCard(props: {
   isSearching: boolean
   searchResults: Array<{ bggId: number; name: string; yearPublished?: number }>
   onAddGame: (bggId: number) => void
-  onClose?: () => void
 }) {
   const {
     localUsers,
@@ -43,6 +42,7 @@ export function LocalPlayersGamesCard(props: {
     gameUrlInput,
     onGameUrlInputChange,
     onAddGameFromUrl,
+    onOpenManualGameDialog,
     isLoading,
     searchQuery,
     onSearchQueryChange,
@@ -50,27 +50,11 @@ export function LocalPlayersGamesCard(props: {
     isSearching,
     searchResults,
     onAddGame,
-    onClose,
   } = props
 
   return (
     <Card sx={{ bgcolor: colors.sand + '20' }}>
         <CardContent>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-            <Typography variant="subtitle2" gutterBottom sx={{ mb: 0 }}>
-              Add games for local players
-            </Typography>
-            {onClose ? (
-              <Button
-                size="small"
-                onClick={onClose}
-                startIcon={<CloseIcon fontSize="small" sx={{ color: 'error.main' }} />}
-              >
-                Close
-              </Button>
-            ) : null}
-          </Box>
-
         <Box sx={{ mb: 2 }}>
           <Stack direction="row" alignItems="center" gap={1} mb={1}>
             <Typography variant="caption" color="text.secondary">
@@ -133,6 +117,20 @@ export function LocalPlayersGamesCard(props: {
             ),
           }}
         />
+
+        {onOpenManualGameDialog ? (
+          <Box sx={{ mt: 1 }}>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={onOpenManualGameDialog}
+              disabled={selectedLocalUsers.length === 0 || isLoading}
+              sx={{ height: 32 }}
+            >
+              Entry manually
+            </Button>
+          </Box>
+        ) : null}
 
         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', my: 1 }}>
           — or search (requires API key) —

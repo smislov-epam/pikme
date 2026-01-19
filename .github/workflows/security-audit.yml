@@ -17,6 +17,8 @@ permissions:
 jobs:
   security-scan:
     runs-on: ubuntu-latest
+    env:
+      HUSKY: 0  # Skip husky install in CI
     steps:
       - name: Checkout
         uses: actions/checkout@v4

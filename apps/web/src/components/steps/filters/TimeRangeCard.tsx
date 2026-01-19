@@ -10,6 +10,7 @@ export interface TimeRange {
 export interface TimeRangeCardProps {
   timeRange: TimeRange
   onTimeRangeChange: (range: TimeRange) => void
+  disabled?: boolean
 }
 
 const TIME_PRESETS: Array<{ label: string; value: TimeRange; description: string }> = [
@@ -19,7 +20,7 @@ const TIME_PRESETS: Array<{ label: string; value: TimeRange; description: string
   { label: 'Any', value: { min: 0, max: 300 }, description: 'No limit' },
 ]
 
-export function TimeRangeCard({ timeRange, onTimeRangeChange }: TimeRangeCardProps) {
+export function TimeRangeCard({ timeRange, onTimeRangeChange, disabled = false }: TimeRangeCardProps) {
   const activeTimePreset = useMemo(() => {
     const preset = TIME_PRESETS.find((p) => p.value.min === timeRange.min && p.value.max === timeRange.max)
     return preset?.label ?? 'Custom'
@@ -38,6 +39,7 @@ export function TimeRangeCard({ timeRange, onTimeRangeChange }: TimeRangeCardPro
         <ToggleButtonGroup
           value={activeTimePreset}
           exclusive
+          disabled={disabled}
           onChange={(_, label) => {
             const preset = TIME_PRESETS.find((p) => p.label === label)
             if (preset) onTimeRangeChange(preset.value)
@@ -65,6 +67,7 @@ export function TimeRangeCard({ timeRange, onTimeRangeChange }: TimeRangeCardPro
           </Typography>
           <Slider
             value={[timeRange.min, timeRange.max]}
+            disabled={disabled}
             onChange={(_, value) => {
               const [min, max] = value as number[]
               onTimeRangeChange({ min, max })

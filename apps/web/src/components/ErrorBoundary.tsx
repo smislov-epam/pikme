@@ -85,7 +85,7 @@ function DefaultFallback({
           }}
         />
 
-        <Typography variant="h5" gutterBottom sx={{ color: colors.deepBlue }}>
+        <Typography variant="h5" gutterBottom sx={{ color: colors.oceanBlue }}>
           Something went wrong
         </Typography>
 
@@ -99,7 +99,7 @@ function DefaultFallback({
             startIcon={<RefreshIcon />}
             onClick={resetErrorBoundary}
             sx={{
-              bgcolor: colors.deepBlue,
+              bgcolor: colors.oceanBlue,
               '&:hover': { bgcolor: colors.skyBlue },
             }}
           >
@@ -112,8 +112,8 @@ function DefaultFallback({
               startIcon={<HomeIcon />}
               onClick={handleGoHome}
               sx={{
-                borderColor: colors.deepBlue,
-                color: colors.deepBlue,
+                borderColor: colors.oceanBlue,
+                color: colors.oceanBlue,
               }}
             >
               Go Home

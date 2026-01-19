@@ -16,6 +16,8 @@ jobs:
     name: Security & Quality
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      HUSKY: 0  # Skip husky install in CI
 
     strategy:
       fail-fast: false

@@ -70,9 +70,6 @@ function DesktopSessionChips({
       role="banner"
       aria-live="polite"
       sx={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 1100,
         bgcolor: alpha(colors.skyBlue, 0.95),
         backdropFilter: 'blur(8px)',
         borderBottom: `1px solid ${alpha(colors.oceanBlue, 0.2)}`,
@@ -150,7 +147,7 @@ function SessionChip({
     <Chip
       size="small"
       label={chipLabel}
-      onClick={isCurrent ? undefined : onNavigate}
+      onClick={onNavigate}
       onDelete={onExit}
       deleteIcon={
         <Tooltip title="Exit session">
@@ -162,7 +159,7 @@ function SessionChip({
         color: colors.navyBlue,
         fontWeight: 600,
         border: isCurrent ? `2px solid ${colors.oceanBlue}` : 'none',
-        cursor: isCurrent ? 'default' : 'pointer',
+        cursor: 'pointer',
         '&:hover': {
           bgcolor: isCurrent ? colors.sand : colors.sand,
         },
@@ -199,7 +196,7 @@ function MobileSessionCarousel({
       sx={{
         position: 'sticky',
         top: 0,
-        zIndex: 1100,
+        zIndex: 1050,
         bgcolor: colors.sand,
         borderBottom: `1px solid ${alpha(colors.oceanBlue, 0.2)}`,
         boxShadow: `0 2px 8px ${alpha(colors.navyBlue, 0.1)}`,

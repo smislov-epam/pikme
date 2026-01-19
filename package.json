@@ -27,7 +27,7 @@
     "emu:j21:fresh": "node tools/kill-emulator-ports.mjs && node tools/run-emulators-java21.mjs emulators:start",
     "emu:j21:import": "node tools/kill-emulator-ports.mjs && node tools/run-emulators-java21.mjs emulators:start --import=./.firebase-emulator-data",
     "emu:j21:export": "node tools/run-emulators-java21.mjs emulators:export ./.firebase-emulator-data",
-    "prepare": "husky",
+    "prepare": "husky || true",
     "security:check": "npm run security:secrets && npm run security:audit && npm run security:web && npm run security:functions",
     "security:secrets": "node tools/detect-secrets.mjs",
     "security:audit": "npm audit --audit-level=moderate",

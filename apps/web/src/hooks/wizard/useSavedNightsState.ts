@@ -1,7 +1,7 @@
 /**
  * Hook for managing saved game nights in the wizard.
  * 
- * Single responsibility: Night persistence, reuse prompts, loading saved nights.
+ * Single responsibility: Night persistence and loading saved nights.
  * 
  * ## Usage
  * 
@@ -15,12 +15,11 @@
  * })
  * ```
  */
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import type { GameRecord, UserRecord, UserPreferenceRecord, SavedNightRecord } from '../../db/types'
 import type { WizardFilters } from '../../store/wizardTypes'
-import type { SavedNightsState, SavedNightsActions, RecommendationResult, PendingReuseNight } from './types'
+import type { SavedNightsState, SavedNightsActions, RecommendationResult } from './types'
 import * as dbService from '../../services/db'
-import { findReusableNight } from '../../services/savedNights/findReusableNight'
 
 export interface UseSavedNightsStateOptions {
   /** Current recommendation result */
@@ -59,8 +58,6 @@ export function useSavedNightsState(options: UseSavedNightsStateOptions): UseSav
   } = options
 
   const [savedNights, setSavedNights] = useState<SavedNightRecord[]>([])
-  const [pendingReuseGamesNightId, setPendingReuseGamesNightId] = useState<number | null>(null)
-  const [dismissedReuseGamesNightId, setDismissedReuseGamesNightId] = useState<number | null>(null)
 
   // Load saved nights on mount
   useEffect(() => {
@@ -74,42 +71,6 @@ export function useSavedNightsState(options: UseSavedNightsStateOptions): UseSav
     }
     load()
   }, [])
-
-  const organizerUsername = useMemo(
-    () => users.find((u) => u.isOrganizer)?.username ?? null,
-    [users],
-  )
-
-  // Derived: pending reuse night info
-  const pendingReuseGamesNight = useMemo((): PendingReuseNight | null => {
-    if (!pendingReuseGamesNightId) return null
-    const match = savedNights.find((n) => n.id === pendingReuseGamesNightId)
-    if (!match) return null
-    return {
-      id: pendingReuseGamesNightId,
-      name: match.data.name,
-      gameCount: (match.data.gameIds ?? []).length,
-    }
-  }, [pendingReuseGamesNightId, savedNights])
-
-  // Check for reusable night when session is empty
-  useEffect(() => {
-    if (sessionGameIds.length > 0) return
-
-    const match = findReusableNight({
-      savedNights,
-      organizerUsername,
-      playerCount: users.length,
-    })
-
-    if (!match?.id) {
-      setPendingReuseGamesNightId(null)
-      return
-    }
-
-    if (dismissedReuseGamesNightId === match.id) return
-    setPendingReuseGamesNightId(match.id)
-  }, [dismissedReuseGamesNightId, organizerUsername, savedNights, sessionGameIds.length, users.length])
 
   // ─────────────────────────────────────────────────────────────────────────
   // Actions
@@ -170,7 +131,9 @@ export function useSavedNightsState(options: UseSavedNightsStateOptions): UseSav
   }, [])
 
   const loadSavedNight = useCallback(
-    async (id: number) => {
+    async (id: number, options?: { includeGames?: boolean }) => {
+      const includeGames = options?.includeGames ?? true
+      
       try {
         const savedNight = await dbService.getSavedNight(id)
         if (!savedNight) {
@@ -201,12 +164,14 @@ export function useSavedNightsState(options: UseSavedNightsStateOptions): UseSav
           }
         }
 
-        // Load games
+        // Load games only if includeGames is true
         let loadedGames: GameRecord[] = []
         let owners: Record<number, string[]> = {}
-        if (data.gameIds?.length) {
+        let sessionGameIds: number[] = []
+        if (includeGames && data.gameIds?.length) {
           loadedGames = await dbService.getGames(data.gameIds)
           owners = await dbService.getGameOwners(data.gameIds)
+          sessionGameIds = data.gameIds
         }
 
         // Load preferences and ratings
@@ -224,7 +189,7 @@ export function useSavedNightsState(options: UseSavedNightsStateOptions): UseSav
         onLoadNight?.({
           users: loadedUsers,
           games: loadedGames,
-          sessionGameIds: data.gameIds ?? [],
+          sessionGameIds,
           gameOwners: owners,
           preferences: prefsMap,
           userRatings: ratingsMap,
@@ -236,51 +201,13 @@ export function useSavedNightsState(options: UseSavedNightsStateOptions): UseSav
     [onLoadNight],
   )
 
-  const confirmReuseGamesFromNight = useCallback(async () => {
-    const nightId = pendingReuseGamesNightId
-    if (!nightId) return
-
-    const night = savedNights.find((n) => n.id === nightId)
-    const gameIds = night?.data.gameIds ?? []
-    if (gameIds.length === 0) {
-      setPendingReuseGamesNightId(null)
-      return
-    }
-
-    try {
-      const loadedGames = await dbService.getGames(gameIds)
-      const owners = await dbService.getGameOwners(gameIds)
-
-      onLoadNight?.({
-        users: [], // Don't override users, just add games
-        games: loadedGames,
-        sessionGameIds: gameIds,
-        gameOwners: owners,
-        preferences: {},
-        userRatings: {},
-      })
-    } catch (err) {
-      console.error('Failed to load games from previous night:', err)
-    } finally {
-      setPendingReuseGamesNightId(null)
-    }
-  }, [pendingReuseGamesNightId, savedNights, onLoadNight])
-
-  const dismissReuseGamesPrompt = useCallback(() => {
-    setDismissedReuseGamesNightId(pendingReuseGamesNightId)
-    setPendingReuseGamesNightId(null)
-  }, [pendingReuseGamesNightId])
-
   return {
     // State
     savedNights,
-    pendingReuseGamesNight,
 
     // Actions
     saveNight,
     loadSavedNights,
     loadSavedNight,
-    confirmReuseGamesFromNight,
-    dismissReuseGamesPrompt,
   }
 }
