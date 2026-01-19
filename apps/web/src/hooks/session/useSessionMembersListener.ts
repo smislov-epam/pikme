@@ -160,29 +160,29 @@ export function useSessionMembersListener(
         if (cancelled) return;
 
         // Host-only guard: guestPreferences reads require the caller to be the session creator.
-        // Avoid setting up an onSnapshot that will immediately error with permission-denied.
-        // If verification fails due to transient/network errors, proceed and let onSnapshot manage retries.
+        // Only proceed if we can CONFIRM the user is the host; otherwise skip entirely.
+        let isHost = false;
         try {
           const sessionRef = doc(firestore, 'sessions', currentSessionId);
           const sessionSnap = await getDoc(sessionRef);
-          const createdByUid = (sessionSnap.data() as { createdByUid?: unknown } | undefined)?.createdByUid;
-          if (typeof createdByUid === 'string' && createdByUid !== auth.currentUser.uid) {
-            console.debug('[useSessionMembersListener] Not session host, skipping guestPreferences listener');
+          if (!sessionSnap.exists()) {
+            console.debug('[useSessionMembersListener] Session does not exist, skipping listener');
             setIsLoading(false);
             return;
           }
+          const createdByUid = (sessionSnap.data() as { createdByUid?: unknown })?.createdByUid;
+          isHost = typeof createdByUid === 'string' && createdByUid === auth.currentUser.uid;
         } catch (err) {
-          const code = (err as { code?: unknown } | null)?.code;
-          if (code === 'permission-denied' || code === 'unauthenticated') {
-            console.debug('[useSessionMembersListener] Not authorized to verify host role; skipping listener');
-            setIsLoading(false);
-            return;
-          }
+          // Any error reading session means we can't verify host status → skip listener
+          console.debug('[useSessionMembersListener] Could not verify host role, skipping listener:', err);
+          setIsLoading(false);
+          return;
+        }
 
-          console.warn(
-            '[useSessionMembersListener] Could not verify host role due to transient error; proceeding with listener:',
-            err
-          );
+        if (!isHost) {
+          console.debug('[useSessionMembersListener] Not session host, skipping guestPreferences listener');
+          setIsLoading(false);
+          return;
         }
 
         // Listen to guestPreferences subcollection

@@ -46,20 +46,7 @@ export function useSessionGuestMode({
   )
 
   const { user, firebaseReady } = useAuth()
-  const { guests: sessionGuests, error: sessionError } = useSessionGuests(activeSessionId)
-
-  // Clear active session if permission error (user doesn't own the session)
-  useEffect(() => {
-    if (!sessionError) return
-    if (sessionError.includes('permission') || sessionError.includes('Permission')) {
-      console.warn('[useSessionGuestMode] Permission denied for session, clearing activeSessionId')
-      // Schedule state update to avoid lint warning about setState in effect
-      queueMicrotask(() => {
-        setActiveSessionIdState(null)
-        setWizardActiveSessionId(null)
-      })
-    }
-  }, [sessionError])
+  const { guests: sessionGuests } = useSessionGuests(activeSessionId)
 
   // Debug: Track activeSessionId and guest count
   useEffect(() => {
