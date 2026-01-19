@@ -92,7 +92,6 @@ export function PlayersStep({
     else toast.info(message)
   }, [toast])
 
-  const localUsers = users.filter((u) => !u.isBggUser)
   const sortedUsers = useMemo(() => [...users].sort((a, b) => (a.isOrganizer && !b.isOrganizer ? -1 : b.isOrganizer && !a.isOrganizer ? 1 : 0)), [users])
   // Autocomplete options: all local users (including ones already in session for duplicate warning)
   // Include disambiguation with internal ID so the user can tell them apart
@@ -153,7 +152,6 @@ export function PlayersStep({
   }
 
   const toggleUserSelection = (username: string) => setSelectedLocalUsers((prev) => prev.includes(username) ? prev.filter((u) => u !== username) : [...prev, username])
-  const selectAllLocalUsers = () => setSelectedLocalUsers(localUsers.map((u) => u.username))
 
   const handleAddGameFromUrl = async () => {
     if (!gameUrlInput.trim() || selectedLocalUsers.length === 0) return
@@ -344,17 +342,17 @@ export function PlayersStep({
         onEditGame={onEditGame}
         onRefreshGameFromBgg={onRefreshGameFromBgg}
 
-        showAddNewGamesAction={localUsers.length > 0}
+        showAddNewGamesAction={users.length > 0}
         addNewGamesPanelOpen={showAddGamesPanel}
         onToggleAddNewGamesPanel={() => setShowAddGamesPanel((v) => !v)}
 
         addNewGamesPanel={(
           <LocalAddGamesPanel
-            open={localUsers.length > 0 && showAddGamesPanel}
-            localUsers={localUsers}
+            open={users.length > 0 && showAddGamesPanel}
+            localUsers={users}
             selectedLocalUsers={selectedLocalUsers}
             onToggleUser={toggleUserSelection}
-            onSelectAll={selectAllLocalUsers}
+            onSelectAll={() => setSelectedLocalUsers(users.map((u) => u.username))}
             gameUrlInput={gameUrlInput}
             onGameUrlInputChange={setGameUrlInput}
             onAddGameFromUrl={handleAddGameFromUrl}
