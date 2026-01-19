@@ -82,7 +82,7 @@ export function WizardFooter(props: {
                   startIcon={<ShareIcon />}
                   sx={{ minWidth: isMobile ? 'auto' : 100 }}
                 >
-                  {isMobile ? '' : 'Share'}
+                  {isMobile ? '' : hasSession ? 'See Invite' : 'Create Invite'}
                 </Button>
               )}
               <Button
@@ -120,7 +120,7 @@ export function WizardFooter(props: {
                   startIcon={hasSession ? <VisibilityIcon /> : <ShareIcon />}
                   sx={{ minWidth: isMobile ? 'auto' : 100 }}
                 >
-                  {isMobile ? '' : hasSession ? 'See Invite' : 'Share'}
+                  {isMobile ? '' : hasSession ? 'See Invite' : 'Create Invite'}
                 </Button>
               )}
               <Button variant="outlined" onClick={onStartOver}>

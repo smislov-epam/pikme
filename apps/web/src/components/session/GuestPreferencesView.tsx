@@ -1,16 +1,39 @@
 /**
- * GuestPreferencesView (REQ-103)
+ * GuestPreferencesView (REQ-103, REQ-106)
  *
  * Shows the preferences UI for a guest who has joined a session.
  * Uses PreferencesStepContent from the main wizard for consistency.
+ * After marking ready, shows GuestWaitingView which polls for results.
  */
 
 import { useState } from 'react';
-import { Alert, Box, Button, CircularProgress, Stack, Typography } from '@mui/material';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import { Alert, Button, CircularProgress, Stack, Typography } from '@mui/material';
 
 import { PreferencesStepContent } from '../steps/preferences/PreferencesStepContent';
 import { GUEST_USERNAME, useGuestPreferences } from '../../hooks/useGuestPreferences';
+import { GuestWaitingView } from './GuestWaitingView';
+import { OtherParticipantsPreferences } from './OtherParticipantsPreferences';
+import { useSessionRealtimeStatus } from '../../hooks/session/useSessionRealtimeStatus';
+
+/** localStorage key for persisting guest ready state */
+const GUEST_READY_KEY = 'guestIsReady';
+
+/** Check if guest is already marked as ready for this session */
+function getGuestReadyState(sessionId: string): boolean {
+  try {
+    const stored = localStorage.getItem(GUEST_READY_KEY);
+    if (!stored) return false;
+    const data = JSON.parse(stored) as { sessionId: string; ready: boolean };
+    return data.sessionId === sessionId && data.ready === true;
+  } catch {
+    return false;
+  }
+}
+
+/** Save guest ready state to localStorage */
+function setGuestReadyState(sessionId: string, ready: boolean): void {
+  localStorage.setItem(GUEST_READY_KEY, JSON.stringify({ sessionId, ready }));
+}
 
 export interface GuestPreferencesViewProps {
   sessionId: string;
@@ -20,7 +43,11 @@ export interface GuestPreferencesViewProps {
  * Guest preferences view with Ready button.
  */
 export function GuestPreferencesView({ sessionId }: GuestPreferencesViewProps) {
-  const [isReady, setIsReady] = useState(false);
+  const realtime = useSessionRealtimeStatus({ sessionId });
+  const showOtherPicks = realtime.shareMode === 'detailed' && realtime.showOtherParticipantsPicks === true;
+
+  // Initialize ready state from localStorage (persists across page refreshes)
+  const [isReady, setIsReady] = useState(() => getGuestReadyState(sessionId));
   const [isMarking, setIsMarking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,6 +82,9 @@ export function GuestPreferencesView({ sessionId }: GuestPreferencesViewProps) {
       );
       await setGuestReady(sessionId);
       sessionStorage.removeItem('guestInitialPreferences');
+      
+      // Persist ready state for this session
+      setGuestReadyState(sessionId, true);
       setIsReady(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to mark as ready');
@@ -72,31 +102,9 @@ export function GuestPreferencesView({ sessionId }: GuestPreferencesViewProps) {
     );
   }
 
-  // Ready state
+  // Ready state - show waiting view that polls for results
   if (isReady) {
-    return (
-      <Stack alignItems="center" spacing={3} py={6}>
-        <Box
-          sx={{
-            width: 64,
-            height: 64,
-            borderRadius: '50%',
-            bgcolor: 'success.light',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <CheckCircleIcon sx={{ fontSize: 40, color: 'success.main' }} />
-        </Box>
-        <Typography variant="h5" textAlign="center">
-          You're Ready!
-        </Typography>
-        <Typography variant="body1" color="text.secondary" textAlign="center">
-          Your choices were sent. You can close this tab.
-        </Typography>
-      </Stack>
-    );
+    return <GuestWaitingView sessionId={sessionId} />;
   }
 
   return (
@@ -105,6 +113,11 @@ export function GuestPreferencesView({ sessionId }: GuestPreferencesViewProps) {
         Browse the games below and set your preferences (ranking is optional). When you're done,
         click "I'm Ready" to send your choices.
       </Alert>
+
+      {/* Other Participants' Picks (detailed share only, host-controlled) */}
+      {showOtherPicks && games.length > 0 && (
+        <OtherParticipantsPreferences sessionId={sessionId} games={games} />
+      )}
 
       {games.length > 0 ? (
         <PreferencesStepContent

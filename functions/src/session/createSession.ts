@@ -191,9 +191,12 @@ export const createSession = onCall(async (request) => {
   // 8. Create session document
   const sessionRef = db.collection('sessions').doc(sessionId);
   const shareMode = req.shareMode === 'quick' ? 'quick' : 'detailed';
+  const showOtherParticipantsPicks =
+    shareMode === 'quick' ? false : req.showOtherParticipantsPicks !== false;
   const session: Session = {
     sessionId,
     title: req.title?.trim() || 'Game Night',
+    hostDisplayName,
     createdAt: now,
     createdByUid: uid,
     scheduledFor,
@@ -205,6 +208,7 @@ export const createSession = onCall(async (request) => {
     status: 'open',
     expiresAt,
     shareMode,
+    showOtherParticipantsPicks,
   };
   batch.set(sessionRef, session);
 
@@ -305,7 +309,22 @@ export const createSession = onCall(async (request) => {
   };
   batch.set(sessionRef.collection('members').doc(uid), hostMember);
 
-  // 14. Commit all writes
+  // 14. Store host preferences in sharedPreferences (so guests can see them)
+  if (req.hostPreferences && req.hostPreferences.length > 0) {
+    const hostSharedPref: SharedPreference = {
+      participantId: hostParticipantId,
+      displayName: hostDisplayName,
+      preferences: req.hostPreferences,
+      sharedAt: now,
+      sharedByUid: uid,
+    };
+    batch.set(
+      sessionRef.collection('sharedPreferences').doc(hostParticipantId),
+      hostSharedPref
+    );
+  }
+
+  // 15. Commit all writes
   await batch.commit();
 
   console.log(

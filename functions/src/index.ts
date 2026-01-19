@@ -30,6 +30,14 @@ export {
   getAllGuestPreferences,
 } from './session/index.js';
 
+// REQ-106: Session lifecycle and participant visibility
+export {
+  closeSession,
+  deleteSession,
+  setSessionSelectedGame,
+  getReadyParticipantPreferences,
+} from './session/index.js';
+
 /**
  * Health check endpoint for testing emulator connectivity.
  */

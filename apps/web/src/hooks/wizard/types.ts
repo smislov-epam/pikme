@@ -23,7 +23,7 @@ export interface PlayersActions {
   addBggUser: (username: string) => Promise<void>
   confirmAddBggUserAnyway: () => Promise<void>
   cancelAddBggUserAnyway: () => void
-  addLocalUser: (name: string, isOrganizer?: boolean) => Promise<void>
+  addLocalUser: (name: string, isOrganizer?: boolean, options?: { forceNew?: boolean }) => Promise<void>
   removeUser: (username: string) => void
   deleteUserPermanently: (username: string) => Promise<void>
   setOrganizer: (username: string) => Promise<void>
@@ -99,6 +99,7 @@ export interface ManualGameInput {
   maxPlayTimeMinutes?: number
   minAge?: number
   thumbnail?: string
+  image?: string
   averageRating?: number
   weight?: number
   categories?: string[]
@@ -118,6 +119,7 @@ export interface FiltersActions {
   setPlayerCount: (count: number) => void
   setTimeRange: (range: { min: number; max: number }) => void
   setMode: (mode: 'coop' | 'competitive' | 'any') => void
+  setRequireBestWithPlayerCount: (enabled: boolean) => void
   setExcludeLowRated: (threshold: number | null) => void
   setAgeRange: (range: { min: number; max: number }) => void
   setComplexityRange: (range: { min: number; max: number }) => void
@@ -182,23 +184,14 @@ export interface RecommendationActions {
 // ─────────────────────────────────────────────────────────────────────────────
 // Saved Nights State
 // ─────────────────────────────────────────────────────────────────────────────
-export interface PendingReuseNight {
-  id: number
-  name: string
-  gameCount: number
-}
-
 export interface SavedNightsState {
   savedNights: SavedNightRecord[]
-  pendingReuseGamesNight: PendingReuseNight | null
 }
 
 export interface SavedNightsActions {
-  saveNight: (name: string, description?: string) => Promise<void>
+  saveNight: (name: string, description?: string, includeGuestUsernames?: string[]) => Promise<void>
   loadSavedNights: () => Promise<void>
-  loadSavedNight: (id: number) => Promise<void>
-  confirmReuseGamesFromNight: () => Promise<void>
-  dismissReuseGamesPrompt: () => void
+  loadSavedNight: (id: number, options?: { includeGames?: boolean }) => Promise<void>
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

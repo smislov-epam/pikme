@@ -3,9 +3,11 @@ import {
   alpha,
   Box,
   Button,
+  Checkbox,
   Collapse,
   IconButton,
   Paper,
+  FormControlLabel,
   Stack,
   TextField,
   Typography,
@@ -27,6 +29,8 @@ import { colors } from '../../../theme/theme';
 export interface CreateSessionFormProps {
   shareMode: 'quick' | 'detailed';
   onShareModeChange: (mode: 'quick' | 'detailed') => void;
+  showOtherParticipantsPicks: boolean;
+  onShowOtherParticipantsPicksChange: (enabled: boolean) => void;
   addTargetNight: boolean;
   onAddTargetNightChange: (enabled: boolean) => void;
   title: string;
@@ -54,6 +58,8 @@ export function CreateSessionForm(props: CreateSessionFormProps) {
   const {
     shareMode,
     onShareModeChange,
+    showOtherParticipantsPicks,
+    onShowOtherParticipantsPicksChange,
     addTargetNight,
     onAddTargetNightChange,
     title,
@@ -230,6 +236,25 @@ export function CreateSessionForm(props: CreateSessionFormProps) {
           fullWidth
           size="small"
           helperText="Optional"
+        />
+      </Collapse>
+
+      {/* Detailed share: optionally allow guests to see other participants' picks */}
+      <Collapse in={!isQuickShare}>
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={showOtherParticipantsPicks}
+              onChange={(e) => onShowOtherParticipantsPicksChange(e.target.checked)}
+              size="small"
+            />
+          }
+          label={
+            <Typography variant="body2">
+              Show Other Participants' Picks to guests
+            </Typography>
+          }
+          sx={{ pl: 0.5 }}
         />
       </Collapse>
 

@@ -58,6 +58,17 @@ export const getAllGuestPreferences = onCall(async (request) => {
   
   guestPrefsSnapshot.forEach((doc) => {
     const data = doc.data();
+
+    // Exclude host and host-submitted local users. Host UI already has local users,
+    // and returning these here causes duplicate host entries (registered vs local).
+    const participantId = String(data.participantId || '');
+    const uidFromDoc = String(data.uid || '');
+    const isHostParticipant = participantId.startsWith('host-');
+    const isHostOrLocalUser = uidFromDoc === session.createdByUid;
+    if (isHostParticipant || isHostOrLocalUser) {
+      return;
+    }
+
     guests.push({
       uid: data.uid,
       participantId: data.participantId,

@@ -1,5 +1,5 @@
 /**
- * Session Functions Index (REQ-102, REQ-103)
+ * Session Functions Index (REQ-102, REQ-103, REQ-106)
  */
 
 // REQ-102: Session creation
@@ -18,4 +18,11 @@ export { removeSessionGuest } from './removeSessionGuest.js';
 export { submitGuestPreferences } from './submitGuestPreferences.js';
 export { getAllGuestPreferences } from './getAllGuestPreferences.js';
 
+// REQ-106: Session lifecycle and participant visibility
+export { closeSession } from './closeSession.js';
+export { deleteSession } from './deleteSession.js';
+export { setSessionSelectedGame } from './setSessionSelectedGame.js';
+export { getReadyParticipantPreferences } from './getReadyParticipantPreferences.js';
+
 export * from './types.js';
+

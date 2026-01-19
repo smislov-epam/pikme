@@ -48,7 +48,8 @@ PIKME uses a blue base with a strong yellow focus color ("PIKME Yellow").
 - “Select all”, “Clear”, “Reset”, “Undo” must be visually distinguishable as actions:
   - Use buttons (text buttons are OK) with consistent placement
   - Never look like plain static text
-- Close/X, delete/trash, and “remove” icons must use a relaxing red (error palette) to distinguish destructive/exit actions from blue positive actions (add/edit/create) while keeping contrast.
+- Close/X, delete/trash, and “remove” icons must use a *milder* red (error palette) to distinguish destructive/exit actions from blue positive actions (add/edit/create) while keeping contrast.
+- Prefer the same “bin icon red” used for the header clean/reset actions: red icon + subtle tinted background (no harsh solid-red fills).
 
 ### 3.5 Tile density toggle (Standard vs Simplified)
 Some steps need a compact, fast-scanning list. Provide a consistent, global toggle where game lists are shown.
@@ -143,7 +144,31 @@ Dialogs must be clean, scannable, and avoid visual clutter.
 - Content: consistent vertical spacing (use `spacing={2}` as baseline).
 - Actions: standard button placement at bottom right.
 
-### 9.2 Form layout rules
+### 9.2 Confirmation dialogs (never use browser defaults)
+**Never use `window.confirm()`, `window.alert()`, or `confirm()`** — always use styled MUI dialogs.
+
+Rules:
+- Use the reusable `ConfirmDialog` component (`apps/web/src/components/ConfirmDialog.tsx`) for all confirmations.
+- Destructive actions (delete, remove, leave) must use the destructive variant (red styling).
+- Destructive headers should be *tinted* red (mild), not a solid saturated red block.
+- Always provide clear, action-specific labels (e.g., "Remove Guest" not just "OK").
+- Include a descriptive message explaining the consequence of the action.
+- Support loading state for async operations.
+
+Example usage:
+```tsx
+<ConfirmDialog
+  open={confirmOpen}
+  title="Remove Guest"
+  message="Are you sure you want to remove this guest from the session?"
+  confirmLabel="Remove"
+  isDestructive={true}
+  onConfirm={handleRemove}
+  onCancel={() => setConfirmOpen(false)}
+/>
+```
+
+### 9.3 Form layout rules
 - **Summary first**: Show key context (e.g., filter summary, counts) at the top before interactive controls.
 - **Progressive disclosure**: Only show related options after user makes a choice (e.g., show title field only after selecting "Detailed Share").
 - **Expandable fields**: Optional inputs (e.g., scheduled time) should appear as clickable text links ("+ Add scheduled time") that expand into input fields with a close (X) button.

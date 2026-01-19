@@ -55,7 +55,11 @@
   - Same terminology and labels (avoid synonyms for the same concept).
   - Same interaction rules (e.g., Undo patterns, confirmation patterns, loading/error states).
 - Prefer reusing existing components/styles over creating near-duplicates.
-- When making UI changes, ensure they align with `ui-ux-guidelines.md`.
+- **Before making any UI changes, ALWAYS review `ui-ux-guidelines.md`** for guidance on:
+  - Dialog structure and confirmation patterns (section 9)
+  - Color semantics and state colors (section 2)
+  - Component consistency rules (section 3)
+  - Layout and density (section 4)
 - When introducing import/export or other file formats:
   - Version the format and keep filenames/headers stable.
   - Define deterministic merge/replace rules.
@@ -87,3 +91,23 @@
 
 ## Conventions for changes
 - Make sure to update README.md with any new setup or usage instructions.
+
+## Learning & Documentation (hard guideline)
+When you discover something that **contradicts your initial assumptions** or reveals a non-obvious pattern:
+
+1. **Pause and clarify**: Acknowledge the incorrect assumption explicitly.
+2. **Document in `Requirements/solution-takeaways.md`**:
+   - Category (UI/UX, Architecture, State Management, Firebase, etc.)
+   - What you assumed vs what is actually true
+   - Why it matters for future work
+3. **Format concisely**: Use tables, code snippets, or bullet points—not prose.
+
+This creates institutional memory and prevents repeating mistakes.
+
+### When to document:
+- State management patterns that weren't obvious
+- UI/UX states that seemed synonymous but aren't (e.g., disabled vs locked vs read-only)
+- Firebase/Firestore behaviors that differ from expectations
+- Component reuse patterns that should be followed
+- Anti-patterns discovered during debugging
+

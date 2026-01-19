@@ -42,10 +42,14 @@ export interface CreateSessionOptions {
   hostDisplayName: string;
   /** Share mode (quick or detailed) */
   shareMode?: 'quick' | 'detailed';
+  /** Detailed share only: whether guests can see the Other Participants' Picks panel */
+  showOtherParticipantsPicks?: boolean;
   /** Games to include in the session */
   games: SessionGameData[];
   /** Named participants with optional shared preferences */
   namedParticipants?: NamedParticipantData[];
+  /** Host's preferences (for detailed share mode) */
+  hostPreferences?: SharedGamePreference[];
 }
 
 /**
@@ -88,6 +92,52 @@ export interface SessionPreview {
   namedSlots: NamedSlotInfo[];
   /** Share mode (quick or detailed) */
   shareMode: 'quick' | 'detailed';
+  /** Detailed share only: whether guests can see the Other Participants' Picks panel */
+  showOtherParticipantsPicks?: boolean;
+  /** Host's display name */
+  hostName?: string;
+  /** Host's Firebase UID (for cross-device recognition) */
+  hostUid: string;
+  /**
+   * Caller's role relative to this session:
+   * - 'host': caller is the session creator
+   * - 'member': caller has already joined this session
+   * - 'guest': caller is not yet a member (new invite)
+   * - null: caller is not authenticated
+   */
+  callerRole: 'host' | 'member' | 'guest' | null;
+  /** Member's participant ID if they're already a member */
+  callerParticipantId?: string;
+  /** Whether the caller has marked Ready (only if authenticated and already a member/host) */
+  callerReady?: boolean;
+  /** Selected game (can be present even while status is 'open') */
+  selectedGame?: SessionResultInfo;
+  /** When selectedGame was set */
+  selectedAt?: Date;
+  /** Tonight's Pick result (only present when status is 'closed') */
+  result?: SessionResultInfo;
+}
+
+/**
+ * Tonight's Pick result info.
+ */
+export interface SessionResultInfo {
+  /** BGG game ID of the winning game */
+  gameId: string;
+  /** Game name */
+  name: string;
+  /** Thumbnail URL */
+  thumbnail: string | null;
+  /** Full-size image URL */
+  image: string | null;
+  /** Final score */
+  score: number;
+  /** Min players */
+  minPlayers: number | null;
+  /** Max players */
+  maxPlayers: number | null;
+  /** Playing time in minutes */
+  playingTimeMinutes: number | null;
 }
 
 /**
@@ -175,4 +225,14 @@ export interface GuestPreferencesData {
   preferences: SharedGamePreference[];
   ready: boolean;
   updatedAt: string | null;
+}
+
+/**
+ * Participant preferences info returned from getReadyParticipantPreferences.
+ */
+export interface ParticipantPreferencesInfo {
+  uid: string;
+  displayName: string;
+  role: 'host' | 'guest';
+  preferences: SharedGamePreference[];
 }

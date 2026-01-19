@@ -1,7 +1,7 @@
 /**
  * Submit Guest Preferences Cloud Function (REQ-103)
  *
- * Allows a guest to save their preferences to Firebase.
+ * Allows a guest (or host) to save their preferences to Firebase.
  * The host can then see these preferences in their wizard.
  */
 
@@ -12,10 +12,11 @@ import type {
   SubmitGuestPreferencesResponse,
   Session,
   SharedGamePreference,
+  SharedPreference,
 } from './types.js';
 
 /**
- * Submit guest preferences.
+ * Submit guest (or host) preferences.
  */
 export const submitGuestPreferences = onCall(async (request) => {
   const { auth, data } = request;
@@ -70,6 +71,13 @@ export const submitGuestPreferences = onCall(async (request) => {
   const member = memberDoc.data();
   const participantId = member?.participantId;
   const displayName = member?.displayName || 'Guest';
+  const isHost = session.createdByUid === uid;
+
+  // Check if host is submitting for a local user
+  const forLocalUser = req.forLocalUser;
+  if (forLocalUser && !isHost) {
+    throw new HttpsError('permission-denied', 'Only host can submit preferences for local users');
+  }
 
   // 5. Validate and normalize preferences
   const validPreferences: SharedGamePreference[] = req.preferences
@@ -81,18 +89,46 @@ export const submitGuestPreferences = onCall(async (request) => {
       isDisliked: Boolean(p.isDisliked),
     }));
 
-  // 6. Save guest preferences to Firestore
-  const guestPrefsRef = sessionRef.collection('guestPreferences').doc(uid);
-  await guestPrefsRef.set({
+  // 6. Save preferences to Firestore
+  const batch = db.batch();
+  
+  // Determine the effective participant info
+  const effectiveParticipantId = forLocalUser?.participantId || participantId;
+  const effectiveDisplayName = forLocalUser?.displayName || displayName;
+
+  // Save to guestPreferences (for tracking and host view)
+  // For local users, use a composite key: uid_localParticipantId
+  const guestPrefsDocId = forLocalUser ? `${uid}_${forLocalUser.participantId}` : uid;
+  const guestPrefsRef = sessionRef.collection('guestPreferences').doc(guestPrefsDocId);
+  batch.set(guestPrefsRef, {
     uid,
-    participantId,
-    displayName,
+    participantId: effectiveParticipantId,
+    displayName: effectiveDisplayName,
     preferences: validPreferences,
     updatedAt: Timestamp.now(),
+    isLocalUser: !!forLocalUser,
   });
 
+  // Update sharedPreferences (so other participants see updates)
+  // - For host's own preferences: use their participantId
+  // - For local users: use the local user's participantId
+  if (effectiveParticipantId) {
+    const sharedPrefsRef = sessionRef.collection('sharedPreferences').doc(effectiveParticipantId);
+    const sharedPref: SharedPreference = {
+      participantId: effectiveParticipantId,
+      displayName: effectiveDisplayName,
+      preferences: validPreferences,
+      sharedAt: Timestamp.now(),
+      sharedByUid: uid,
+    };
+    batch.set(sharedPrefsRef, sharedPref);
+  }
+
+  await batch.commit();
+
+  const logSuffix = forLocalUser ? ` for local user ${forLocalUser.displayName}` : '';
   console.log(
-    `[submitGuestPreferences] User ${uid} (${displayName}) submitted ${validPreferences.length} preferences for session ${sessionId}`
+    `[submitGuestPreferences] User ${uid} (${displayName}${isHost ? ', host' : ''}) submitted ${validPreferences.length} preferences${logSuffix} for session ${sessionId}`
   );
 
   const response: SubmitGuestPreferencesResponse = {

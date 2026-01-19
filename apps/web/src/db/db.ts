@@ -3,6 +3,7 @@ import type {
   GameRecord,
   GameNoteRecord,
   SavedNightRecord,
+  SessionWizardStateRecord,
   UserGameRecord,
   UserPreferenceRecord,
   UserRecord,
@@ -17,6 +18,7 @@ export class PikmeDb extends Dexie {
   userGames!: Table<UserGameRecord, number>
   userPreferences!: Table<UserPreferenceRecord, number>
   wizardState!: Table<WizardStateRecord, 'singleton'>
+  sessionWizardState!: Table<SessionWizardStateRecord, string>
   savedNights!: Table<SavedNightRecord, number>
 
   constructor() {
@@ -181,6 +183,18 @@ export class PikmeDb extends Dexie {
           })
         }
       })
+
+    // Version 8: Per-session (and draft) wizard state snapshots in Dexie.
+    this.version(8).stores({
+      games: 'bggId, name, lastFetchedAt',
+      gameNotes: '++id, bggId, createdAt',
+      users: 'username, internalId, isBggUser, isLocalOwner, firebaseUid, lastSyncAt',
+      userGames: '++id, [username+bggId], username, bggId, source, addedAt',
+      userPreferences: '++id, [username+bggId], username, bggId, updatedAt',
+      wizardState: 'id, updatedAt',
+      sessionWizardState: 'id, updatedAt',
+      savedNights: '++id, createdAt',
+    })
   }
 }
 
@@ -196,5 +210,6 @@ export async function clearAllData(): Promise<void> {
   await db.userGames.clear()
   await db.userPreferences.clear()
   await db.wizardState.clear()
+  await db.sessionWizardState.clear()
   await db.savedNights.clear()
 }

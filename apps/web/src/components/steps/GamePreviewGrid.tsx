@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, type ReactNode } from 'react'
 import {
   Box,
   Button,
@@ -18,6 +18,8 @@ import {
 import SearchIcon from '@mui/icons-material/Search'
 import AddIcon from '@mui/icons-material/Add'
 import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import type { GameRecord, UserRecord } from '../../db/types'
 import { GameRow } from './GameRow'
 import { GameEditDialog } from '../GameEditDialog'
@@ -44,6 +46,7 @@ interface GamePreviewGridProps {
   showAddNewGamesAction?: boolean
   onToggleAddNewGamesPanel?: () => void
   addNewGamesPanelOpen?: boolean
+  addNewGamesPanel?: ReactNode
 }
 
 export function GamePreviewGrid({
@@ -63,6 +66,7 @@ export function GamePreviewGrid({
   showAddNewGamesAction,
   onToggleAddNewGamesPanel,
   addNewGamesPanelOpen,
+  addNewGamesPanel,
 }: GamePreviewGridProps) {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
@@ -154,7 +158,7 @@ export function GamePreviewGrid({
 
         {(collectionOnlyGames.length > 0 || showAddNewGamesAction) && (
           <Box sx={{ mt: 2 }}>
-            <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center" sx={{ mb: 1 }}>
+            <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center" sx={{ mb: 0.75 }}>
               {collectionOnlyGames.length > 0 ? (
                 <Button
                   size="small"
@@ -170,28 +174,11 @@ export function GamePreviewGrid({
                       : `Show ${collectionOnlyGames.length} games from collection`}
                 </Button>
               ) : null}
-
-              {showAddNewGamesAction && onToggleAddNewGamesPanel ? (
-                <Button
-                  size="small"
-                  startIcon={<AddIcon />}
-                  onClick={onToggleAddNewGamesPanel}
-                  sx={{
-                    bgcolor: alpha(colors.sand, 0.65),
-                    color: colors.navyBlue,
-                    border: `1px solid ${alpha(colors.sand, 0.95)}`,
-                    '&:hover': { bgcolor: alpha(colors.sand, 0.8) },
-                  }}
-                  aria-expanded={addNewGamesPanelOpen ? 'true' : 'false'}
-                >
-                  {isMobile ? 'Add New Game' : 'Add New Games to Collection'}
-                </Button>
-              ) : null}
             </Stack>
 
             {collectionOnlyGames.length > 0 ? (
               <Collapse in={showCollectionGames}>
-                <Box sx={{ display: 'grid', rowGap: 0.5, maxHeight: 200, overflowY: 'auto' }}>
+                <Box sx={{ display: 'grid', rowGap: 0.5, maxHeight: 200, overflowY: 'auto', mt: 1 }}>
                   {collectionOnlyGames.map((game) => (
                     <Box key={game.bggId} sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 0.75, bgcolor: 'action.hover', borderRadius: 1, opacity: 0.7 }}>
                       <Box
@@ -213,6 +200,45 @@ export function GamePreviewGrid({
                   ))}
                 </Box>
               </Collapse>
+            ) : null}
+
+            {showAddNewGamesAction && onToggleAddNewGamesPanel ? (
+              <Box
+                sx={{
+                  mt: 1,
+                  border: `1px solid ${alpha(colors.sand, 0.95)}`,
+                  borderRadius: 2,
+                  overflow: 'hidden',
+                }}
+              >
+                <Button
+                  fullWidth
+                  size="small"
+                  startIcon={<AddIcon />}
+                  endIcon={addNewGamesPanelOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                  onClick={onToggleAddNewGamesPanel}
+                  sx={{
+                    bgcolor: alpha(colors.sand, 0.65),
+                    color: colors.navyBlue,
+                    border: 'none',
+                    borderRadius: addNewGamesPanelOpen ? 0 : 2,
+                    '&:hover': { bgcolor: alpha(colors.sand, 0.8) },
+                    justifyContent: 'space-between',
+                    '& .MuiButton-startIcon': { ml: 0 },
+                    '& .MuiButton-endIcon': { ml: 'auto' },
+                    py: 0.75,
+                  }}
+                  aria-expanded={addNewGamesPanelOpen ? 'true' : 'false'}
+                >
+                  {isMobile ? 'Add New Game' : 'Add New Games to Collection'}
+                </Button>
+
+                {addNewGamesPanel ? (
+                  <Box sx={{ m: 0, p: 0, bgcolor: 'transparent' }}>
+                    {addNewGamesPanel}
+                  </Box>
+                ) : null}
+              </Box>
             ) : null}
           </Box>
         )}

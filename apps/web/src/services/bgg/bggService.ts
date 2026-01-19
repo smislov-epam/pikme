@@ -299,6 +299,7 @@ export async function addGameManually(
     maxPlayTimeMinutes?: number
     minAge?: number
     thumbnail?: string
+    image?: string
     averageRating?: number
     weight?: number
     categories?: string[]
@@ -325,7 +326,8 @@ export async function addGameManually(
     minPlayTimeMinutes: game.minPlayTimeMinutes,
     maxPlayTimeMinutes: game.maxPlayTimeMinutes,
     minAge: game.minAge,
-    thumbnail: game.thumbnail,
+    thumbnail: game.thumbnail ?? game.image,
+    image: game.image,
     averageRating: game.averageRating,
     weight: game.weight,
     categories: game.categories,

@@ -20,6 +20,7 @@ import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import GroupIcon from '@mui/icons-material/Group';
 import SportsEsportsIcon from '@mui/icons-material/SportsEsports';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { colors } from '../../theme/theme';
 import type { SessionPreview, NamedSlotInfo } from '../../services/session/types';
 import { IdentityClaimCard } from './IdentityClaimCard';
@@ -92,6 +93,12 @@ export function SessionPreviewCard({
       >
         {preview.title}
       </Typography>
+
+      {preview.selectedGame && (
+        <Alert severity="success" icon={<CheckCircleIcon />}>
+          Game selected: <strong>{preview.selectedGame.name}</strong>
+        </Alert>
+      )}
 
       <Card variant="outlined">
         <CardContent>

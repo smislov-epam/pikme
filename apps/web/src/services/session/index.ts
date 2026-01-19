@@ -1,5 +1,5 @@
 /**
- * Session Services Index (REQ-102, REQ-103)
+ * Session Services Index (REQ-102, REQ-103, REQ-106)
  */
 
 export {
@@ -14,6 +14,11 @@ export {
   getSharedPreferences,
   submitGuestPreferences,
   getAllGuestPreferences,
+  getReadyParticipantPreferences,
+  markParticipantReady,
+  setSessionSelectedGame,
+  closeSession,
+  deleteSession,
 } from './sessionService';
 export {
   hydrateSessionGames,
@@ -33,4 +38,6 @@ export type {
   SharedPreferencesResult,
   NamedSlotInfo,
   GuestPreferencesData,
+  ParticipantPreferencesInfo,
+  SessionResultInfo,
 } from './types';

@@ -106,6 +106,14 @@ export function trackTonightsPickReady(payload: {
   playerCount: number
   filters: WizardFilters
   alternativeCount: number
+  /** Game metadata for richer analytics */
+  weight?: number
+  yearPublished?: number
+  bestWith?: string
+  playingTimeMinutes?: number
+  /** Session context */
+  isSessionGame?: boolean
+  guestCount?: number
 }) {
   trackEvent('tonights_pick_ready', {
     bgg_id: payload.bggId,
@@ -118,6 +126,14 @@ export function trackTonightsPickReady(payload: {
     filters_time_max: payload.filters.timeRange.max,
     alternative_count: payload.alternativeCount,
     match_reasons: payload.matchReasons.slice(0, 4).join('|'),
+    // Enhanced game metadata
+    game_weight: payload.weight ? roundScore(payload.weight) : undefined,
+    game_year: payload.yearPublished,
+    game_best_with: payload.bestWith,
+    game_play_time: payload.playingTimeMinutes,
+    // Session context
+    is_session_game: payload.isSessionGame ?? false,
+    guest_count: payload.guestCount ?? 0,
   })
 }
 
@@ -161,5 +177,76 @@ export function trackGameNightSaved(payload: {
     session_games: payload.sessionGames,
     top_pick_name: payload.topPickName,
     has_description: payload.hasDescription,
+  })
+}
+
+// ============================================================================
+// Session Analytics Events (REQ-108)
+// ============================================================================
+
+/**
+ * Tracks when a host creates a new game session.
+ */
+export function trackSessionCreated(payload: {
+  sessionId: string
+  gameCount: number
+  namedSlots: number
+  openSlots: number
+}) {
+  trackEvent('session_created', {
+    session_id: payload.sessionId,
+    game_count: payload.gameCount,
+    named_slots: payload.namedSlots,
+    open_slots: payload.openSlots,
+    total_slots: payload.namedSlots + payload.openSlots,
+  })
+}
+
+/**
+ * Tracks when a guest joins a session.
+ */
+export function trackSessionJoined(payload: {
+  sessionId: string
+  joinMethod: 'named_slot' | 'open_slot' | 'local_preferences'
+  isReturningUser: boolean
+}) {
+  trackEvent('session_joined', {
+    session_id: payload.sessionId,
+    join_method: payload.joinMethod,
+    is_returning_user: payload.isReturningUser,
+  })
+}
+
+/**
+ * Tracks when a guest submits their preferences to a session.
+ */
+export function trackPreferencesSubmitted(payload: {
+  sessionId: string
+  preferenceCount: number
+  topPickCount: number
+  dislikeCount: number
+}) {
+  trackEvent('preferences_submitted', {
+    session_id: payload.sessionId,
+    preference_count: payload.preferenceCount,
+    top_pick_count: payload.topPickCount,
+    dislike_count: payload.dislikeCount,
+  })
+}
+
+/**
+ * Tracks when a host closes a session and reveals results.
+ */
+export function trackSessionClosed(payload: {
+  sessionId: string
+  participantCount: number
+  topPickBggId: number
+  topPickName: string
+}) {
+  trackEvent('session_closed', {
+    session_id: payload.sessionId,
+    participant_count: payload.participantCount,
+    top_pick_bgg_id: payload.topPickBggId,
+    top_pick_name: payload.topPickName,
   })
 }

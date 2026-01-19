@@ -9,7 +9,7 @@ import {
   getSharedPreferences,
   hydrateSessionGames,
 } from '../../services/session';
-import { getUserPreferences } from '../../services/db/userPreferencesService';
+import { trackSessionJoined } from '../../services/analytics/googleAnalytics';
 
 export interface SessionJoinActions {
   handleJoin: (participantId?: string) => void;
@@ -23,7 +23,6 @@ export function useSessionJoinActions(data: SessionJoinData): SessionJoinActions
     displayName,
     preview,
     sessionId,
-    hasLocalPreferences,
     localOwner,
     hasSharedPreferences,
     sharedPreferences,
@@ -63,6 +62,13 @@ export function useSessionJoinActions(data: SessionJoinData): SessionJoinActions
         const claimResult = await claimSessionSlot(sessionId, nameToUse, participantId);
         const claimedSlot = Boolean(participantId);
         setClaimedNamedSlot(claimedSlot);
+
+        // Track session join in analytics
+        trackSessionJoined({
+          sessionId,
+          joinMethod: claimedSlot ? 'named_slot' : 'open_slot',
+          isReturningUser: Boolean(localOwner),
+        });
 
         // Prevent preference/rank leakage between sessions.
         // Guests should start with no local preferences unless explicitly seeded.
@@ -117,7 +123,10 @@ export function useSessionJoinActions(data: SessionJoinData): SessionJoinActions
           return;
         }
 
-        if (localOwner && hasLocalPreferences) {
+        // Show preference-source selection if user has local data (local owner exists).
+        // This allows them to choose between "Join as Guest" and "Use My Preferences".
+        // Only show mode-select for brand-new users with no local data.
+        if (localOwner) {
           setState('preference-source');
         } else {
           setState('mode-select');
@@ -131,7 +140,6 @@ export function useSessionJoinActions(data: SessionJoinData): SessionJoinActions
     },
     [
       displayName,
-      hasLocalPreferences,
       localOwner,
       preview?.namedSlots,
       preview?.shareMode,
@@ -171,11 +179,11 @@ export function useSessionJoinActions(data: SessionJoinData): SessionJoinActions
       setState('loading-games');
       try {
         localStorage.setItem('guestPreferenceSource', source);
-        // Always use the simplified guest preferences view for both sources.
-        // "local" means start from the device's existing local preferences.
-        localStorage.setItem('guestMode', 'guest');
 
         if (source === 'host') {
+          // "Join as Guest" - use simplified GuestPreferencesView
+          localStorage.setItem('guestMode', 'guest');
+          
           // If the user did NOT claim a reserved named slot ("I'm someone else"),
           // start with unranked games (no preloaded ranks/preferences).
           if (localStorage.getItem('guestClaimedNamedSlot') !== 'true') {
@@ -189,49 +197,51 @@ export function useSessionJoinActions(data: SessionJoinData): SessionJoinActions
           }
           setState('preferences');
         } else {
-          // Apply local preferences into the simplified guest view.
-          // We copy local owner's prefs into the guest user so edits don't mutate the owner's data.
+          // "Use My Preferences" - redirect to dedicated SessionGuestPage
+          // REQ-106: This provides a focused session experience separate from wizard
+          
+          // Parse session game IDs
+          const rawIds = localStorage.getItem('guestSessionGameIds');
+          const parsed = rawIds ? (JSON.parse(rawIds) as unknown) : [];
+          const sessionGameIds = Array.isArray(parsed)
+            ? parsed
+                .map((id) => (typeof id === 'number' ? id : Number(id)))
+                .filter((id) => Number.isFinite(id))
+            : [];
+          
+          // Sync session games into the returning user's local collection
           try {
-            if (localOwner) {
-              const localPrefs = await getUserPreferences(localOwner.username);
-              sessionStorage.setItem(
-                'guestInitialPreferences',
-                JSON.stringify(
-                  localPrefs.map((p) => ({
-                    bggId: p.bggId,
-                    rank: p.rank,
-                    isTopPick: p.isTopPick,
-                    isDisliked: p.isDisliked,
-                  }))
-                )
-              );
-
-              // Background sync: add session games to the returning user's local collection.
-              // This ensures the session's options become part of their device collection.
-              try {
-                const rawIds = localStorage.getItem('guestSessionGameIds');
-                const parsed = rawIds ? (JSON.parse(rawIds) as unknown) : [];
-                const sessionGameIds = Array.isArray(parsed)
-                  ? parsed
-                      .map((id) => (typeof id === 'number' ? id : Number(id)))
-                      .filter((id) => Number.isFinite(id))
-                  : [];
-
-                if (sessionGameIds.length > 0) {
-                  const { addGameToUser } = await import('../../services/db/userGamesService');
-                  for (const bggId of sessionGameIds) {
-                    await addGameToUser(localOwner.username, bggId);
-                  }
-                }
-              } catch (syncErr) {
-                console.warn('[SessionJoinPage] Failed to sync session games into local collection:', syncErr);
+            if (localOwner && sessionGameIds.length > 0) {
+              const { addGameToUser } = await import('../../services/db/userGamesService');
+              for (const bggId of sessionGameIds) {
+                await addGameToUser(localOwner.username, bggId);
               }
+              console.log(`[SessionJoinPage] Synced ${sessionGameIds.length} session games to ${localOwner.username}`);
             }
-          } catch (prefErr) {
-            console.warn('[SessionJoinPage] Failed to apply local preferences for guest:', prefErr);
+          } catch (syncErr) {
+            console.warn('[SessionJoinPage] Failed to sync session games into local collection:', syncErr);
           }
 
-          setState('preferences');
+          // Set session context for SessionGuestPage
+          const effectiveSessionId = sessionId ?? localStorage.getItem('guestSessionId');
+          if (effectiveSessionId) {
+            localStorage.setItem('activeSessionId', effectiveSessionId);
+            try {
+              const stored = localStorage.getItem('activeSessionIds');
+              const parsed = stored ? (JSON.parse(stored) as unknown) : [];
+              const ids = Array.isArray(parsed)
+                ? parsed.filter((id) => typeof id === 'string')
+                : [];
+              if (!ids.includes(effectiveSessionId)) ids.push(effectiveSessionId);
+              localStorage.setItem('activeSessionIds', JSON.stringify(ids));
+            } catch {
+              localStorage.setItem('activeSessionIds', JSON.stringify([effectiveSessionId]));
+            }
+          }
+          
+          // Redirect to dedicated session guest page
+          window.location.href = `/session/${effectiveSessionId}/preferences`;
+          return; // Don't call setIsSelectingSource since we're redirecting
         }
       } catch (err) {
         console.warn('[SessionJoinPage] Failed to select preference source:', err);
@@ -241,7 +251,7 @@ export function useSessionJoinActions(data: SessionJoinData): SessionJoinActions
         setIsSelectingSource(false);
       }
     },
-    [hasSharedPreferences, localOwner, sharedPreferences, setError, setIsSelectingSource, setState]
+    [hasSharedPreferences, localOwner, sessionId, sharedPreferences, setError, setIsSelectingSource, setState]
   );
 
   const handleSomeoneElse = useCallback(() => {

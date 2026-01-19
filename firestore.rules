@@ -37,6 +37,14 @@ service cloud.firestore {
       // Writes handled by Cloud Functions only
       allow write: if false;
 
+      // Guest preferences (REQ-103, REQ-108): host-only read.
+      // Stored by Cloud Functions (Admin SDK) so clients must never write here.
+      match /guestPreferences/{guestPrefId} {
+        allow read: if request.auth != null &&
+          get(/databases/$(database)/documents/sessions/$(sessionId)).data.createdByUid == request.auth.uid;
+        allow write: if false;
+      }
+
       // Session games: same access as parent session
       match /sessionGames/{gameId} {
         allow read: if request.auth != null && (

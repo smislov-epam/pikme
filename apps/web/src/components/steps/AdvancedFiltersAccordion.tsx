@@ -28,6 +28,8 @@ export interface AdvancedFiltersAccordionProps {
 
   ratingRange: { min: number; max: number }
   onRatingRangeChange: (range: { min: number; max: number }) => void
+
+  disabled?: boolean
 }
 
 export function AdvancedFiltersAccordion({
@@ -42,6 +44,7 @@ export function AdvancedFiltersAccordion({
   onComplexityRangeChange,
   ratingRange,
   onRatingRangeChange,
+  disabled = false,
 }: AdvancedFiltersAccordionProps) {
   return (
     <Accordion
@@ -63,6 +66,7 @@ export function AdvancedFiltersAccordion({
           control={
             <Switch
               checked={requireBestWithPlayerCount}
+              disabled={disabled}
               onChange={(_, checked) => onRequireBestWithPlayerCountChange(checked)}
             />
           }
@@ -80,6 +84,7 @@ export function AdvancedFiltersAccordion({
         <Box sx={{ px: 1, mt: 2, mb: 3 }}>
           <Slider
             value={excludeLowRatedThreshold ?? 0}
+            disabled={disabled}
             onChange={(_, v) => onExcludeLowRatedChange((v as number) || null)}
             min={0}
             max={10}
@@ -101,6 +106,7 @@ export function AdvancedFiltersAccordion({
         <Box sx={{ px: 1, mt: 2, mb: 3 }}>
           <Slider
             value={[ageRange.min, ageRange.max]}
+            disabled={disabled}
             onChange={(_, value) => {
               const [min, max] = value as number[]
               onAgeRangeChange({ min, max })
@@ -127,6 +133,7 @@ export function AdvancedFiltersAccordion({
         <Box sx={{ px: 1, mt: 2, mb: 3 }}>
           <Slider
             value={[complexityRange.min, complexityRange.max]}
+            disabled={disabled}
             onChange={(_, value) => {
               const [min, max] = value as number[]
               onComplexityRangeChange({ min, max })
@@ -151,6 +158,7 @@ export function AdvancedFiltersAccordion({
         <Box sx={{ px: 1, mt: 2 }}>
           <Slider
             value={[ratingRange.min, ratingRange.max]}
+            disabled={disabled}
             onChange={(_, value) => {
               const [min, max] = value as number[]
               onRatingRangeChange({ min, max })

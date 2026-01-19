@@ -1,18 +1,23 @@
 import {
-  FormControl,
-  MenuItem,
-  Select,
+  Box,
   Tab,
   Tabs,
   Tooltip,
   Typography,
   Stack,
+  IconButton,
+  alpha,
 } from '@mui/material'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked'
-import CloudIcon from '@mui/icons-material/Cloud'
+import CloudDoneIcon from '@mui/icons-material/CloudDone'
+import SyncIcon from '@mui/icons-material/Sync'
+import LockIcon from '@mui/icons-material/Lock'
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
+import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import type { UserRecord } from '../../../db/types'
-import type { GuestStatus } from './types'
+import type { GuestStatus, UserSyncStatus } from './types'
+import { colors } from '../../../theme/theme'
 
 export function PreferencesUserSelector(props: {
   users: UserRecord[]
@@ -25,12 +30,31 @@ export function PreferencesUserSelector(props: {
   gameIds: number[]
   /** Optional guest statuses (for showing ready indicators) */
   guestStatuses?: GuestStatus[]
+  /** Usernames that are read-only (cannot be edited) */
+  readOnlyUsernames?: string[]
+  /** Sync statuses for users in active session */
+  syncStatuses?: UserSyncStatus[]
+  /** Callback when user clicks sync button */
+  onSyncUser?: (username: string) => void
 }) {
-  const { users, selectedUser, isMobile, onChange, preferences, gameIds, guestStatuses = [] } = props
+  const { 
+    users, 
+    selectedUser, 
+    isMobile, 
+    onChange, 
+    preferences, 
+    gameIds, 
+    guestStatuses = [], 
+    readOnlyUsernames = [],
+    syncStatuses = [],
+    onSyncUser,
+  } = props
 
   // Create a map of guest statuses
   const statusMap = new Map(guestStatuses.map((g) => [g.username, g]))
+  const syncStatusMap = new Map(syncStatuses.map((s) => [s.username, s]))
   const gameIdSet = new Set(gameIds)
+  const readOnlySet = new Set(readOnlyUsernames)
 
   const getChoiceState = (user: UserRecord): 'in-progress' | 'chosen' => {
     // By default the host/organizer is treated as "chosen".
@@ -53,46 +77,202 @@ export function PreferencesUserSelector(props: {
     return hasChoiceForVisibleGames ? 'chosen' : 'in-progress'
   }
 
-  const renderStatusIcon = (state: 'in-progress' | 'chosen', color: string) => {
-    if (state === 'chosen') {
-      return <CheckCircleIcon sx={{ fontSize: 18, color }} />
+  /** Render the status icon based on sync state */
+  const renderStatusIcon = (
+    user: UserRecord, 
+    choiceState: 'in-progress' | 'chosen',
+  ) => {
+    const syncStatus = syncStatusMap.get(user.username)
+    const isGuest = user.username.startsWith('__guest_')
+    const iconSize = 18
+
+    // If we have sync status from active session, use that
+    if (syncStatus) {
+      switch (syncStatus.state) {
+        case 'synced':
+          // Local user synced - green checkmark
+          return (
+            <Tooltip title="Preferences synced">
+              <CheckCircleIcon sx={{ fontSize: iconSize, color: 'success.main' }} />
+            </Tooltip>
+          )
+        case 'needs-sync':
+          // Local user with changes - blue sync arrows (clickable)
+          return (
+            <Tooltip title="Click to sync changes">
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onSyncUser?.(user.username)
+                }}
+                sx={{ 
+                  p: 0.25,
+                  color: colors.oceanBlue,
+                  '&:hover': { bgcolor: alpha(colors.oceanBlue, 0.1) },
+                }}
+              >
+                <SyncIcon sx={{ fontSize: iconSize }} />
+              </IconButton>
+            </Tooltip>
+          )
+        case 'syncing':
+          // Currently syncing - rotating icon, not clickable
+          return (
+            <Tooltip title="Syncing...">
+              <Box
+                sx={{ 
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  p: 0.25,
+                }}
+              >
+                <SyncIcon 
+                  sx={{ 
+                    fontSize: iconSize, 
+                    color: colors.oceanBlue,
+                    animation: 'spin 1s linear infinite',
+                    '@keyframes spin': {
+                      '0%': { transform: 'rotate(0deg)' },
+                      '100%': { transform: 'rotate(360deg)' },
+                    },
+                  }} 
+                />
+              </Box>
+            </Tooltip>
+          )
+        case 'remote':
+          // Remote guest submitted - green cloud
+          return (
+            <Tooltip title="Preferences received from guest">
+              <CloudDoneIcon sx={{ fontSize: iconSize, color: 'success.main' }} />
+            </Tooltip>
+          )
+        case 'waiting':
+          // Waiting for remote guest
+          return (
+            <Tooltip title="Waiting for preferences">
+              <RadioButtonUncheckedIcon sx={{ fontSize: iconSize, color: 'text.secondary' }} />
+            </Tooltip>
+          )
+      }
     }
-    return <RadioButtonUncheckedIcon sx={{ fontSize: 18, color }} />
+
+    // Legacy fallback: Guest users from guestStatuses (no active session sync tracking)
+    if (isGuest) {
+      const status = statusMap.get(user.username)
+      const hasUpdates = (status?.updatedAt ?? null) !== null
+      if (hasUpdates) {
+        return (
+          <Tooltip title="Preferences received from guest">
+            <CloudDoneIcon sx={{ fontSize: iconSize, color: 'success.main' }} />
+          </Tooltip>
+        )
+      }
+      return (
+        <Tooltip title="Waiting for guest preferences">
+          <RadioButtonUncheckedIcon sx={{ fontSize: iconSize, color: 'text.secondary' }} />
+        </Tooltip>
+      )
+    }
+
+    // Fallback to legacy choice state (no active session)
+    if (choiceState === 'chosen') {
+      return <CheckCircleIcon sx={{ fontSize: iconSize, color: 'success.main' }} />
+    }
+    return <RadioButtonUncheckedIcon sx={{ fontSize: iconSize, color: 'text.secondary' }} />
   }
 
   if (users.length <= 1) return null
 
+  // Mobile: carousel-style tile with left/right arrows
   if (isMobile) {
-    return (
-      <FormControl fullWidth>
-        <Select
-          size="small"
-          value={selectedUser}
-          onChange={(e) => onChange(String(e.target.value))}
-          sx={{ bgcolor: 'background.default', height: 40 }}
-        >
-          {users.map((user) => {
-            const status = statusMap.get(user.username)
-            const isGuest = !!status
-            const choiceState = getChoiceState(user)
-            const tone = choiceState === 'chosen' ? 'success.main' : 'primary.main'
+    const currentIndex = users.findIndex((u) => u.username === selectedUser)
+    const currentUser = users[currentIndex]
+    const isReadOnly = readOnlySet.has(currentUser?.username ?? '')
+    const choiceState = currentUser ? getChoiceState(currentUser) : 'in-progress'
+    const canGoLeft = currentIndex > 0
+    const canGoRight = currentIndex < users.length - 1
 
-            return (
-              <MenuItem key={user.username} value={user.username}>
-                <Stack direction="row" spacing={1} alignItems="center">
-                  {renderStatusIcon(choiceState, tone)}
-                  <Typography variant="body2" sx={{ color: tone }}>
-                    {user.displayName || user.username}
-                  </Typography>
-                  {isGuest && (
-                    <CloudIcon sx={{ fontSize: 16, color: tone, opacity: 0.9 }} />
-                  )}
-                </Stack>
-              </MenuItem>
-            )
-          })}
-        </Select>
-      </FormControl>
+    const handlePrev = () => {
+      if (canGoLeft) {
+        onChange(users[currentIndex - 1].username)
+      }
+    }
+
+    const handleNext = () => {
+      if (canGoRight) {
+        onChange(users[currentIndex + 1].username)
+      }
+    }
+
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          bgcolor: 'background.paper',
+          borderRadius: 2,
+          border: '1px solid',
+          borderColor: 'divider',
+          p: 0.5,
+        }}
+      >
+        {/* Left arrow */}
+        <IconButton
+          size="small"
+          onClick={handlePrev}
+          disabled={!canGoLeft}
+          sx={{ 
+            color: canGoLeft ? 'text.primary' : 'text.disabled',
+            p: 0.5,
+          }}
+        >
+          <ChevronLeftIcon />
+        </IconButton>
+
+        {/* Center: user tile */}
+        <Box
+          sx={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: 40,
+            px: 1,
+          }}
+        >
+          <Stack direction="row" spacing={0.75} alignItems="center">
+            {currentUser && renderStatusIcon(currentUser, choiceState)}
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              {currentUser?.displayName || currentUser?.username}
+            </Typography>
+            {isReadOnly && (
+              <Tooltip title="View only">
+                <LockIcon sx={{ fontSize: 14, color: 'text.disabled' }} />
+              </Tooltip>
+            )}
+          </Stack>
+          {/* User position indicator */}
+          <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+            {currentIndex + 1}/{users.length}
+          </Typography>
+        </Box>
+
+        {/* Right arrow */}
+        <IconButton
+          size="small"
+          onClick={handleNext}
+          disabled={!canGoRight}
+          sx={{ 
+            color: canGoRight ? 'text.primary' : 'text.disabled',
+            p: 0.5,
+          }}
+        >
+          <ChevronRightIcon />
+        </IconButton>
+      </Box>
     )
   }
 
@@ -102,47 +282,52 @@ export function PreferencesUserSelector(props: {
       onChange={(_, v) => onChange(String(v))}
       variant="scrollable"
       scrollButtons="auto"
+      TabIndicatorProps={{
+        sx: {
+          bgcolor: colors.oceanBlue,
+          height: 3,
+          bottom: 0,
+        },
+      }}
       sx={{
-        // Folder-tab style: tabs are the surfaces, not the container.
-        bgcolor: 'transparent',
-        borderBottom: '1px solid',
-        borderColor: 'divider',
+        bgcolor: alpha(colors.skyBlue, 0.08),
+        borderRadius: 2,
+        border: `1px solid ${alpha(colors.oceanBlue, 0.15)}`,
+        minHeight: 44,
+        '& .MuiTabs-flexContainer': {
+          gap: 0.5,
+        },
         '& .MuiTab-root': {
+          minHeight: 44,
           textTransform: 'none',
           fontWeight: 500,
-          minHeight: 40,
-        },
-        '& .MuiTabs-indicator': {
-          display: 'none',
+          fontSize: '0.85rem',
+          color: colors.navyBlue,
+          px: 1.5,
+          '&.Mui-selected': {
+            color: colors.oceanBlue,
+            fontWeight: 600,
+            bgcolor: alpha(colors.oceanBlue, 0.06),
+          },
+          '&:hover': {
+            bgcolor: alpha(colors.oceanBlue, 0.04),
+          },
         },
       }}
     >
       {users.map((user) => {
-        const status = statusMap.get(user.username)
-        const isGuest = !!status
-        const isReady = status?.ready ?? false
-        const hasUpdates = (status?.updatedAt ?? null) !== null
+        const isReadOnly = readOnlySet.has(user.username)
         const choiceState = getChoiceState(user)
 
-        const tone = choiceState === 'chosen' ? 'success.main' : 'primary.main'
-
         const label = (
-          <Stack direction="row" spacing={1} alignItems="center">
-            {renderStatusIcon(choiceState, tone)}
-            <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>
+          <Stack direction="row" spacing={0.75} alignItems="center">
+            {renderStatusIcon(user, choiceState)}
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
               {user.displayName || user.username}
             </Typography>
-            {isGuest && (
-              <Tooltip
-                title={
-                  hasUpdates
-                    ? 'Guest (Preferences received)'
-                    : isReady
-                      ? 'Guest (Ready)'
-                      : 'Guest (Joining)'
-                }
-              >
-                <CloudIcon sx={{ fontSize: 16, color: tone, opacity: 0.9 }} />
+            {isReadOnly && (
+              <Tooltip title="View only - you cannot edit this user's preferences">
+                <LockIcon sx={{ fontSize: 14, color: 'text.disabled' }} />
               </Tooltip>
             )}
           </Stack>
@@ -153,30 +338,7 @@ export function PreferencesUserSelector(props: {
             key={user.username}
             value={user.username}
             label={label}
-            sx={{
-              minHeight: 40,
-              px: 1.5,
-              py: 0.5,
-              borderTopLeftRadius: 10,
-              borderTopRightRadius: 10,
-              borderBottomLeftRadius: 0,
-              borderBottomRightRadius: 0,
-              border: '1px solid',
-              borderColor: 'divider',
-              borderBottom: 0,
-              mr: 0.5,
-              bgcolor: 'background.default',
-              color: 'text.primary',
-              '&.Mui-selected': {
-                bgcolor: 'background.default',
-                color: 'text.primary',
-                borderColor: tone,
-                zIndex: 1,
-              },
-              '&:hover': {
-                bgcolor: 'action.hover',
-              },
-            }}
+            sx={{ '& .MuiTab-iconWrapper': { mr: 0 } }}
           />
         )
       })}

@@ -9,9 +9,10 @@ type Mode = 'coop' | 'competitive' | 'any'
 type Props = {
   mode: Mode
   onModeChange: (mode: Mode) => void
+  disabled?: boolean
 }
 
-export function VibeCard({ mode, onModeChange }: Props) {
+export function VibeCard({ mode, onModeChange, disabled = false }: Props) {
   const theme = useTheme()
   const isNarrow = useMediaQuery(theme.breakpoints.down('sm'))
 
@@ -28,6 +29,7 @@ export function VibeCard({ mode, onModeChange }: Props) {
         <ToggleButtonGroup
           value={mode}
           exclusive
+          disabled={disabled}
           onChange={(_, v) => v && onModeChange(v)}
           fullWidth
           sx={{ '& .MuiToggleButton-root': { py: 1, minHeight: 56 } }}

@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { useEffect } from 'react'
 import { vi } from 'vitest'
 import { useWizardState } from './useWizardState'
 
@@ -27,7 +28,11 @@ vi.mock('../services/db', async () => {
       { username: 'u1', bggId: 2, rank: 2, isTopPick: false, isDisliked: false, updatedAt: FIXED_NOW },
       { username: 'u1', bggId: 3, rank: 3, isTopPick: false, isDisliked: false, updatedAt: FIXED_NOW },
     ]),
-    getUserGames: vi.fn().mockResolvedValue([]),
+    getUserGames: vi.fn().mockResolvedValue([
+      { username: 'u1', bggId: 1, rating: 8, source: 'manual', addedAt: FIXED_NOW },
+      { username: 'u1', bggId: 2, rating: 7, source: 'manual', addedAt: FIXED_NOW },
+      { username: 'u1', bggId: 3, rating: 6, source: 'manual', addedAt: FIXED_NOW },
+    ]),
     getLocalUsers: vi.fn().mockResolvedValue([]),
     getSavedNights: vi.fn().mockResolvedValue([]),
     saveNight: saveNightMock,
@@ -63,6 +68,21 @@ vi.mock('../services/storage/wizardStateStorage', () => ({
 
 function Harness() {
   const wizard = useWizardState()
+
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      await wizard.addLocalUser('u1')
+      if (cancelled) return
+      wizard.setPlayerCount(4)
+      wizard.addGameToSession(1)
+      wizard.addGameToSession(2)
+      wizard.addGameToSession(3)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [wizard])
 
   return (
     <div>

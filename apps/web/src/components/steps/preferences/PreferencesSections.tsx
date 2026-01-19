@@ -73,7 +73,7 @@ export function TopPicksSection(props: {
   const { topPicks, droppableId, layoutMode, onOpenDetails, onToggleTopPick, onToggleDisliked } = props
 
   return (
-    <Card sx={{ bgcolor: colors.sand + '30', border: `2px dashed ${colors.sand}` }}>
+    <Card sx={{ bgcolor: 'background.paper', border: `2px solid ${colors.sand}` }}>
       <CardContent>
         <SectionHeader
           icon={<StarIcon sx={{ color: colors.sand }} />}
@@ -135,7 +135,7 @@ export function DislikedSection(props: {
   const { disliked, droppableId, layoutMode, onOpenDetails, onToggleTopPick, onToggleDisliked } = props
 
   return (
-    <Card sx={{ border: '1px solid', borderColor: 'error.light' }}>
+    <Card sx={{ bgcolor: 'background.paper', border: '2px solid', borderColor: 'error.light' }}>
       <CardContent>
         <SectionHeader
           title={`Disliked (${disliked.length})`}

@@ -35,9 +35,6 @@ export interface PlayersStepProps {
   pendingBggUserNotFoundUsername: string | null
   onConfirmAddBggUserAnyway: () => Promise<void>
   onCancelAddBggUserAnyway: () => void
-  pendingReuseGamesNight: { id: number; name: string; gameCount: number } | null
-  onConfirmReuseGamesFromNight: () => Promise<void>
-  onDismissReuseGamesPrompt: () => void
   onAddBggUser: (username: string) => Promise<void>
   onAddLocalUser: (name: string, isOrganizer?: boolean, options?: { forceNew?: boolean }) => Promise<void>
   onRemoveUser: (username: string) => void
@@ -51,7 +48,7 @@ export interface PlayersStepProps {
   onExcludeGameFromSession: (bggId: number) => void
   onUndoExcludeGameFromSession: (bggId: number) => void
   onAddOwnerToGame: (username: string, bggId: number) => Promise<void>
-  onLoadSavedNight: (id: number) => Promise<void>
+  onLoadSavedNight: (id: number, options?: { includeGames?: boolean }) => Promise<void>
   onFetchGameInfo: (url: string) => Promise<Partial<ManualGameData> & { bggId: number }>
   onAddGameManually: (usernames: string[], game: ManualGameData) => Promise<void>
   onEditGame: (game: GameRecord) => Promise<void>
@@ -67,9 +64,6 @@ export function PlayersStep({
   pendingBggUserNotFoundUsername,
   onConfirmAddBggUserAnyway,
   onCancelAddBggUserAnyway,
-  pendingReuseGamesNight,
-  onConfirmReuseGamesFromNight,
-  onDismissReuseGamesPrompt,
   onAddBggUser, onAddLocalUser, onRemoveUser, onDeleteUser, onSetOrganizer, onSearchGame,
   onAddGameToUser, onRemoveGameFromUser, onAddGameToSession, onRemoveGameFromSession,
   onAddOwnerToGame, onLoadSavedNight, onFetchGameInfo, onAddGameManually, onEditGame,
@@ -86,6 +80,7 @@ export function PlayersStep({
   const [isSearching, setIsSearching] = useState(false)
   const [deleteDialogUser, setDeleteDialogUser] = useState<string | null>(null)
   const [showManualEntry, setShowManualEntry] = useState(false)
+  const [manualDialogMode, setManualDialogMode] = useState<'bgg' | 'manual'>('bgg')
   const [showAddGamesPanel, setShowAddGamesPanel] = useState(false)
   const [isFetchingGame, setIsFetchingGame] = useState(false)
   const [manualGame, setManualGame] = useState<ManualGameData>({ name: '', bggId: 0 })
@@ -191,6 +186,7 @@ export function PlayersStep({
 
     // Always show dialog - fetch what we can and let user complete
     setIsFetchingGame(true)
+    setManualDialogMode('bgg')
     setShowManualEntry(true)
     setManualGame({ name: '', bggId })
 
@@ -219,8 +215,38 @@ export function PlayersStep({
     }
   }
 
+  const openManualAddDialog = () => {
+    if (selectedLocalUsers.length === 0) return
+    setIsFetchingGame(false)
+    setManualDialogMode('manual')
+    setShowManualEntry(true)
+    setManualGame({ name: '', bggId: 0 })
+  }
+
   const handleManualGameSubmit = async () => {
     if (!manualGame.name.trim() || manualGame.bggId <= 0 || selectedLocalUsers.length === 0) return
+
+    // If game already exists locally, do not overwrite it from manual entry.
+    // Instead, add ownership for selected players.
+    const existingGame = games.find((g) => g.bggId === manualGame.bggId)
+    if (existingGame) {
+      const owners = new Set(gameOwners[manualGame.bggId] ?? [])
+      const missingUsers = selectedLocalUsers.filter((u) => !owners.has(u))
+
+      if (missingUsers.length === 0) {
+        showNotice(`“${existingGame.name}” is already added for the selected players.`, 'info')
+      } else {
+        for (const username of missingUsers) {
+          await onAddGameToUser(username, manualGame.bggId)
+        }
+        showNotice(`Added existing game “${existingGame.name}” to: ${missingUsers.join(', ')}`, 'success')
+      }
+
+      setShowManualEntry(false)
+      setManualGame({ name: '', bggId: 0 })
+      return
+    }
+
     await onAddGameManually(selectedLocalUsers, manualGame)
     setShowManualEntry(false)
     setGameUrlInput('')
@@ -246,9 +272,6 @@ export function PlayersStep({
         pendingBggUserNotFoundUsername={pendingBggUserNotFoundUsername}
         onConfirmAddBggUserAnyway={() => void onConfirmAddBggUserAnyway()}
         onCancelAddBggUserAnyway={onCancelAddBggUserAnyway}
-        pendingReuseGamesNight={pendingReuseGamesNight}
-        onConfirmReuseGamesFromNight={() => void onConfirmReuseGamesFromNight()}
-        onDismissReuseGamesPrompt={onDismissReuseGamesPrompt}
         pendingDuplicateUser={pendingDuplicateUser}
         onSelectExistingUser={(user) => void handleSelectExistingUser(user)}
         onCreateNewDuplicateUser={() => void handleCreateNewDuplicateUser()}
@@ -288,7 +311,7 @@ export function PlayersStep({
       <Collapse in={isLoading}><Card sx={{ bgcolor: 'secondary.light', border: 'none' }}><CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2 }}><CircularProgress size={24} /><Box><Typography fontWeight={500}>BGG is preparing data…</Typography><Typography variant="body2" color="text.secondary">This may take a moment for large collections</Typography></Box></CardContent></Card></Collapse>
 
       <DeleteUserDialog open={!!deleteDialogUser} username={deleteDialogUser} onClose={() => setDeleteDialogUser(null)} onRemoveFromSession={() => { if (deleteDialogUser) { onRemoveUser(deleteDialogUser); setSelectedLocalUsers((prev) => prev.filter((u) => u !== deleteDialogUser)) } setDeleteDialogUser(null) }} onDeletePermanently={async () => { if (deleteDialogUser) { await onDeleteUser(deleteDialogUser); setSelectedLocalUsers((prev) => prev.filter((u) => u !== deleteDialogUser)) } setDeleteDialogUser(null) }} />
-      <ManualGameDialog open={showManualEntry} game={manualGame} isLoading={isFetchingGame} onGameChange={setManualGame} onClose={() => { setShowManualEntry(false); setIsFetchingGame(false) }} onSubmit={handleManualGameSubmit} />
+      <ManualGameDialog open={showManualEntry} mode={manualDialogMode} game={manualGame} isLoading={isFetchingGame} onGameChange={setManualGame} onClose={() => { setShowManualEntry(false); setIsFetchingGame(false) }} onSubmit={handleManualGameSubmit} />
 
       {users.length > 0 ? (
         <PlayersListCard
@@ -324,25 +347,27 @@ export function PlayersStep({
         showAddNewGamesAction={localUsers.length > 0}
         addNewGamesPanelOpen={showAddGamesPanel}
         onToggleAddNewGamesPanel={() => setShowAddGamesPanel((v) => !v)}
-      />
 
-      <LocalAddGamesPanel
-        open={localUsers.length > 0 && showAddGamesPanel}
-        localUsers={localUsers}
-        selectedLocalUsers={selectedLocalUsers}
-        onToggleUser={toggleUserSelection}
-        onSelectAll={selectAllLocalUsers}
-        gameUrlInput={gameUrlInput}
-        onGameUrlInputChange={setGameUrlInput}
-        onAddGameFromUrl={handleAddGameFromUrl}
-        isLoading={isLoading}
-        searchQuery={searchQuery}
-        onSearchQueryChange={setSearchQuery}
-        onSearch={handleSearch}
-        isSearching={isSearching}
-        searchResults={searchResults}
-        onAddGame={handleAddGame}
-        onClose={() => setShowAddGamesPanel(false)}
+        addNewGamesPanel={(
+          <LocalAddGamesPanel
+            open={localUsers.length > 0 && showAddGamesPanel}
+            localUsers={localUsers}
+            selectedLocalUsers={selectedLocalUsers}
+            onToggleUser={toggleUserSelection}
+            onSelectAll={selectAllLocalUsers}
+            gameUrlInput={gameUrlInput}
+            onGameUrlInputChange={setGameUrlInput}
+            onAddGameFromUrl={handleAddGameFromUrl}
+            onOpenManualGameDialog={openManualAddDialog}
+            isLoading={isLoading}
+            searchQuery={searchQuery}
+            onSearchQueryChange={setSearchQuery}
+            onSearch={handleSearch}
+            isSearching={isSearching}
+            searchResults={searchResults}
+            onAddGame={handleAddGame}
+          />
+        )}
       />
     </Stack>
   )

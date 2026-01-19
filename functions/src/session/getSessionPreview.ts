@@ -3,6 +3,7 @@
  *
  * Returns session summary for join page without requiring authentication.
  * Guests can view basic info before deciding to join.
+ * If caller is authenticated, returns their role (host/member/guest).
  */
 
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
@@ -13,14 +14,16 @@ import type {
   Session,
   Participant,
   NamedSlotInfo,
+  SessionMember,
 } from './types.js';
 
 /**
  * Get session preview for join page.
  */
 export const getSessionPreview = onCall(async (request) => {
-  const { data } = request;
+  const { data, auth } = request;
   const req = data as GetSessionPreviewRequest;
+  const callerUid = auth?.uid ?? null;
 
   // 1. Validate request
   if (!req.sessionId?.trim()) {
@@ -60,6 +63,14 @@ export const getSessionPreview = onCall(async (request) => {
   const sharedPrefsSnap = await sessionRef.collection('sharedPreferences').get();
   const sharedPrefsIds = new Set(sharedPrefsSnap.docs.map((d) => d.id));
 
+  const hostParticipantId = `host-${session.createdByUid}`;
+  const hostParticipantDoc = participantsSnap.docs.find((d) => d.id === hostParticipantId);
+  const hostParticipant = hostParticipantDoc?.data() as Participant | undefined;
+  const hostName =
+    session.hostDisplayName?.trim() ||
+    hostParticipant?.displayName?.trim() ||
+    undefined;
+
   const namedSlots: NamedSlotInfo[] = [];
   for (const doc of participantsSnap.docs) {
     const participant = doc.data() as Participant;
@@ -73,11 +84,40 @@ export const getSessionPreview = onCall(async (request) => {
     }
   }
 
-  // 7. Build response
+  // 7. Determine caller's role and participant info
+  let callerRole: 'host' | 'member' | 'guest' | null = null;
+  let callerParticipantId: string | undefined;
+  let callerReady: boolean | undefined;
+
+  if (callerUid) {
+    if (callerUid === session.createdByUid) {
+      callerRole = 'host';
+      callerParticipantId = hostParticipantId;
+      callerReady = true;
+    } else {
+      // Check if caller is already a member
+      const memberDoc = await sessionRef.collection('members').doc(callerUid).get();
+      if (memberDoc.exists) {
+        callerRole = 'member';
+        const memberData = memberDoc.data() as SessionMember;
+        callerParticipantId = memberData.participantId;
+        callerReady = memberData.ready;
+      } else {
+        callerRole = 'guest';
+      }
+    }
+  }
+
+  // 8. Build response
+  const shareMode = session.shareMode ?? 'detailed';
+  const showOtherParticipantsPicks =
+    shareMode === 'quick' ? false : session.showOtherParticipantsPicks !== false;
+
   const response: GetSessionPreviewResponse = {
     ok: true,
     sessionId,
     title: session.title,
+    hostName,
     scheduledFor: session.scheduledFor.toDate().toISOString(),
     minPlayers: session.minPlayers,
     maxPlayers: session.maxPlayers,
@@ -89,7 +129,15 @@ export const getSessionPreview = onCall(async (request) => {
     claimedCount,
     availableSlots,
     namedSlots,
-    shareMode: session.shareMode ?? 'detailed',
+    shareMode,
+    showOtherParticipantsPicks,
+    hostUid: session.createdByUid,
+    callerRole,
+    callerParticipantId,
+    callerReady,
+    selectedGame: session.selectedGame,
+    selectedAt: session.selectedAt ? session.selectedAt.toDate().toISOString() : undefined,
+    result: session.result,
   };
 
   return response;

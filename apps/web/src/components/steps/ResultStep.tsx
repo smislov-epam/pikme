@@ -35,6 +35,11 @@ export interface ResultStepProps {
   onLayoutModeChange: (mode: LayoutMode) => void
   onPromoteAlternative: (bggId: number) => void
   onSaveNight: () => void
+  /** Session context for analytics */
+  sessionContext?: {
+    isSessionGame: boolean
+    guestCount: number
+  }
 }
 
 export function ResultStep({
@@ -47,6 +52,7 @@ export function ResultStep({
   layoutMode,
   onLayoutModeChange,
   onPromoteAlternative,
+  sessionContext,
 }: ResultStepProps) {
   const theme = useTheme()
   const isNarrow = useMediaQuery(theme.breakpoints.down('sm'))
@@ -71,9 +77,17 @@ export function ResultStep({
       playerCount: users.length,
       filters,
       alternativeCount: alternatives.length,
+      // Enhanced game metadata
+      weight: topPick.game.weight,
+      yearPublished: topPick.game.yearPublished,
+      bestWith: topPick.game.bestWith,
+      playingTimeMinutes: topPick.game.playingTimeMinutes,
+      // Session context
+      isSessionGame: sessionContext?.isSessionGame,
+      guestCount: sessionContext?.guestCount,
     })
     lastTrackedPickRef.current = topPick.game.bggId
-  }, [alternatives.length, filters, topPick, users.length])
+  }, [alternatives.length, filters, topPick, users.length, sessionContext])
 
   const handlePromoteAlternative = useCallback(
     (alternative: GameWithScore, index: number) => {

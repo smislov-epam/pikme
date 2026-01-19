@@ -39,3 +39,18 @@ export {
   getRegistrationErrorCode,
   RegistrationErrorCodes,
 } from './functions';
+
+// Cloud Function helpers (REQ-107)
+export {
+  callFunction,
+  createFunctionCaller,
+  callFunctionNoRetry,
+} from './callFunction';
+
+export {
+  callWithRetry,
+  withRetry,
+  isRetryableError,
+  calculateBackoffDelay,
+  type RetryConfig,
+} from './retryWrapper';

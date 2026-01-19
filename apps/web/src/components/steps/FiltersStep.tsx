@@ -34,6 +34,8 @@ export interface FiltersStepProps {
   filteredGames: GameRecord[]
   onExcludeGameFromSession: (bggId: number) => void
   onUndoExcludeGameFromSession: (bggId: number) => void
+  /** Whether all filter controls are disabled (e.g., in session guest mode) */
+  disabled?: boolean
 }
 
 export function FiltersStep({
@@ -62,12 +64,13 @@ export function FiltersStep({
   filteredGames,
   onExcludeGameFromSession,
   onUndoExcludeGameFromSession,
+  disabled = false,
 }: FiltersStepProps) {
   return (
     <Stack spacing={2}>
       <SectionHeader
         title="Set your constraints"
-        subtitle="Filter games by what works for your group tonight"
+        subtitle={disabled ? "Filters are set by the host (read-only)" : "Filter games by what works for your group tonight"}
         titleVariant="h5"
         subtitleVariant="caption"
         titleColor="primary.dark"
@@ -78,13 +81,14 @@ export function FiltersStep({
         sessionUserCount={sessionUserCount}
         playerCount={playerCount}
         onPlayerCountChange={onPlayerCountChange}
+        disabled={disabled}
       />
 
       {/* Time Range */}
-      <TimeRangeCard timeRange={timeRange} onTimeRangeChange={onTimeRangeChange} />
+      <TimeRangeCard timeRange={timeRange} onTimeRangeChange={onTimeRangeChange} disabled={disabled} />
 
       {/* Game Mode */}
-      <VibeCard mode={mode} onModeChange={onModeChange} />
+      <VibeCard mode={mode} onModeChange={onModeChange} disabled={disabled} />
 
       <AdvancedFiltersAccordion
         playerCount={playerCount}
@@ -98,6 +102,7 @@ export function FiltersStep({
         onComplexityRangeChange={onComplexityRangeChange}
         ratingRange={ratingRange}
         onRatingRangeChange={onRatingRangeChange}
+        disabled={disabled}
       />
 
       <FiltersResultsSection

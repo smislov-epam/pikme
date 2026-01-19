@@ -24,6 +24,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { colors } from '../../theme/theme';
 import { getSessionMembers, removeSessionGuest } from '../../services/session';
 import type { SessionMemberInfo } from '../../services/session/types';
+import { ConfirmDialog } from '../ConfirmDialog';
 
 export interface SessionMemberListProps {
   /** Session ID to fetch members for */
@@ -42,6 +43,7 @@ export function SessionMemberList({
   const [members, setMembers] = useState<SessionMemberInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [removingUid, setRemovingUid] = useState<string | null>(null);
+  const [guestToRemove, setGuestToRemove] = useState<SessionMemberInfo | null>(null);
 
   useEffect(() => {
     const fetchMembers = async () => {
@@ -62,19 +64,18 @@ export function SessionMemberList({
     return () => clearInterval(interval);
   }, [sessionId, pollInterval]);
 
-  const handleRemoveGuest = async (guest: SessionMemberInfo) => {
-    if (guest.role !== 'guest') return;
-    const confirmed = window.confirm(`Remove ${guest.displayName} from this session?`);
-    if (!confirmed) return;
+  const handleRemoveGuest = async () => {
+    if (!guestToRemove || guestToRemove.role !== 'guest') return;
 
-    setRemovingUid(guest.uid);
+    setRemovingUid(guestToRemove.uid);
     try {
-      await removeSessionGuest(sessionId, guest.uid);
-      setMembers((prev) => prev.filter((m) => m.uid !== guest.uid));
+      await removeSessionGuest(sessionId, guestToRemove.uid);
+      setMembers((prev) => prev.filter((m) => m.uid !== guestToRemove.uid));
     } catch (err) {
       console.error('Failed to remove guest:', err);
     } finally {
       setRemovingUid(null);
+      setGuestToRemove(null);
     }
   };
 
@@ -140,7 +141,7 @@ export function SessionMemberList({
               edge="end"
               size="small"
               aria-label={`Remove ${member.displayName}`}
-              onClick={() => handleRemoveGuest(member)}
+              onClick={() => setGuestToRemove(member)}
               disabled={removingUid === member.uid}
             >
               <DeleteOutlineIcon fontSize="small" />
@@ -148,6 +149,18 @@ export function SessionMemberList({
           )}
         </ListItem>
       ))}
+
+      {/* Remove guest confirmation dialog */}
+      <ConfirmDialog
+        open={guestToRemove !== null}
+        title="Remove Guest"
+        message={`Are you sure you want to remove ${guestToRemove?.displayName ?? 'this guest'} from this session?`}
+        confirmLabel="Remove"
+        isDestructive
+        isLoading={removingUid !== null}
+        onConfirm={handleRemoveGuest}
+        onCancel={() => setGuestToRemove(null)}
+      />
     </List>
   );
 }
