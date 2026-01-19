@@ -63,8 +63,35 @@ export function useSessionMembersListener(
   const [connected, setConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [authUid, setAuthUid] = useState<string | null>(null);
 
   const unsubscribeRef = useRef<(() => void) | null>(null);
+
+  // Track auth state changes to retry listener when user signs in
+  useEffect(() => {
+    let unsubscribe: (() => void) | null = null;
+    
+    async function subscribeToAuth() {
+      try {
+        const { initializeFirebase, getAuthInstance } = await import('../../services/firebase');
+        const ready = await initializeFirebase();
+        if (!ready) return;
+
+        const auth = getAuthInstance();
+        if (!auth) return;
+
+        const { onAuthStateChanged } = await import('firebase/auth');
+        unsubscribe = onAuthStateChanged(auth, (user) => {
+          setAuthUid(user?.uid ?? null);
+        });
+      } catch {
+        // Firebase not available
+      }
+    }
+    
+    subscribeToAuth();
+    return () => unsubscribe?.();
+  }, []);
 
   useEffect(() => {
     // Clean up previous listener
@@ -91,19 +118,72 @@ export function useSessionMembersListener(
 
     async function setupListener() {
       try {
-        const { getFirestoreInstance } = await import(
-          '../../services/firebase/init'
+        // Ensure Firebase is initialized before accessing Auth/Firestore singletons.
+        const { initializeFirebase, getAuthInstance, getFirestoreInstance } = await import(
+          '../../services/firebase'
         );
-        const { collection, onSnapshot, query, orderBy } = await import(
+        const ready = await initializeFirebase();
+        if (!ready) {
+          // Firebase disabled/misconfigured; listener should be a no-op.
+          setIsLoading(false);
+          return;
+        }
+
+        const { collection, onSnapshot, query, orderBy, doc, getDoc } = await import(
           'firebase/firestore'
         );
 
+        const auth = getAuthInstance();
+        if (!auth?.currentUser) {
+          // Not authenticated yet - silently skip listener setup
+          // The listener will be retried when auth state changes
+          console.debug('[useSessionMembersListener] No auth user, skipping listener');
+          setIsLoading(false);
+          return;
+        }
+
+        // Anonymous auth is used for guest/session flows.
+        // Guest preferences are host-only, so anonymous users should never subscribe here.
+        if (auth.currentUser.isAnonymous) {
+          console.debug('[useSessionMembersListener] Anonymous user, skipping host-only listener');
+          setIsLoading(false);
+          return;
+        }
+
         const firestore = getFirestoreInstance();
         if (!firestore) {
-          throw new Error('Firestore not initialized');
+          // Should not happen if initializeFirebase() returned true, but keep it safe.
+          setIsLoading(false);
+          return;
         }
 
         if (cancelled) return;
+
+        // Host-only guard: guestPreferences reads require the caller to be the session creator.
+        // Avoid setting up an onSnapshot that will immediately error with permission-denied.
+        // If verification fails due to transient/network errors, proceed and let onSnapshot manage retries.
+        try {
+          const sessionRef = doc(firestore, 'sessions', currentSessionId);
+          const sessionSnap = await getDoc(sessionRef);
+          const createdByUid = (sessionSnap.data() as { createdByUid?: unknown } | undefined)?.createdByUid;
+          if (typeof createdByUid === 'string' && createdByUid !== auth.currentUser.uid) {
+            console.debug('[useSessionMembersListener] Not session host, skipping guestPreferences listener');
+            setIsLoading(false);
+            return;
+          }
+        } catch (err) {
+          const code = (err as { code?: unknown } | null)?.code;
+          if (code === 'permission-denied' || code === 'unauthenticated') {
+            console.debug('[useSessionMembersListener] Not authorized to verify host role; skipping listener');
+            setIsLoading(false);
+            return;
+          }
+
+          console.warn(
+            '[useSessionMembersListener] Could not verify host role due to transient error; proceeding with listener:',
+            err
+          );
+        }
 
         // Listen to guestPreferences subcollection
         const guestPrefsRef = collection(
@@ -185,7 +265,7 @@ export function useSessionMembersListener(
         unsubscribeRef.current = null;
       }
     };
-  }, [sessionId]);
+  }, [sessionId, authUid]); // Re-run when auth state changes
 
   return { guestData, connected, isLoading, error };
 }

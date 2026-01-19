@@ -13,10 +13,11 @@
  * because the invite flow handles identity claiming differently.
  */
 
-import { type PropsWithChildren, useState, useCallback } from 'react'
+import { type PropsWithChildren, useState, useCallback, useEffect } from 'react'
 import { Box, CircularProgress, Container, Typography } from '@mui/material'
-import { useLocalOwner } from '../../hooks/useLocalOwner'
+import { useLocalOwner, createLocalOwner, linkLocalOwnerToFirebase } from '../../hooks/useLocalOwner'
 import { LocalOwnerSetupDialog } from '../LocalOwnerSetupDialog'
+import { useAuth } from '../../hooks/useAuth'
 
 export interface LocalOwnerGateProps extends PropsWithChildren {
   /**
@@ -29,13 +30,65 @@ export interface LocalOwnerGateProps extends PropsWithChildren {
 /**
  * Gate component that ensures local owner exists.
  * Shows loading state, then either setup dialog or children.
+ * For authenticated users without local owner, auto-creates and links.
  */
 export function LocalOwnerGate({ children, bypass = false }: LocalOwnerGateProps) {
-  const { isLoading, hasLocalOwner } = useLocalOwner()
+  const { isLoading, hasLocalOwner, localOwner } = useLocalOwner()
+  const { user, loading: authLoading, firebaseReady } = useAuth()
   const [setupComplete, setSetupComplete] = useState(false)
+  const [autoCreating, setAutoCreating] = useState(false)
 
-  // Show dialog after loading completes and no local owner found
-  const shouldShowSetup = !isLoading && !hasLocalOwner && !setupComplete
+  // Auto-create local owner for authenticated users on new device/browser
+  useEffect(() => {
+    if (isLoading || authLoading || !firebaseReady) return
+    if (hasLocalOwner || setupComplete || autoCreating) return
+    if (!user) return // Not authenticated - show manual setup dialog
+
+    // User is authenticated but no local owner - auto-create and link
+    setAutoCreating(true)
+    ;(async () => {
+      try {
+        console.debug('[LocalOwnerGate] Auto-creating local owner for authenticated user:', user.uid)
+        await createLocalOwner({
+          displayName: user.displayName || user.email?.split('@')[0] || 'User',
+        })
+        await linkLocalOwnerToFirebase(user.uid)
+        setSetupComplete(true)
+      } catch (err) {
+        console.error('[LocalOwnerGate] Failed to auto-create local owner:', err)
+        // Fall back to manual setup dialog
+      } finally {
+        setAutoCreating(false)
+      }
+    })()
+  }, [isLoading, authLoading, firebaseReady, hasLocalOwner, setupComplete, autoCreating, user])
+
+  // If a local owner already exists, ensure it's linked to the current authenticated user.
+  // This is important when Firebase auth is restored from persistence (user didn't visit LoginPage)
+  // or when the local owner was created before registration.
+  useEffect(() => {
+    if (isLoading || authLoading || !firebaseReady) return
+    if (!user) return
+    if (!localOwner) return
+
+    // Already linked to this user.
+    if (localOwner.firebaseUid === user.uid) return
+
+    // Link/overwrite to the signed-in user's UID. This device's local owner should map
+    // to the currently authenticated account.
+    ;(async () => {
+      try {
+        console.debug('[LocalOwnerGate] Linking existing local owner to authenticated user:', user.uid)
+        await linkLocalOwnerToFirebase(user.uid)
+        setSetupComplete(true)
+      } catch (err) {
+        console.error('[LocalOwnerGate] Failed to link local owner to authenticated user:', err)
+      }
+    })()
+  }, [isLoading, authLoading, firebaseReady, user, localOwner])
+
+  // Show dialog after loading completes and no local owner found (only for non-authenticated)
+  const shouldShowSetup = !isLoading && !authLoading && !hasLocalOwner && !setupComplete && !user && !autoCreating
 
   const handleSetupComplete = useCallback(() => {
     setSetupComplete(true)
@@ -46,8 +99,8 @@ export function LocalOwnerGate({ children, bypass = false }: LocalOwnerGateProps
     return <>{children}</>
   }
 
-  // Still loading from database
-  if (isLoading) {
+  // Still loading from database or auth, or auto-creating
+  if (isLoading || authLoading || autoCreating) {
     return (
       <Container maxWidth="sm">
         <Box
@@ -60,7 +113,7 @@ export function LocalOwnerGate({ children, bypass = false }: LocalOwnerGateProps
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <CircularProgress size={24} />
-            <Typography>Loading...</Typography>
+            <Typography>{autoCreating ? 'Setting up your profile...' : 'Loading...'}</Typography>
           </Box>
         </Box>
       </Container>

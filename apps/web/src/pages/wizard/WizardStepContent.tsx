@@ -287,6 +287,7 @@ export function WizardStepContent(props: {
             readOnlyUsernames={readOnlyUsernames}
             syncStatuses={showSyncUI ? syncStatuses : undefined}
             onSyncUser={showSyncUI ? handleSyncUser : undefined}
+            hasActiveSession={showSyncUI}
           />
           {/* Show other participants' preferences when in an active session with guests */}
           {showSyncUI && hasRemoteParticipants && activeSessionId && (

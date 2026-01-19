@@ -51,7 +51,7 @@ export const DEFAULT_RESET_STATE: Omit<WizardPersistenceState, 'users' | 'games'
     requireBestWithPlayerCount: false,
     excludeLowRatedThreshold: null,
     ageRange: { min: 0, max: 21 },
-    complexityRange: { min: 1, max: 5 },
+    complexityRange: { min: 0, max: 5 },
     ratingRange: { min: 0, max: 10 },
   },
   preferences: {},

@@ -15,7 +15,7 @@ export const DEFAULT_FILTERS: WizardFilters = {
   requireBestWithPlayerCount: false,
   excludeLowRatedThreshold: null,
   ageRange: { min: 0, max: 21 },
-  complexityRange: { min: 1, max: 5 },
+  complexityRange: { min: 0, max: 5 },
   ratingRange: { min: 0, max: 10 },
 }
 

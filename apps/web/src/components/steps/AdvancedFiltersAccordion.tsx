@@ -138,13 +138,13 @@ export function AdvancedFiltersAccordion({
               const [min, max] = value as number[]
               onComplexityRangeChange({ min, max })
             }}
-            min={1}
+            min={0}
             max={5}
             step={0.5}
             marks={[
+              { value: 0, label: '0' },
               { value: 1, label: '1' },
               { value: 2.5, label: '2.5' },
-              { value: 4, label: '4' },
               { value: 5, label: '5' },
             ]}
             valueLabelDisplay="auto"

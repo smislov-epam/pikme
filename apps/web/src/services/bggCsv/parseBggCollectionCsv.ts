@@ -77,6 +77,8 @@ export function parseBggCollectionCsv(content: string): ParsedBggCollectionCsv {
     header: true,
     skipEmptyLines: 'greedy',
     delimiter: ',',
+    // Transform header keys to lowercase for case-insensitive access
+    transformHeader: (header) => header.trim().toLowerCase(),
   })
 
   if (parsed.errors?.length) {

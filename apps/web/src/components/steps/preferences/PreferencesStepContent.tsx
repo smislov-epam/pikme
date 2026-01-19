@@ -52,22 +52,15 @@ export interface PreferencesStepProps {
   ) => void
   onReorderPreferences: (username: string, orderedBggIds: number[]) => void
   onClearPreference: (username: string, bggId: number) => void
-  /** Optional guest statuses (for showing ready indicators on host) */
-  guestStatuses?: GuestStatus[]
-  /** Force full tile layout even on mobile */
-  forceFullTiles?: boolean
-  /** Hide layout toggle (e.g., guest quick share) */
-  hideLayoutToggle?: boolean
-  /** Read-only mode for viewing other users' preferences (REQ-106) */
-  readOnly?: boolean
-  /** Username of the user whose preferences should be shown in read-only mode */
-  readOnlyUsername?: string
-  /** Usernames that are read-only (e.g., session guests - host cannot edit their preferences) */
-  readOnlyUsernames?: string[]
-  /** Sync statuses for users in active session */
-  syncStatuses?: UserSyncStatus[]
-  /** Callback when user clicks sync button in tab */
-  onSyncUser?: (username: string) => void
+  guestStatuses?: GuestStatus[] // For showing ready indicators on host
+  forceFullTiles?: boolean // Force full tile layout even on mobile
+  hideLayoutToggle?: boolean // Hide layout toggle (e.g., guest quick share)
+  readOnly?: boolean // Read-only mode for viewing other users' preferences (REQ-106)
+  readOnlyUsername?: string // User whose preferences should be shown in read-only mode
+  readOnlyUsernames?: string[] // Usernames that are read-only (e.g., session guests)
+  syncStatuses?: UserSyncStatus[] // Sync statuses for users in active session
+  onSyncUser?: (username: string) => void // Callback when user clicks sync button in tab
+  hasActiveSession?: boolean // Shows user tabs even with single user
 }
 
 export function PreferencesStepContent({
@@ -89,6 +82,7 @@ export function PreferencesStepContent({
   readOnlyUsernames = [],
   syncStatuses = [],
   onSyncUser,
+  hasActiveSession = false,
 }: PreferencesStepProps) {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
@@ -158,21 +152,15 @@ export function PreferencesStepContent({
   }, [gamesWithPrefs])
 
   const disliked = useMemo(() => gamesWithPrefs.filter((g) => g.pref?.isDisliked), [gamesWithPrefs])
-
   const topPicks = useMemo(() => gamesWithPrefs.filter((g) => g.pref?.isTopPick && !g.pref?.isDisliked), [gamesWithPrefs])
-
-  const ranked = useMemo(
-    () =>
-      gamesWithPrefs
-        .filter((g) => !g.pref?.isTopPick && !g.pref?.isDisliked && g.pref?.rank !== undefined)
-        .sort((a, b) => (a.pref?.rank ?? 0) - (b.pref?.rank ?? 0)),
-    [gamesWithPrefs]
-  )
-
-  const neutral = useMemo(
-    () => gamesWithPrefs.filter((g) => !g.pref?.isTopPick && !g.pref?.isDisliked && g.pref?.rank === undefined),
-    [gamesWithPrefs]
-  )
+  const ranked = useMemo(() =>
+    gamesWithPrefs
+      .filter((g) => !g.pref?.isTopPick && !g.pref?.isDisliked && g.pref?.rank !== undefined)
+      .sort((a, b) => (a.pref?.rank ?? 0) - (b.pref?.rank ?? 0)),
+  [gamesWithPrefs])
+  const neutral = useMemo(() =>
+    gamesWithPrefs.filter((g) => !g.pref?.isTopPick && !g.pref?.isDisliked && g.pref?.rank === undefined),
+  [gamesWithPrefs])
 
   const rankedIds = useMemo(() => ranked.map((g) => g.game.bggId), [ranked])
   const topPickIds = useMemo(() => topPicks.map((g) => g.game.bggId), [topPicks])
@@ -230,24 +218,15 @@ export function PreferencesStepContent({
   )
 
   if (users.length === 0) {
-    return (
-      <Card>
-        <CardContent>
-          <Typography color="text.secondary">No players added yet. Go back to add players.</Typography>
-        </CardContent>
-      </Card>
-    )
+    return <Card><CardContent><Typography color="text.secondary">No players added yet. Go back to add players.</Typography></CardContent></Card>
   }
 
   // In read-only mode (explicit or selected guest user), disable all edit actions
   const effectiveOnToggleTopPick = isSelectedUserReadOnly ? () => {} : handleToggleTopPick
   const effectiveOnToggleDisliked = isSelectedUserReadOnly ? () => {} : handleToggleDisliked
   const effectiveOnSetRank = isSelectedUserReadOnly ? () => {} : handleSetRank
-  
-  // Find the display name for the read-only user
   const readOnlyUserDisplayName = isSelectedUserReadOnly
-    ? users.find((u) => u.username === selectedUser)?.displayName || selectedUser
-    : ''
+    ? users.find((u) => u.username === selectedUser)?.displayName || selectedUser : ''
 
   return (
     <Stack spacing={3}>
@@ -289,6 +268,7 @@ export function PreferencesStepContent({
           readOnlyUsernames={readOnlyUsernames}
           syncStatuses={syncStatuses}
           onSyncUser={onSyncUser}
+          alwaysShow={hasActiveSession}
         />
       )}
 

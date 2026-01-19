@@ -36,6 +36,8 @@ export function PreferencesUserSelector(props: {
   syncStatuses?: UserSyncStatus[]
   /** Callback when user clicks sync button */
   onSyncUser?: (username: string) => void
+  /** Always show the selector even with single user (for active sessions) */
+  alwaysShow?: boolean
 }) {
   const { 
     users, 
@@ -48,6 +50,7 @@ export function PreferencesUserSelector(props: {
     readOnlyUsernames = [],
     syncStatuses = [],
     onSyncUser,
+    alwaysShow = false,
   } = props
 
   // Create a map of guest statuses
@@ -184,7 +187,8 @@ export function PreferencesUserSelector(props: {
     return <RadioButtonUncheckedIcon sx={{ fontSize: iconSize, color: 'text.secondary' }} />
   }
 
-  if (users.length <= 1) return null
+  // Hide user tabs when there's only one user, unless alwaysShow is true (for active sessions)
+  if (users.length <= 1 && !alwaysShow) return null
 
   // Mobile: carousel-style tile with left/right arrows
   if (isMobile) {
