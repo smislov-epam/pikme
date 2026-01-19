@@ -138,11 +138,13 @@ jobs:
           echo "🔐 Scanning for exposed secrets..."
           node tools/detect-secrets.mjs
 
-  # Dependency Review (PRs only)
+  # Dependency Review (PRs only, requires Dependency Graph enabled)
+  # To enable: Repository Settings -> Security & analysis -> Dependency graph
   dependency-review:
     name: Dependency Review
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
+    continue-on-error: true  # Don't fail the workflow if dependency graph is not enabled
     
     steps:
       - name: Checkout code
