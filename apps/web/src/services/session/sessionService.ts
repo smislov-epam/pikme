@@ -23,6 +23,35 @@ import type {
 } from './types';
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Session Preview Cache
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Cache entry with data and timestamp */
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+
+/** Session preview cache with short TTL to prevent redundant calls */
+const sessionPreviewCache = new Map<string, CacheEntry<SessionPreview>>();
+
+/** Cache TTL in milliseconds (3 seconds) */
+const CACHE_TTL_MS = 3000;
+
+/** Clear expired cache entries periodically */
+function cleanupCache(): void {
+  const now = Date.now();
+  for (const [key, entry] of sessionPreviewCache) {
+    if (now - entry.timestamp > CACHE_TTL_MS) {
+      sessionPreviewCache.delete(key);
+    }
+  }
+}
+
+// Clean up cache every 30 seconds
+setInterval(cleanupCache, 30000);
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Session Creation & Management
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -85,13 +114,26 @@ export async function createSession(
 
 /**
  * Get session preview for join page.
+ * 
+ * Uses a short-lived cache (3s) to prevent redundant Cloud Function calls
+ * when multiple components request the same session data simultaneously.
  *
  * @param sessionId The session ID
+ * @param skipCache If true, bypass cache and fetch fresh data
  * @returns Session preview data
  */
 export async function getSessionPreview(
-  sessionId: string
+  sessionId: string,
+  skipCache = false
 ): Promise<SessionPreview> {
+  // Check cache first (unless explicitly skipped)
+  if (!skipCache) {
+    const cached = sessionPreviewCache.get(sessionId);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+      return cached.data;
+    }
+  }
+
   const result = await callFunction<
     { sessionId: string },
     {
@@ -140,7 +182,7 @@ export async function getSessionPreview(
     }
   >('getSessionPreview', { sessionId });
 
-  return {
+  const preview: SessionPreview = {
     sessionId: result.sessionId,
     title: result.title,
     hostName: result.hostName,
@@ -165,6 +207,11 @@ export async function getSessionPreview(
     selectedAt: result.selectedAt ? new Date(result.selectedAt) : undefined,
     result: result.result,
   };
+
+  // Cache the result
+  sessionPreviewCache.set(sessionId, { data: preview, timestamp: Date.now() });
+
+  return preview;
 }
 
 /**

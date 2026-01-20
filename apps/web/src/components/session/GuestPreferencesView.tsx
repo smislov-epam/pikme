@@ -104,7 +104,7 @@ export function GuestPreferencesView({ sessionId }: GuestPreferencesViewProps) {
 
   // Ready state - show waiting view that polls for results
   if (isReady) {
-    return <GuestWaitingView sessionId={sessionId} />;
+    return <GuestWaitingView sessionId={sessionId} realtime={realtime} />;
   }
 
   return (

@@ -66,10 +66,15 @@ export function useSessionRealtimeStatus({
 
     async function setupListener() {
       try {
-        // Dynamic import to avoid bundling when not used
-        const { getFirestoreInstance } = await import(
+        // Ensure Firebase is initialized before accessing Firestore
+        const { initializeFirebase, getFirestoreInstance } = await import(
           '../../services/firebase/init'
         );
+        const ready = await initializeFirebase();
+        if (!ready) {
+          throw new Error('Firebase initialization failed');
+        }
+        
         const { doc, onSnapshot } = await import('firebase/firestore');
 
         const firestore = getFirestoreInstance();

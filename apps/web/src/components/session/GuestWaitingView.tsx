@@ -18,8 +18,19 @@ import { TonightsPickResultCard } from './TonightsPickResultCard';
 /** Fallback poll interval in ms (only used if realtime fails) */
 const POLL_INTERVAL_MS = 10000;
 
+/** Shape of realtime state from parent (to avoid duplicate listeners) */
+interface RealtimeState {
+  status: 'open' | 'closed' | 'expired';
+  selectedGame?: { name: string; thumbnail?: string | null; bggId: number };
+  result?: { name: string; thumbnail?: string | null; bggId: number };
+  connected: boolean;
+  error: Error | null;
+}
+
 export interface GuestWaitingViewProps {
   sessionId: string;
+  /** Optional realtime state from parent to avoid duplicate listeners */
+  realtime?: RealtimeState;
 }
 
 type SessionStatus = 'open' | 'closed' | 'expired';
@@ -27,12 +38,17 @@ type SessionStatus = 'open' | 'closed' | 'expired';
 /**
  * View shown to guests after they click "I'm Ready".
  * Uses realtime Firestore listener, with polling fallback if connection fails.
+ * If parent provides realtime state, skips creating its own listener.
  */
-export function GuestWaitingView({ sessionId }: GuestWaitingViewProps) {
+export function GuestWaitingView({ sessionId, realtime: parentRealtime }: GuestWaitingViewProps) {
   const theme = useTheme();
 
-  // Primary: Realtime listener (instant, ~2 reads total)
-  const realtime = useSessionRealtimeStatus({ sessionId });
+  // Only create our own listener if parent didn't provide realtime state
+  const ownRealtime = useSessionRealtimeStatus({ 
+    sessionId,
+    enabled: !parentRealtime, // Skip listener if parent provided state
+  });
+  const realtime = parentRealtime ?? ownRealtime;
 
   // Fallback: Polling state (only used if realtime fails)
   const [fallbackStatus, setFallbackStatus] = useState<SessionStatus>('open');

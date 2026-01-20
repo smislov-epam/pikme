@@ -62,7 +62,7 @@ export function SessionGuestView({ sessionId, sessionTitle }: SessionGuestViewPr
 
   // Ready state without changes - show waiting view that polls for results
   if (isReady && !hasChanges) {
-    return <GuestWaitingView sessionId={sessionId} />;
+    return <GuestWaitingView sessionId={sessionId} realtime={realtime} />;
   }
 
   // No local owner found (edge case)

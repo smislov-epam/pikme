@@ -55,7 +55,9 @@ export function useSessionJoinActions(data: SessionJoinData): SessionJoinActions
         const { signInAnonymously } = await import('firebase/auth');
         const { getAuthInstance } = await import('../../services/firebase');
         const auth = getAuthInstance();
-        if (auth) {
+        // Only sign in anonymously if not already authenticated
+        // This prevents overwriting existing registered user auth or creating orphaned accounts
+        if (auth && !auth.currentUser) {
           await signInAnonymously(auth);
         }
 
