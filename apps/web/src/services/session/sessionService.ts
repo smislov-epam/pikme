@@ -6,6 +6,7 @@
  */
 
 import { callFunction, callFunctionNoRetry } from '../firebase';
+import { getCachedPreview, setCachedPreview } from './sessionPreviewCache';
 import type {
   CreateSessionOptions,
   CreateSessionResult,
@@ -21,35 +22,6 @@ import type {
   GuestPreferencesData,
   ParticipantPreferencesInfo,
 } from './types';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Session Preview Cache
-// ─────────────────────────────────────────────────────────────────────────────
-
-/** Cache entry with data and timestamp */
-interface CacheEntry<T> {
-  data: T;
-  timestamp: number;
-}
-
-/** Session preview cache with short TTL to prevent redundant calls */
-const sessionPreviewCache = new Map<string, CacheEntry<SessionPreview>>();
-
-/** Cache TTL in milliseconds (3 seconds) */
-const CACHE_TTL_MS = 3000;
-
-/** Clear expired cache entries periodically */
-function cleanupCache(): void {
-  const now = Date.now();
-  for (const [key, entry] of sessionPreviewCache) {
-    if (now - entry.timestamp > CACHE_TTL_MS) {
-      sessionPreviewCache.delete(key);
-    }
-  }
-}
-
-// Clean up cache every 30 seconds
-setInterval(cleanupCache, 30000);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Session Creation & Management
@@ -128,9 +100,9 @@ export async function getSessionPreview(
 ): Promise<SessionPreview> {
   // Check cache first (unless explicitly skipped)
   if (!skipCache) {
-    const cached = sessionPreviewCache.get(sessionId);
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
-      return cached.data;
+    const cached = getCachedPreview(sessionId);
+    if (cached) {
+      return cached;
     }
   }
 
@@ -209,7 +181,7 @@ export async function getSessionPreview(
   };
 
   // Cache the result
-  sessionPreviewCache.set(sessionId, { data: preview, timestamp: Date.now() });
+  setCachedPreview(sessionId, preview);
 
   return preview;
 }

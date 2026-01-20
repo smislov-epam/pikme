@@ -116,48 +116,48 @@ export function RegistrationPage() {
 
     if (user) {
       // User is authenticated, try to redeem invite
-      redeemInvite();
+      void redeemInviteAsync();
     } else {
       // Show account creation form
       setState((s) => ({ ...s, step: 'create-account' }));
     }
-  }, [authLoading, firebaseReady, user, inviteToken]);
 
-  async function redeemInvite() {
-    if (!inviteToken || !user) return;
+    async function redeemInviteAsync() {
+      if (!inviteToken || !user) return;
 
-    setState((s) => ({ ...s, step: 'redeeming', error: null }));
+      setState((s) => ({ ...s, step: 'redeeming', error: null }));
 
-    try {
-      await redeemRegistrationInvite(inviteToken);
-
-      // Link local owner to Firebase UID (REQ-103 user journeys)
       try {
-        const localOwner = await getLocalOwner();
-        if (localOwner) {
-          // Existing local owner - link to Firebase
-          await linkLocalOwnerToFirebase(user.uid);
-        } else {
-          // No local owner yet - create one from Firebase profile
-          await createLocalOwner({
-            displayName: user.displayName || state.displayName || 'User',
-          });
-          await linkLocalOwnerToFirebase(user.uid);
-        }
-      } catch (linkError) {
-        // Non-fatal - log but don't fail registration
-        console.warn('Failed to link local owner:', linkError);
-      }
+        await redeemRegistrationInvite(inviteToken);
 
-      setState((s) => ({ ...s, step: 'success' }));
-    } catch (error) {
-      setState((s) => ({
-        ...s,
-        step: 'error',
-        error: getErrorMessage(error),
-      }));
+        // Link local owner to Firebase UID (REQ-103 user journeys)
+        try {
+          const localOwner = await getLocalOwner();
+          if (localOwner) {
+            // Existing local owner - link to Firebase
+            await linkLocalOwnerToFirebase(user.uid);
+          } else {
+            // No local owner yet - create one from Firebase profile
+            await createLocalOwner({
+              displayName: user.displayName || state.displayName || 'User',
+            });
+            await linkLocalOwnerToFirebase(user.uid);
+          }
+        } catch (linkError) {
+          // Non-fatal - log but don't fail registration
+          console.warn('Failed to link local owner:', linkError);
+        }
+
+        setState((s) => ({ ...s, step: 'success' }));
+      } catch (error) {
+        setState((s) => ({
+          ...s,
+          step: 'error',
+          error: getErrorMessage(error),
+        }));
+      }
     }
-  }
+  }, [authLoading, firebaseReady, user, inviteToken, state.displayName]);
 
   async function handleCreateAccount(e: React.FormEvent) {
     e.preventDefault();

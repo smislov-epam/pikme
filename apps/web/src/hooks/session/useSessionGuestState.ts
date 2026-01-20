@@ -141,7 +141,7 @@ export function useSessionGuestState(sessionId: string): SessionGuestStateResult
   const isLoading = localOwner === undefined || gamesQuery === undefined || 
                     preferencesQuery === undefined || userGamesQuery === undefined;
 
-  const games = gamesQuery ?? [];
+  const games = useMemo(() => gamesQuery ?? [], [gamesQuery]);
 
   // Format preferences as Record<username, prefs[]>
   const preferences = useMemo(() => {

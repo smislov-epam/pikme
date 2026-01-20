@@ -12,7 +12,7 @@ import type { SessionResultInfo } from '../../services/session/types';
 
 type SessionStatus = 'open' | 'closed' | 'expired';
 
-interface SessionRealtimeState {
+export interface SessionRealtimeState {
   /** Current session status */
   status: SessionStatus;
   /** Share mode (quick/detailed) */

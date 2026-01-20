@@ -96,7 +96,7 @@ export function useActiveSessions(): UseActiveSessionsResult {
     () => localStorage.getItem(CURRENT_SESSION_KEY)
   );
   const [isLoading, setIsLoading] = useState(false);
-  const { user, firebaseReady } = useAuth();
+  const { firebaseReady } = useAuth();
 
   // Sync sessionIds to localStorage
   useEffect(() => {
@@ -177,7 +177,7 @@ export function useActiveSessions(): UseActiveSessionsResult {
     } finally {
       setIsLoading(false);
     }
-  }, [firebaseReady, sessionIds, user?.uid]);
+  }, [firebaseReady, sessionIds]);
 
   // Initial load and refresh when sessionIds change
   useEffect(() => {

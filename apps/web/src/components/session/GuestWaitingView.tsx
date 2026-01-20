@@ -12,25 +12,16 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CelebrationIcon from '@mui/icons-material/Celebration';
 import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
 import type { SessionResultInfo } from '../../services/session/types';
-import { useSessionRealtimeStatus } from '../../hooks/session/useSessionRealtimeStatus';
+import { useSessionRealtimeStatus, type SessionRealtimeState } from '../../hooks/session/useSessionRealtimeStatus';
 import { TonightsPickResultCard } from './TonightsPickResultCard';
 
 /** Fallback poll interval in ms (only used if realtime fails) */
 const POLL_INTERVAL_MS = 10000;
 
-/** Shape of realtime state from parent (to avoid duplicate listeners) */
-interface RealtimeState {
-  status: 'open' | 'closed' | 'expired';
-  selectedGame?: { name: string; thumbnail?: string | null; bggId: number };
-  result?: { name: string; thumbnail?: string | null; bggId: number };
-  connected: boolean;
-  error: Error | null;
-}
-
 export interface GuestWaitingViewProps {
   sessionId: string;
   /** Optional realtime state from parent to avoid duplicate listeners */
-  realtime?: RealtimeState;
+  realtime?: SessionRealtimeState;
 }
 
 type SessionStatus = 'open' | 'closed' | 'expired';

@@ -105,7 +105,7 @@ export function PlayersStep({
 
       return { label: baseName, username: u.username, internalId: u.internalId, suffix }
     })
-  }, [existingLocalUsers, users])
+  }, [existingLocalUsers])
 
   const handleAddUser = async () => {
     if (!inputValue.trim()) return

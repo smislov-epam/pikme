@@ -23,13 +23,11 @@ describe('onAuthStateChange', () => {
     // If unsubscribe is called before the dynamic import resolves,
     // it should NOT throw an error or call the callback after cleanup
 
-    let capturedCallback: ((user: unknown) => void) | null = null;
     const mockUnsubscribe = vi.fn();
 
     // Mock firebase/auth with a delayed import
     vi.doMock('firebase/auth', () => ({
-      onAuthStateChanged: vi.fn((auth, callback) => {
-        capturedCallback = callback;
+      onAuthStateChanged: vi.fn(() => {
         return mockUnsubscribe;
       }),
     }));
