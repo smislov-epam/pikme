@@ -28,8 +28,15 @@ function cleanupCache(): void {
   }
 }
 
-// Clean up cache every 30 seconds
-setInterval(cleanupCache, 30000);
+let cleanupTimer: ReturnType<typeof setInterval> | null = setInterval(cleanupCache, 30000);
+
+/** Stop the background cache cleanup interval (useful for tests or teardown) */
+export function stopPreviewCacheCleanup(): void {
+  if (cleanupTimer) {
+    clearInterval(cleanupTimer);
+    cleanupTimer = null;
+  }
+}
 
 /**
  * Get cached session preview if available and not expired.

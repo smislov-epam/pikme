@@ -39,6 +39,7 @@ vi.mock('../firebase', () => ({
 
 // Import after mock setup
 import { getSessionPreview } from './sessionService';
+import { stopPreviewCacheCleanup } from './sessionPreviewCache';
 
 describe('getSessionPreview caching', () => {
   beforeEach(() => {
@@ -48,6 +49,7 @@ describe('getSessionPreview caching', () => {
   });
 
   afterEach(() => {
+    stopPreviewCacheCleanup();
     vi.useRealTimers();
   });
 

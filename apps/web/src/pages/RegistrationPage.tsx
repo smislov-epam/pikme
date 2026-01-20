@@ -5,7 +5,7 @@
  * Flow: User opens link → Creates account → Redeems invite → Becomes host-eligible.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Card,
@@ -83,6 +83,7 @@ export function RegistrationPage() {
     confirmPassword: '',
     error: null,
   });
+  const displayNameRef = useRef('');
 
   // Extract token from URL on mount
   useEffect(() => {
@@ -98,6 +99,11 @@ export function RegistrationPage() {
       }));
     }
   }, []);
+
+  // Keep the latest display name available without re-running effects
+  useEffect(() => {
+    displayNameRef.current = state.displayName;
+  }, [state.displayName]);
 
   // Handle auth state changes
   useEffect(() => {
@@ -139,7 +145,7 @@ export function RegistrationPage() {
           } else {
             // No local owner yet - create one from Firebase profile
             await createLocalOwner({
-              displayName: user.displayName || state.displayName || 'User',
+              displayName: user.displayName || displayNameRef.current || 'User',
             });
             await linkLocalOwnerToFirebase(user.uid);
           }
@@ -157,7 +163,7 @@ export function RegistrationPage() {
         }));
       }
     }
-  }, [authLoading, firebaseReady, user, inviteToken, state.displayName]);
+  }, [authLoading, firebaseReady, user, inviteToken]);
 
   async function handleCreateAccount(e: React.FormEvent) {
     e.preventDefault();
