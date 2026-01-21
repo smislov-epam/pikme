@@ -1,5 +1,7 @@
 import { sleep } from '../http/sleep'
 import { computeBackoffDelayMs } from './backoff'
+import { isDevelopment } from './bggUrls'
+import { callFunction } from '../firebase/callFunction'
 
 export interface FetchQueuedXmlOptions {
   maxRetries: number
@@ -64,7 +66,103 @@ export function hasBggApiKey(): boolean {
   return !!getBggApiKey()
 }
 
-export async function fetchQueuedXml(url: string, options: FetchQueuedXmlOptions): Promise<string> {
+/**
+ * BGG Proxy request/response types (must match Firebase Function)
+ */
+interface BggProxyRequest {
+  endpoint: string
+  params: Record<string, string>
+}
+
+interface BggProxyResponse {
+  xml: string
+  status: number
+}
+
+/**
+ * Parse URL into endpoint and params for the Firebase proxy.
+ */
+function parseUrlForProxy(url: string): { endpoint: string; params: Record<string, string> } {
+  // URL is like: /bgg-api/xmlapi2/search?query=catan&type=boardgame
+  const urlObj = new URL(url, 'http://localhost')
+  const pathParts = urlObj.pathname.split('/')
+  // Find the endpoint (last part after xmlapi2)
+  const xmlapi2Index = pathParts.indexOf('xmlapi2')
+  const endpoint = xmlapi2Index >= 0 ? pathParts[xmlapi2Index + 1] : pathParts[pathParts.length - 1]
+
+  const params: Record<string, string> = {}
+  urlObj.searchParams.forEach((value, key) => {
+    params[key] = value
+  })
+
+  return { endpoint, params }
+}
+
+/**
+ * Fetch BGG XML via Firebase Function proxy (for production).
+ * The server-side function uses its own API key from Firebase secrets.
+ */
+async function fetchViaProxy(
+  url: string,
+  options: FetchQueuedXmlOptions
+): Promise<string> {
+  const { maxRetries, initialDelayMs, maxDelayMs } = options
+  const { endpoint, params } = parseUrlForProxy(url)
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await callFunction<BggProxyRequest, BggProxyResponse>(
+        'bggProxy',
+        {
+          endpoint,
+          params,
+        }
+      )
+
+      // Handle 202 (queued) - client should retry
+      if (response.status === 202) {
+        if (attempt === maxRetries) {
+          throw new BggQueuedError('BGG is still preparing data (HTTP 202) after maximum retries.')
+        }
+        const delayMs = computeBackoffDelayMs({ attempt, initialDelayMs, maxDelayMs })
+        await sleep(delayMs)
+        continue
+      }
+
+      return response.xml
+    } catch (error) {
+      // Check for specific error codes from Firebase Function
+      const errorMessage = error instanceof Error ? error.message : String(error)
+
+      if (errorMessage.includes('resource-exhausted') || errorMessage.includes('rate limit')) {
+        if (attempt === maxRetries) {
+          throw new BggRateLimitError(
+            'BGG API rate limit exceeded. Try again in a few minutes.'
+          )
+        }
+        const delayMs = computeBackoffDelayMs({ attempt, initialDelayMs, maxDelayMs })
+        await sleep(delayMs)
+        continue
+      }
+
+      if (errorMessage.includes('unauthenticated') || errorMessage.includes('authentication failed')) {
+        throw new BggAuthError(
+          'BGG API authentication failed. Your API key may be invalid or expired.'
+        )
+      }
+
+      // Re-throw other errors
+      throw error
+    }
+  }
+
+  throw new Error('Unexpected BGG proxy polling loop termination.')
+}
+
+/**
+ * Fetch BGG XML directly (for development with Vite proxy).
+ */
+async function fetchDirect(url: string, options: FetchQueuedXmlOptions): Promise<string> {
   const { maxRetries, initialDelayMs, maxDelayMs, signal, apiKey } = options
   const token = getBggApiKey(apiKey)
 
@@ -131,4 +229,17 @@ export async function fetchQueuedXml(url: string, options: FetchQueuedXmlOptions
   }
 
   throw new Error('Unexpected BGG polling loop termination.')
+}
+
+/**
+ * Fetch XML from BGG API with retry/backoff for 202 (queued) responses.
+ *
+ * In development, uses Vite proxy for CORS bypass.
+ * In production, uses Firebase Function proxy.
+ */
+export async function fetchQueuedXml(url: string, options: FetchQueuedXmlOptions): Promise<string> {
+  if (isDevelopment()) {
+    return fetchDirect(url, options)
+  }
+  return fetchViaProxy(url, options)
 }
