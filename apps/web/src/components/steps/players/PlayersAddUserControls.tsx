@@ -68,6 +68,7 @@ export function PlayersAddUserControls({
             borderColor: 'divider',
             borderRadius: 2,
             overflow: 'hidden',
+            bgcolor: 'white',
           }}
         >
           <TextField
@@ -82,9 +83,14 @@ export function PlayersAddUserControls({
             disabled={isLoading}
             sx={{
               flex: 1,
+              bgcolor: 'white',
               '& .MuiOutlinedInput-root': {
                 borderRadius: 0,
+                bgcolor: 'white',
                 '& fieldset': { border: 'none' },
+              },
+              '& .MuiInputBase-root': {
+                bgcolor: 'white',
               },
             }}
           />

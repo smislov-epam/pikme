@@ -100,6 +100,11 @@ export function usePlayersState(options: UsePlayersStateOptions = {}): UsePlayer
           return [...prev, user]
         })
 
+        // Add to existingLocalUsers so they appear in dropdown after removal from session
+        setExistingLocalUsers((prev) =>
+          prev.some((u) => u.username === user.username) ? prev : [...prev, user]
+        )
+
         // Load ratings
         const userGameRecords = await dbService.getUserGames(username)
         const ratings: Record<number, number | undefined> = Object.fromEntries(
@@ -142,6 +147,11 @@ export function usePlayersState(options: UsePlayersStateOptions = {}): UsePlayer
         if (prev.some((u) => u.username === username)) return prev
         return [...prev, user]
       })
+
+      // Add to existingLocalUsers so they appear in dropdown after removal from session
+      setExistingLocalUsers((prev) =>
+        prev.some((u) => u.username === user.username) ? prev : [...prev, user]
+      )
 
       onUserAdded?.(user, [], {}, [], {})
     } catch (err) {

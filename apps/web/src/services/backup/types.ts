@@ -33,9 +33,16 @@ export interface BackupProgress {
   table?: BackupTable
 }
 
+/** Maps backup username -> local username for user remapping during import */
+export type UserMapping = Record<string, string>
+
 export interface ImportOptions {
   mode: BackupMode
   files: File | File[] | Blob | Uint8Array
+  /** Optional user mappings: backup username -> local username */
+  userMapping?: UserMapping
+  /** Username that should be marked as local owner after import (for Replace mode identity mapping) */
+  localOwnerUsername?: string
   onProgress?: (progress: BackupProgress) => void
 }
 

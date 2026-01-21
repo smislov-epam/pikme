@@ -180,6 +180,49 @@ export async function syncUserCollectionToDb(
 }
 
 /**
+ * Sync a BGG collection to an existing local user.
+ * Updates the user's bggUsername field and syncs their games.
+ * Used when linking a BGG account to an existing local player.
+ */
+export async function syncBggCollectionToExistingUser(
+  localUsername: string,
+  bggUsername: string,
+  options: BggFetchOptions & { cacheMaxAgeMs?: number } = {},
+): Promise<{ games: GameRecord[]; user: UserRecord }> {
+  // Fetch collection from BGG
+  const collection = await fetchOwnedCollection(bggUsername, options)
+
+  // Update existing user record with BGG username
+  const { upsertUser, getUser } = await import('../db')
+  const existingUser = await getUser(localUsername)
+  if (!existingUser) {
+    throw new Error(`User not found: ${localUsername}`)
+  }
+
+  const updatedUser = await upsertUser({
+    ...existingUser,
+    bggUsername,
+    isBggUser: false, // Keep as local user, just with linked BGG account
+    ownedCount: collection.length,
+    lastSyncAt: new Date().toISOString(),
+  })
+
+  // Sync user's collection to DB (using the local username, not BGG username)
+  await syncUserCollection(localUsername, collection)
+
+  // Get all unique game IDs
+  const bggIds = collection.map((item) => item.bggId)
+
+  // Sync game details to DB
+  const games = await syncGameDetailsToDb(bggIds, options)
+
+  return {
+    games,
+    user: updatedUser,
+  }
+}
+
+/**
  * Sync multiple users' BGG collections to the database.
  * Returns the union of all games across users.
  */

@@ -3,6 +3,8 @@ import StarIcon from '@mui/icons-material/Star'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import PersonIcon from '@mui/icons-material/Person'
 import CloudDoneIcon from '@mui/icons-material/CloudDone'
+import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd'
+import PlaylistRemoveIcon from '@mui/icons-material/PlaylistRemove'
 import type { UserRecord } from '../../db/types'
 import { colors } from '../../theme/theme'
 import { getDisambiguatedLabel } from '../../services/db/userIdService'
@@ -10,10 +12,16 @@ import { getDisambiguatedLabel } from '../../services/db/userIdService'
 export function PlayersListCard(props: {
   users: UserRecord[]
   gameOwners: Record<number, string[]>
+  /** Set of usernames whose games are excluded from the session */
+  excludedUserGames?: Set<string>
   onSetOrganizer: (username: string) => void
   onRequestDelete: (username: string) => void
+  /** Add all games owned by this user to the session */
+  onAddUserGamesToSession?: (username: string) => void
+  /** Remove games owned ONLY by this user from the session */
+  onRemoveUserGamesFromSession?: (username: string) => void
 }) {
-  const { users, gameOwners, onSetOrganizer, onRequestDelete } = props
+  const { users, gameOwners, excludedUserGames, onSetOrganizer, onRequestDelete, onAddUserGamesToSession, onRemoveUserGamesFromSession } = props
 
   return (
     <Card>
@@ -26,6 +34,7 @@ export function PlayersListCard(props: {
             const userGameCount = Object.values(gameOwners).filter((owners) => owners.includes(user.username)).length
             const displayLabel = getDisambiguatedLabel(user, users)
             const isLinkedToFirebase = !!user.firebaseUid
+            const isUserGamesExcluded = excludedUserGames?.has(user.username) ?? false
 
             return (
               <Chip
@@ -60,6 +69,28 @@ export function PlayersListCard(props: {
                         ({userGameCount} games)
                       </Typography>
                     )}
+                    {/* Add/Remove games from session icons - inside chip */}
+                    {userGameCount > 0 && (onAddUserGamesToSession || onRemoveUserGamesFromSession) && (
+                      isUserGamesExcluded ? (
+                        onAddUserGamesToSession && (
+                          <Tooltip title={`Add ${displayLabel}'s games to session`} arrow>
+                            <PlaylistAddIcon
+                              sx={{ fontSize: 16, color: 'white', cursor: 'pointer', ml: 0.25 }}
+                              onClick={(e) => { e.stopPropagation(); onAddUserGamesToSession(user.username) }}
+                            />
+                          </Tooltip>
+                        )
+                      ) : (
+                        onRemoveUserGamesFromSession && (
+                          <Tooltip title={`Remove ${displayLabel}'s exclusive games from session`} arrow>
+                            <PlaylistRemoveIcon
+                              sx={{ fontSize: 16, color: 'white', cursor: 'pointer', ml: 0.25, opacity: 0.8, '&:hover': { opacity: 1 } }}
+                              onClick={(e) => { e.stopPropagation(); onRemoveUserGamesFromSession(user.username) }}
+                            />
+                          </Tooltip>
+                        )
+                      )
+                    )}
                   </Box>
                 }
                 icon={user.isBggUser ? <RefreshIcon fontSize="small" /> : <PersonIcon fontSize="small" />}
@@ -84,6 +115,9 @@ export function PlayersListCard(props: {
                   color: 'primary.dark',
                   cursor: user.isOrganizer ? 'default' : 'pointer',
                   fontWeight: user.isOrganizer || user.isLocalOwner ? 600 : 400,
+                  opacity: isUserGamesExcluded ? 0.6 : 1,
+                  transition: 'background-color 0.2s ease',
+                  '&:hover': { bgcolor: 'primary.main', color: 'white' },
                   '& .MuiChip-label': { px: 1, py: 0 },
                   '& .MuiChip-deleteIcon': { color: 'white', opacity: 0.9, '&:hover': { opacity: 1 } },
                 }}

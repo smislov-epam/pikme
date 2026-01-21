@@ -69,6 +69,7 @@ export interface WizardActions {
   removeUser: (username: string) => void
   deleteUserPermanently: (username: string) => Promise<void>
   setOrganizer: (username: string) => Promise<void>
+  setExistingLocalUsers: React.Dispatch<React.SetStateAction<UserRecord[]>>
   searchGame: (query: string) => Promise<BggSearchResult[]>
   addGameToUser: (username: string, bggId: number) => Promise<void>
   removeGameFromUser: (username: string, bggId: number) => Promise<void>

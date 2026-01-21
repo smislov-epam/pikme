@@ -46,6 +46,7 @@ describe('PlayersStep', () => {
         layoutMode="standard"
         onLayoutModeChange={vi.fn()}
         existingLocalUsers={[]}
+        onSetExistingLocalUsers={vi.fn()}
         savedNights={[makeSavedNight()]}
         pendingBggUserNotFoundUsername={null}
         onConfirmAddBggUserAnyway={vi.fn().mockResolvedValue(undefined)}
@@ -60,16 +61,13 @@ describe('PlayersStep', () => {
         onRemoveGameFromUser={vi.fn().mockResolvedValue(undefined)}
         onAddGameToSession={vi.fn()}
         onRemoveGameFromSession={vi.fn()}
-        onExcludeGameFromSession={vi.fn()}
-        onUndoExcludeGameFromSession={vi.fn()}
-        onAddOwnerToGame={vi.fn().mockResolvedValue(undefined)}
+                onAddOwnerToGame={vi.fn().mockResolvedValue(undefined)}
         onLoadSavedNight={onLoadSavedNight}
         onFetchGameInfo={vi.fn().mockResolvedValue({ bggId: 1 })}
         onAddGameManually={vi.fn().mockResolvedValue(undefined)}
         onEditGame={vi.fn().mockResolvedValue(undefined)}
         onRefreshGameFromBgg={vi.fn().mockResolvedValue({ bggId: 1, name: 'X', lastFetchedAt: '' })}
         isLoading={false}
-        error={null}
       />,
     )
 
@@ -106,6 +104,7 @@ describe('PlayersStep', () => {
         layoutMode="standard"
         onLayoutModeChange={vi.fn()}
         existingLocalUsers={[]}
+        onSetExistingLocalUsers={vi.fn()}
         savedNights={[]}
         pendingBggUserNotFoundUsername={null}
         onConfirmAddBggUserAnyway={vi.fn().mockResolvedValue(undefined)}
@@ -120,16 +119,13 @@ describe('PlayersStep', () => {
         onRemoveGameFromUser={vi.fn().mockResolvedValue(undefined)}
         onAddGameToSession={vi.fn()}
         onRemoveGameFromSession={vi.fn()}
-        onExcludeGameFromSession={vi.fn()}
-        onUndoExcludeGameFromSession={vi.fn()}
-        onAddOwnerToGame={vi.fn().mockResolvedValue(undefined)}
+                onAddOwnerToGame={vi.fn().mockResolvedValue(undefined)}
         onLoadSavedNight={vi.fn().mockResolvedValue(undefined)}
         onFetchGameInfo={vi.fn().mockResolvedValue({ bggId: 1 })}
         onAddGameManually={vi.fn().mockResolvedValue(undefined)}
         onEditGame={vi.fn().mockResolvedValue(undefined)}
         onRefreshGameFromBgg={vi.fn().mockResolvedValue({ bggId: 1, name: 'X', lastFetchedAt: '' })}
         isLoading={false}
-        error={null}
       />,
     )
 
@@ -160,6 +156,7 @@ describe('PlayersStep', () => {
         layoutMode="standard"
         onLayoutModeChange={vi.fn()}
         existingLocalUsers={[]}
+        onSetExistingLocalUsers={vi.fn()}
         savedNights={[]}
         pendingBggUserNotFoundUsername="ghost_user"
         onConfirmAddBggUserAnyway={onConfirmAddBggUserAnyway}
@@ -174,16 +171,13 @@ describe('PlayersStep', () => {
         onRemoveGameFromUser={vi.fn().mockResolvedValue(undefined)}
         onAddGameToSession={vi.fn()}
         onRemoveGameFromSession={vi.fn()}
-        onExcludeGameFromSession={vi.fn()}
-        onUndoExcludeGameFromSession={vi.fn()}
-        onAddOwnerToGame={vi.fn().mockResolvedValue(undefined)}
+                onAddOwnerToGame={vi.fn().mockResolvedValue(undefined)}
         onLoadSavedNight={vi.fn().mockResolvedValue(undefined)}
         onFetchGameInfo={vi.fn().mockResolvedValue({ bggId: 1 })}
         onAddGameManually={vi.fn().mockResolvedValue(undefined)}
         onEditGame={vi.fn().mockResolvedValue(undefined)}
         onRefreshGameFromBgg={vi.fn().mockResolvedValue({ bggId: 1, name: 'X', lastFetchedAt: '' })}
         isLoading={false}
-        error={null}
       />,
     )
 

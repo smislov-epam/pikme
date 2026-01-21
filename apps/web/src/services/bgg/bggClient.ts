@@ -40,14 +40,20 @@ export class BggUserNotFoundError extends Error {
 // Get API key from environment or localStorage
 function getBggApiKey(providedKey?: string): string | undefined {
   if (providedKey) return providedKey
-  // Check for environment variable (set in .env file)
-  if (import.meta.env.VITE_BGG_API_KEY) return import.meta.env.VITE_BGG_API_KEY
-  // Check localStorage for user-provided key
-  return localStorage.getItem('bgg_api_key') ?? undefined
+  // Check localStorage first for user-provided key (takes priority over env)
+  const localKey = localStorage.getItem('bgg_api_key')
+  if (localKey && localKey.trim().length > 0) return localKey.trim()
+  // Fall back to environment variable (set in .env file)
+  const envKey = import.meta.env.VITE_BGG_API_KEY
+  if (envKey && envKey.trim().length > 0) return envKey.trim()
+  return undefined
 }
 
 export function setBggApiKey(key: string): void {
-  localStorage.setItem('bgg_api_key', key)
+  const trimmed = key.trim()
+  if (trimmed.length > 0) {
+    localStorage.setItem('bgg_api_key', trimmed)
+  }
 }
 
 export function clearBggApiKey(): void {
