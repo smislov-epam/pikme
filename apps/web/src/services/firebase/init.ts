@@ -38,7 +38,6 @@ export async function initializeFirebase(): Promise<boolean> {
 async function doInitialize(): Promise<boolean> {
   // Check feature flag first (no imports if disabled)
   if (!isFirebaseAvailable()) {
-    console.log('[Firebase] Disabled by feature flag or missing config');
     return false;
   }
 
@@ -88,11 +87,8 @@ async function doInitialize(): Promise<boolean> {
         host,
         featureConfig.functionsPort
       );
-
-      console.log('[Firebase] Connected to emulators');
     }
 
-    console.log('[Firebase] Initialized successfully');
     return true;
   } catch (error) {
     initError = error instanceof Error ? error : new Error(String(error));

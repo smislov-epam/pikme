@@ -213,6 +213,42 @@ describe('useSavedNightsState', () => {
       expect(consoleSpy).toHaveBeenCalledWith('Saved night not found')
       consoleSpy.mockRestore()
     })
+
+    it('restores sessionGameIds even when games are skipped', async () => {
+      const savedNight = {
+        ...mockSavedNights[0],
+        data: {
+          ...mockSavedNights[0].data,
+          gameIds: [11, 22, 33],
+        },
+      }
+
+      mockedDb.getSavedNight.mockResolvedValue(savedNight)
+      mockedDb.getUser.mockImplementation(async (username) =>
+        mockUsers.find((u) => u.username === username),
+      )
+      mockedDb.getGames.mockResolvedValue([])
+      mockedDb.getGameOwners.mockResolvedValue({})
+      mockedDb.getUserPreferences.mockResolvedValue([])
+      mockedDb.getUserGames.mockResolvedValue([])
+
+      const onLoadNight = vi.fn()
+      const options = { ...createDefaultOptions(), onLoadNight }
+
+      const { result } = renderHook(() => useSavedNightsState(options))
+
+      await act(async () => {
+        await result.current.loadSavedNight(1, { includeGames: false })
+      })
+
+      expect(onLoadNight).toHaveBeenCalledWith(
+        expect.objectContaining({
+          sessionGameIds: [11, 22, 33],
+          games: [],
+          gameOwners: {},
+        }),
+      )
+    })
   })
 
   describe('loadSavedNights', () => {

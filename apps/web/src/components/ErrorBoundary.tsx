@@ -13,6 +13,7 @@ import HomeIcon from '@mui/icons-material/Home'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import { colors } from '../theme/theme'
+import { Link as RouterLink } from 'react-router-dom'
 
 export interface FallbackProps {
   error: Error
@@ -51,10 +52,6 @@ function DefaultFallback({
   showDetails: boolean
   onToggleDetails: () => void
 }) {
-  const handleGoHome = () => {
-    window.location.href = '/'
-  }
-
   return (
     <Box
       sx={{
@@ -110,7 +107,8 @@ function DefaultFallback({
             <Button
               variant="outlined"
               startIcon={<HomeIcon />}
-              onClick={handleGoHome}
+              component={RouterLink}
+              to="/"
               sx={{
                 borderColor: colors.oceanBlue,
                 color: colors.oceanBlue,

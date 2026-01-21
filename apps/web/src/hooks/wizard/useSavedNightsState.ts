@@ -164,14 +164,15 @@ export function useSavedNightsState(options: UseSavedNightsStateOptions): UseSav
           }
         }
 
+        // Always restore the saved collection, even if we skip fetching game records
+        const sessionGameIds: number[] = data.gameIds ?? []
+
         // Load games only if includeGames is true
         let loadedGames: GameRecord[] = []
         let owners: Record<number, string[]> = {}
-        let sessionGameIds: number[] = []
-        if (includeGames && data.gameIds?.length) {
-          loadedGames = await dbService.getGames(data.gameIds)
-          owners = await dbService.getGameOwners(data.gameIds)
-          sessionGameIds = data.gameIds
+        if (includeGames && sessionGameIds.length) {
+          loadedGames = await dbService.getGames(sessionGameIds)
+          owners = await dbService.getGameOwners(sessionGameIds)
         }
 
         // Load preferences and ratings

@@ -4,6 +4,7 @@ import { vi } from 'vitest'
 import { theme } from '../theme/theme'
 import WizardPage from './WizardPage'
 import { ToastProvider } from '../services/toast'
+import { RouterTestWrapper } from '../test/routerTestUtils'
 
 // Mock the database and BGG services to avoid IndexedDB issues in tests
 vi.mock('../services/db', () => ({
@@ -42,9 +43,11 @@ vi.mock('../services/bgg/bggClient', () => ({
 
 function renderWithTheme(ui: React.ReactElement) {
   return render(
-    <ThemeProvider theme={theme}>
-      <ToastProvider>{ui}</ToastProvider>
-    </ThemeProvider>
+    <RouterTestWrapper>
+      <ThemeProvider theme={theme}>
+        <ToastProvider>{ui}</ToastProvider>
+      </ThemeProvider>
+    </RouterTestWrapper>
   )
 }
 

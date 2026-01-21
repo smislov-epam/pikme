@@ -7,7 +7,10 @@
  */
 
 import { useState } from 'react';
-import { Alert, Button, CircularProgress, Stack, Typography } from '@mui/material';
+import { Alert, Button, CircularProgress, Stack, ToggleButton, ToggleButtonGroup, Typography, useMediaQuery, useTheme } from '@mui/material';
+import ViewAgendaIcon from '@mui/icons-material/ViewAgenda';
+import ViewStreamIcon from '@mui/icons-material/ViewStream';
+import type { LayoutMode } from '../../services/storage/uiPreferences';
 
 import { PreferencesStepContent } from '../steps/preferences/PreferencesStepContent';
 import { GUEST_USERNAME, useGuestPreferences } from '../../hooks/useGuestPreferences';
@@ -43,6 +46,8 @@ export interface GuestPreferencesViewProps {
  * Guest preferences view with Ready button.
  */
 export function GuestPreferencesView({ sessionId }: GuestPreferencesViewProps) {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const realtime = useSessionRealtimeStatus({ sessionId });
   const showOtherPicks = realtime.shareMode === 'detailed' && realtime.showOtherParticipantsPicks === true;
 
@@ -50,6 +55,8 @@ export function GuestPreferencesView({ sessionId }: GuestPreferencesViewProps) {
   const [isReady, setIsReady] = useState(() => getGuestReadyState(sessionId));
   const [isMarking, setIsMarking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Layout mode: simplified by default on mobile for guests
+  const [layoutMode, setLayoutMode] = useState<LayoutMode>(() => (isMobile ? 'simplified' : 'standard'));
 
   const {
     games,
@@ -114,6 +121,26 @@ export function GuestPreferencesView({ sessionId }: GuestPreferencesViewProps) {
         click "I'm Ready" to send your choices.
       </Alert>
 
+      {/* Layout toggle - desktop only with text labels for clarity */}
+      {!isMobile && (
+        <ToggleButtonGroup
+          value={layoutMode}
+          exclusive
+          onChange={(_, value) => value && setLayoutMode(value as LayoutMode)}
+          size="small"
+          sx={{ alignSelf: 'flex-end' }}
+        >
+          <ToggleButton value="standard" sx={{ textTransform: 'none', px: 2 }}>
+            <ViewAgendaIcon fontSize="small" sx={{ mr: 1 }} />
+            Card View
+          </ToggleButton>
+          <ToggleButton value="simplified" sx={{ textTransform: 'none', px: 2 }}>
+            <ViewStreamIcon fontSize="small" sx={{ mr: 1 }} />
+            Compact View
+          </ToggleButton>
+        </ToggleButtonGroup>
+      )}
+
       {/* Other Participants' Picks (detailed share only, host-controlled) */}
       {showOtherPicks && games.length > 0 && (
         <OtherParticipantsPreferences sessionId={sessionId} games={games} />
@@ -124,14 +151,13 @@ export function GuestPreferencesView({ sessionId }: GuestPreferencesViewProps) {
           users={users}
           games={games}
           gameOwners={gameOwners}
-          layoutMode="standard"
-          onLayoutModeChange={() => {}}
+          layoutMode={layoutMode}
+          onLayoutModeChange={setLayoutMode}
           preferences={preferences}
           userRatings={userRatings}
           onUpdatePreference={updatePreference}
           onReorderPreferences={reorderPreferences}
           onClearPreference={clearPreference}
-          forceFullTiles
           hideLayoutToggle
         />
       ) : (

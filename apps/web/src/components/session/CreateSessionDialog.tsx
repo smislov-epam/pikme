@@ -3,26 +3,35 @@
  *
  * Dialog for hosts to create a new session and share games with guests.
  */
+/* eslint-disable max-lines -- TODO: Refactor into smaller components */
 
 import { useState } from 'react';
 import {
   Alert,
+  Box,
   Button,
   CircularProgress,
+  Collapse,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  IconButton,
+  Paper,
   Stack,
   Typography,
+  alpha,
 } from '@mui/material';
 import ShareIcon from '@mui/icons-material/Share';
 import CancelIcon from '@mui/icons-material/Cancel';
+import CloseIcon from '@mui/icons-material/Close';
+import BoltIcon from '@mui/icons-material/Bolt';
+import TuneIcon from '@mui/icons-material/Tune';
 import { colors } from '../../theme/theme';
 import type { GameRecord, UserRecord, UserPreferenceRecord } from '../../db/types';
 import { createSession } from '../../services/session';
 import { SessionViewContent } from './SessionViewContent';
-import { CreateSessionForm } from './createSessionDialog/CreateSessionForm';
+import { DetailedShareForm } from './createSessionDialog/DetailedShareForm';
 import { toSessionGameData } from './createSessionDialog/toSessionGameData';
 import type { NamedParticipantData, SharedGamePreference } from '../../services/session';
 import { trackSessionCreated } from '../../services/analytics/googleAnalytics';
@@ -72,7 +81,7 @@ export function CreateSessionDialog({
     (existingSessionId && !forceCreateNew) ? 'view' : 'form';
 
   const [step, setStep] = useState<DialogStep>(getInitialStep);
-  const [shareMode, setShareMode] = useState<'quick' | 'detailed'>('quick');
+  const [showDetailedOptions, setShowDetailedOptions] = useState(false);
   const [showOtherParticipantsPicks, setShowOtherParticipantsPicks] = useState(true);
   const [title, setTitle] = useState('');
   const [scheduledFor, setScheduledFor] = useState(() => {
@@ -107,19 +116,21 @@ export function CreateSessionDialog({
     if (forceCreateNew) {
       setStep('form');
       setSessionId(null);
+      setShowDetailedOptions(false);
     } else if (existingSessionId) {
       setStep('view');
       setSessionId(existingSessionId);
     } else {
       setStep('form');
       setSessionId(null);
+      setShowDetailedOptions(false);
     }
     setError(null);
   };
 
   // Build named participants data for session creation
-  const buildNamedParticipants = (): NamedParticipantData[] => {
-    if (shareMode === 'quick') return [];
+  const buildNamedParticipants = (isDetailedShare: boolean): NamedParticipantData[] => {
+    if (!isDetailedShare) return [];
     // Get the set of game IDs that are being shared (filtered games)
     const sharedGameIds = new Set(games.map((g) => g.bggId));
     
@@ -166,7 +177,7 @@ export function CreateSessionDialog({
       }));
   };
 
-  const handleCreate = async () => {
+  const handleCreate = async (isDetailedShare: boolean) => {
     setStep('creating');
     setError(null);
 
@@ -175,8 +186,9 @@ export function CreateSessionDialog({
       const effectiveScheduledFor = addTargetNight
         ? scheduledFor
         : new Date(Date.now() + 24 * 60 * 60 * 1000);
-      const namedParticipants = buildNamedParticipants();
+      const namedParticipants = buildNamedParticipants(isDetailedShare);
       const hostPreferences = buildHostPreferences();
+      const shareMode = isDetailedShare ? 'detailed' : 'quick';
       const result = await createSession({
         title: title.trim() || undefined,
         scheduledFor: effectiveScheduledFor,
@@ -187,7 +199,7 @@ export function CreateSessionDialog({
         maxPlayingTimeMinutes: maxPlayingTime,
         hostDisplayName,
         shareMode,
-        showOtherParticipantsPicks: shareMode === 'detailed' ? showOtherParticipantsPicks : false,
+        showOtherParticipantsPicks: isDetailedShare ? showOtherParticipantsPicks : false,
         games: games.map(toSessionGameData),
         namedParticipants,
         hostPreferences,
@@ -224,7 +236,7 @@ export function CreateSessionDialog({
     // Don't reset session state when closing if we have an existing session
     if (!existingSessionId) {
       setStep('form');
-      setShareMode('quick');
+      setShowDetailedOptions(false);
       setTitle('');
       // Reset scheduledFor to tomorrow 7 PM
       const tomorrow = new Date();
@@ -239,6 +251,18 @@ export function CreateSessionDialog({
       setSelectedParticipants({});
     }
     onClose();
+  };
+
+  const handleQuickShare = () => {
+    handleCreate(false);
+  };
+
+  const handleDetailedShareClick = () => {
+    setShowDetailedOptions(true);
+  };
+
+  const handleCollapseDetailedOptions = () => {
+    setShowDetailedOptions(false);
   };
 
   return (
@@ -269,26 +293,68 @@ export function CreateSessionDialog({
 
       <DialogContent sx={{ pt: 3, pb: 2 }}>
         {step === 'form' && (
-          <CreateSessionForm
-            shareMode={shareMode}
-            onShareModeChange={setShareMode}
-            showOtherParticipantsPicks={showOtherParticipantsPicks}
-            onShowOtherParticipantsPicksChange={setShowOtherParticipantsPicks}
-            addTargetNight={addTargetNight}
-            onAddTargetNightChange={setAddTargetNight}
-            title={title}
-            onTitleChange={setTitle}
-            scheduledFor={scheduledFor}
-            onScheduledForChange={setScheduledFor}
-            gamesCount={games.length}
-            playerCount={playerCount}
-            minPlayingTime={minPlayingTime}
-            maxPlayingTime={maxPlayingTime}
-            users={nonHostUsers}
-            preferences={preferences}
-            selectedParticipants={selectedParticipants}
-            onSelectedParticipantsChange={setSelectedParticipants}
-          />
+          <Stack spacing={2}>
+            {/* Filter info panel */}
+            <Paper
+              elevation={0}
+              sx={{
+                px: 1.5,
+                py: 1,
+                bgcolor: alpha(colors.oceanBlue, 0.08),
+                border: `1px solid ${alpha(colors.oceanBlue, 0.2)}`,
+                borderRadius: 1.5,
+              }}
+            >
+              <Typography variant="body2" color="text.secondary">
+                <strong>{games.length}</strong> games • <strong>{Math.min(playerCount, 12)}</strong> players max
+                {(minPlayingTime || maxPlayingTime) && ` • ${minPlayingTime ?? '?'}–${maxPlayingTime ?? '?'} min`}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Invite expires in 24 hours
+              </Typography>
+            </Paper>
+
+            {/* Detailed Share Options Tile */}
+            <Collapse in={showDetailedOptions}>
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 2,
+                  bgcolor: alpha(colors.oceanBlue, 0.08),
+                  border: `1px solid ${alpha(colors.oceanBlue, 0.2)}`,
+                  borderRadius: 2,
+                }}
+              >
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
+                  <Typography variant="subtitle2" fontWeight={600}>
+                    Detailed Share Options
+                  </Typography>
+                  <IconButton
+                    size="small"
+                    onClick={handleCollapseDetailedOptions}
+                    aria-label="Close detailed options"
+                    sx={{ mt: -0.5, mr: -0.5 }}
+                  >
+                    <CloseIcon fontSize="small" />
+                  </IconButton>
+                </Box>
+                <DetailedShareForm
+                  showOtherParticipantsPicks={showOtherParticipantsPicks}
+                  onShowOtherParticipantsPicksChange={setShowOtherParticipantsPicks}
+                  addTargetNight={addTargetNight}
+                  onAddTargetNightChange={setAddTargetNight}
+                  title={title}
+                  onTitleChange={setTitle}
+                  scheduledFor={scheduledFor}
+                  onScheduledForChange={setScheduledFor}
+                  users={users.filter((u) => !u.isLocalOwner)}
+                  preferences={preferences}
+                  selectedParticipants={selectedParticipants}
+                  onSelectedParticipantsChange={setSelectedParticipants}
+                />
+              </Paper>
+            </Collapse>
+          </Stack>
         )}
 
         {step === 'creating' && (
@@ -319,12 +385,36 @@ export function CreateSessionDialog({
         )}
       </DialogContent>
 
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        {step === 'form' && (
+      <DialogActions sx={{ px: 3, pb: 2, justifyContent: 'space-between' }}>
+        {step === 'form' && !showDetailedOptions && (
+          <>
+            <Button onClick={handleClose}>Cancel</Button>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button
+                onClick={handleQuickShare}
+                variant="contained"
+                disabled={games.length === 0}
+                startIcon={<BoltIcon />}
+              >
+                Quick Share
+              </Button>
+              <Button
+                onClick={handleDetailedShareClick}
+                variant="outlined"
+                disabled={games.length === 0}
+                startIcon={<TuneIcon />}
+              >
+                Detailed Share
+              </Button>
+            </Box>
+          </>
+        )}
+
+        {step === 'form' && showDetailedOptions && (
           <>
             <Button onClick={handleClose}>Cancel</Button>
             <Button
-              onClick={handleCreate}
+              onClick={() => handleCreate(true)}
               variant="contained"
               disabled={games.length === 0}
             >
@@ -334,7 +424,7 @@ export function CreateSessionDialog({
         )}
 
         {step === 'success' && (
-          <Button onClick={handleClose} variant="contained">
+          <Button onClick={handleClose} variant="contained" sx={{ ml: 'auto' }}>
             Done
           </Button>
         )}

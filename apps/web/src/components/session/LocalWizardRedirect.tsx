@@ -7,6 +7,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { CircularProgress, Stack, Typography } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 
 export interface LocalWizardRedirectProps {
   sessionId: string;
@@ -22,6 +23,7 @@ export interface LocalWizardRedirectProps {
 export function LocalWizardRedirect({ sessionId }: LocalWizardRedirectProps) {
   const [status, setStatus] = useState<string>('Setting up...');
   const didRunRef = useRef(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     // In dev, React StrictMode may run effects twice.
@@ -48,12 +50,10 @@ export function LocalWizardRedirect({ sessionId }: LocalWizardRedirectProps) {
         if (!localOwner) {
           // Create local owner with the display name from the claimed slot
           localOwner = await createLocalOwner({ displayName });
-          console.log('[LocalWizardRedirect] Created local owner:', localOwner.username);
         } else if (localOwner.displayName !== displayName) {
           // Update local owner's display name if it differs (user entered a new name)
           await db.users.update(localOwner.username, { displayName });
           localOwner = { ...localOwner, displayName };
-          console.log('[LocalWizardRedirect] Updated local owner display name to:', displayName);
         }
 
         // If user claimed a named slot with shared preferences, import them to the local owner
@@ -68,7 +68,6 @@ export function LocalWizardRedirect({ sessionId }: LocalWizardRedirectProps) {
             .toArray();
           
           if (guestPrefs.length > 0) {
-            console.log(`[LocalWizardRedirect] Transferring ${guestPrefs.length} preferences from guest to ${localOwner.username}`);
             const now = new Date().toISOString();
             
             for (const pref of guestPrefs) {
@@ -97,7 +96,9 @@ export function LocalWizardRedirect({ sessionId }: LocalWizardRedirectProps) {
 
         let sessionGameIds: number[] = [];
         try {
-          const rawIds = localStorage.getItem('guestSessionGameIds');
+          const rawIds =
+            localStorage.getItem(`guestSessionGameIds:${sessionId}`) ??
+            localStorage.getItem('guestSessionGameIds');
           const parsed = rawIds ? (JSON.parse(rawIds) as unknown) : [];
           if (Array.isArray(parsed)) {
             sessionGameIds = parsed.filter((id) => typeof id === 'number' && Number.isFinite(id));
@@ -107,7 +108,6 @@ export function LocalWizardRedirect({ sessionId }: LocalWizardRedirectProps) {
         }
 
         if (sessionGameIds.length > 0) {
-          console.log(`[LocalWizardRedirect] Adding ${sessionGameIds.length} session games to ${localOwner.username}`);
           for (const bggId of sessionGameIds) {
             await addGameToUser(localOwner.username, bggId);
           }
@@ -129,19 +129,19 @@ export function LocalWizardRedirect({ sessionId }: LocalWizardRedirectProps) {
         }
 
         // Redirect to the focused session preferences page
-        window.location.href = `/session/${sessionId}/preferences`;
+        navigate(`/session/${sessionId}/preferences`, { replace: true });
       } catch (err) {
         console.error('[LocalWizardRedirect] Setup failed:', err);
         setStatus('Setup failed. Redirecting...');
         // Still try to redirect on error
         setTimeout(() => {
-          window.location.href = `/session/${sessionId}/preferences`;
+          navigate(`/session/${sessionId}/preferences`, { replace: true });
         }, 1000);
       }
     }
 
     setupLocalOwnerAndRedirect();
-  }, [sessionId]);
+  }, [navigate, sessionId]);
 
   return (
     <Stack alignItems="center" spacing={2} py={8}>

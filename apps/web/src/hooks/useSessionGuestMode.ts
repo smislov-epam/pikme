@@ -48,11 +48,6 @@ export function useSessionGuestMode({
   const { user, firebaseReady } = useAuth()
   const { guests: sessionGuests } = useSessionGuests(activeSessionId)
 
-  // Debug: Track activeSessionId and guest count
-  useEffect(() => {
-    console.debug('[useSessionGuestMode] activeSessionId:', activeSessionId, 'guests:', sessionGuests.length)
-  }, [activeSessionId, sessionGuests])
-
   // If the user is authenticated, we are in host (or signed-in) context.
   // Clear any stale local-join guest-mode state so it doesn't lock preferences.
   useEffect(() => {

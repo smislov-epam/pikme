@@ -85,7 +85,6 @@ export function useAuth(): UseAuthReturn {
             const lastAuthUid = localStorage.getItem(LAST_AUTH_UID_KEY);
             if (lastAuthUid && lastAuthUid !== effectiveUser.uid) {
               // Different user signed in - clear stale session data
-              console.log('[useAuth] User changed, clearing stale session storage');
               clearAllSessionStorage();
             }
             // Store current user's UID for future comparison
@@ -137,7 +136,6 @@ export function useAuth(): UseAuthReturn {
     try {
       // Clear session storage before signing out to prevent stale data
       // from being accessed by subsequent users on this device
-      console.log('[useAuth] Signing out, clearing session storage');
       clearAllSessionStorage();
       // Also clear the last auth UID so it doesn't interfere with fresh logins
       localStorage.removeItem(LAST_AUTH_UID_KEY);

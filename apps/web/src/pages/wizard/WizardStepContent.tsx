@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Stack } from '@mui/material'
 import { PlayersStep, FiltersStep, PreferencesStep, ResultStep } from '../../components/steps'
-import { OtherParticipantsPreferences } from '../../components/session'
 import type { WizardState, WizardActions } from '../../hooks/useWizardState'
 import type { UserRecord, UserPreferenceRecord } from '../../db/types'
 import type { GuestStatus, UserSyncStatus } from '../../components/steps/preferences/types'
@@ -94,7 +93,6 @@ export function WizardStepContent(props: {
   )
 
   // Once an online session exists, preferences should be syncable so invitees can see them.
-  const hasRemoteParticipants = guestStatuses && guestStatuses.length > 0
   const syncStatuses = useMemo<UserSyncStatus[]>(() => {
     // Only compute sync statuses if we have an online session
     if (!activeSessionId) return []
@@ -289,13 +287,6 @@ export function WizardStepContent(props: {
             onSyncUser={showSyncUI ? handleSyncUser : undefined}
             hasActiveSession={showSyncUI}
           />
-          {/* Show other participants' preferences when in an active session with guests */}
-          {showSyncUI && hasRemoteParticipants && activeSessionId && (
-            <OtherParticipantsPreferences
-              sessionId={activeSessionId}
-              games={wizard.filteredGames}
-            />
-          )}
         </Stack>
       );
     }

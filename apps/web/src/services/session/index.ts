@@ -40,4 +40,5 @@ export type {
   GuestPreferencesData,
   ParticipantPreferencesInfo,
   SessionResultInfo,
+  CloseSessionResult,
 } from './types';

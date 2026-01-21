@@ -272,26 +272,24 @@ export function PreferencesStepContent({
         />
       )}
 
-      {!isMobile ? (
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, alignItems: 'center' }}>
-          {hasNewGames ? (
-            <FormControlLabel
-              label={`Only new games (${newGameIds.size})`}
-              control={
-                <Switch
-                  size="small"
-                  checked={showOnlyNewGames}
-                  onChange={(e) => setShowOnlyNewGames(e.target.checked)}
-                />
-              }
-              sx={{ mr: 0 }}
-            />
-          ) : null}
-          {!hideLayoutToggle && (
-            <LayoutToggle layoutMode={layoutMode} onChange={onLayoutModeChange} variant="icon" />
-          )}
-        </Box>
-      ) : null}
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, alignItems: 'center' }}>
+        {!isMobile && hasNewGames ? (
+          <FormControlLabel
+            label={`Only new games (${newGameIds.size})`}
+            control={
+              <Switch
+                size="small"
+                checked={showOnlyNewGames}
+                onChange={(e) => setShowOnlyNewGames(e.target.checked)}
+              />
+            }
+            sx={{ mr: 0 }}
+          />
+        ) : null}
+        {!isMobile && !hideLayoutToggle && (
+          <LayoutToggle layoutMode={layoutMode} onChange={onLayoutModeChange} variant="icon" />
+        )}
+      </Box>
 
       <DndContext
         sensors={readOnly ? [] : sensors}

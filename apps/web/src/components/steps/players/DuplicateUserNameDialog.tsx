@@ -1,5 +1,6 @@
 import {
   Button,
+  Chip,
   Dialog,
   DialogActions,
   DialogContent,
@@ -10,9 +11,10 @@ import {
   ListItemText,
   Stack,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material'
 import PersonIcon from '@mui/icons-material/Person'
-import AddIcon from '@mui/icons-material/Add'
 import type { UserRecord } from '../../../db/types'
 import { extractSuffixFromId } from '../../../services/db/userIdService'
 
@@ -35,6 +37,9 @@ export function DuplicateUserNameDialog({
   onSelectExisting,
   onCreateNew,
 }: DuplicateUserNameDialogProps) {
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+
   return (
     <Dialog open={open} onClose={isLoading ? undefined : onCancel} maxWidth="xs" fullWidth>
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -61,6 +66,7 @@ export function DuplicateUserNameDialog({
           <List dense disablePadding>
             {existingUsers.map((user) => {
               const suffix = extractSuffixFromId(user.internalId)
+              const displayId = suffix || user.internalId
               return (
                 <ListItemButton
                   key={user.username}
@@ -72,8 +78,20 @@ export function DuplicateUserNameDialog({
                     <PersonIcon color="action" />
                   </ListItemIcon>
                   <ListItemText
-                    primary={user.displayName || user.username}
-                    secondary={user.internalId ? `ID: ${user.internalId}${suffix ? ` • #${suffix}` : ''}` : undefined}
+                    primary={
+                      <Stack direction="row" alignItems="center" spacing={1} sx={{ flexWrap: 'wrap' }}>
+                        <Typography component="span" fontWeight={500}>
+                          {user.displayName || user.username}
+                        </Typography>
+                        {displayId && (
+                          <Chip
+                            label={`id: ${displayId}`}
+                            size="small"
+                            sx={{ height: 20, fontSize: '0.7rem', bgcolor: 'action.hover' }}
+                          />
+                        )}
+                      </Stack>
+                    }
                   />
                 </ListItemButton>
               )
@@ -88,17 +106,12 @@ export function DuplicateUserNameDialog({
                 '&:hover': { bgcolor: 'action.selected' },
               }}
             >
-              <ListItemIcon sx={{ minWidth: 40 }}>
-                <AddIcon color="primary" />
-              </ListItemIcon>
               <ListItemText
                 primary={
                   <Typography variant="body2" color="primary" fontWeight={600}>
-                    Create new player
+                    + {!isMobile && 'Create '}new {name} player
                   </Typography>
                 }
-                secondary={`A new "${name}" with a unique ID`}
-                primaryTypographyProps={{ color: 'primary' }}
               />
             </ListItemButton>
           </List>

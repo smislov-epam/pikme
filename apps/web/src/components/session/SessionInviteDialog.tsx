@@ -151,7 +151,7 @@ export function SessionInviteDialog({
               <Typography variant="h6" gutterBottom>
                 🎲 {sessionData.title}
               </Typography>
-              {sessionData.hostName && (
+              {sessionData.hostName && sessionData.callerRole !== 'host' && (
                 <Typography variant="body2" color="text.secondary">
                   Hosted by {sessionData.hostName}
                 </Typography>

@@ -122,12 +122,11 @@ export function useActiveSessions(): UseActiveSessionsResult {
     setIsLoading(true);
     try {
       const sessionInfos = await Promise.all(
-        sessionIds.map(async (sessionId): Promise<ActiveSessionInfo | null> => {
+        sessionIds.map(async (sessionId) => {
           try {
             const preview = await getSessionPreview(sessionId);
-            // Determine role based on Cloud Function (works for anonymous/guest flows too)
             const isHost = preview.callerRole === 'host';
-            return {
+            const info: ActiveSessionInfo = {
               sessionId,
               title: preview.title,
               hostName: preview.hostName ?? null,
@@ -140,29 +139,28 @@ export function useActiveSessions(): UseActiveSessionsResult {
                 : null,
               status: preview.status,
             };
+            return { info, status: preview.status };
           } catch (err) {
             console.warn(`[useActiveSessions] Failed to load session ${sessionId}:`, err);
-            // Session may have expired or been deleted
-            return null;
+            // Keep the session ID so we can retry later instead of dropping it on transient errors
+            return { info: null, status: null };
           }
         })
       );
 
-      // Filter out failed/expired/closed sessions and update state
-      // Sessions with 'closed' status are finished (host revealed results and saved)
-      const validSessions = sessionInfos.filter(
-        (s): s is ActiveSessionInfo => s !== null && s.status === 'open'
-      );
+      const openSessions = sessionInfos
+        .map((result) => result.info)
+        .filter((s): s is ActiveSessionInfo => Boolean(s && s.status === 'open'));
 
-      // Remove expired session IDs
-      const validIds = validSessions.map((s) => s.sessionId);
-      const expiredIds = sessionIds.filter((id) => !validIds.includes(id));
-      if (expiredIds.length > 0) {
-        setSessionIds(validIds);
+      const closedOrExpiredIds = sessionInfos
+        .filter((result) => result.info && result.info.status !== 'open')
+        .map((result) => result.info!.sessionId);
+
+      if (closedOrExpiredIds.length > 0) {
+        setSessionIds((prev) => prev.filter((id) => !closedOrExpiredIds.includes(id)));
       }
 
-      // Sort by scheduled time (soonest first), then by title
-      validSessions.sort((a, b) => {
+      openSessions.sort((a, b) => {
         if (a.scheduledFor && b.scheduledFor) {
           return new Date(a.scheduledFor).getTime() - new Date(b.scheduledFor).getTime();
         }
@@ -171,7 +169,7 @@ export function useActiveSessions(): UseActiveSessionsResult {
         return a.title.localeCompare(b.title);
       });
 
-      setSessions(validSessions);
+      setSessions(openSessions);
     } catch (err) {
       console.error('[useActiveSessions] Failed to refresh sessions:', err);
     } finally {

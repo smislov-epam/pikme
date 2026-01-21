@@ -53,6 +53,9 @@ export interface WizardState {
     vetoed: Array<{ game: GameRecord; vetoedBy: string[] }>
   }
 
+  /** Optional override: bggId of a manually promoted pick */
+  promotedPickBggId: number | null
+
   // UI preferences
   layoutMode: LayoutMode
 }

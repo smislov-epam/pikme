@@ -10,6 +10,7 @@ import {
   Stack,
   TextField,
   Typography,
+  useMediaQuery,
 } from '@mui/material'
 import LinkIcon from '@mui/icons-material/Link'
 import SearchIcon from '@mui/icons-material/Search'
@@ -52,6 +53,8 @@ export function LocalPlayersGamesCard(props: {
     onAddGame,
   } = props
 
+  const isMobile = useMediaQuery('(max-width:600px)')
+
   return (
     <Card sx={{ bgcolor: colors.sand + '20' }}>
         <CardContent>
@@ -89,34 +92,57 @@ export function LocalPlayersGamesCard(props: {
           ) : null}
         </Box>
 
-        <TextField
-          fullWidth
-          size="small"
-          placeholder="Paste BGG link (e.g. boardgamegeek.com/boardgame/123/game)"
-          value={gameUrlInput}
-          onChange={(e) => onGameUrlInputChange(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && onAddGameFromUrl()}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <LinkIcon fontSize="small" />
-              </InputAdornment>
-            ),
-            endAdornment: (
-              <InputAdornment position="end">
-                <Button
-                  size="small"
-                  variant="contained"
-                  onClick={onAddGameFromUrl}
-                  disabled={!gameUrlInput.trim() || selectedLocalUsers.length === 0 || isLoading}
-                  sx={{ height: 32 }}
-                >
-                  Add
-                </Button>
-              </InputAdornment>
-            ),
+        <Box
+          sx={{
+            display: 'flex',
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: 2,
+            overflow: 'hidden',
           }}
-        />
+        >
+          <TextField
+            fullWidth
+            size="small"
+            placeholder="Paste BGG link (e.g. boardgamegeek.com/boardgame/123/game)"
+            value={gameUrlInput}
+            onChange={(e) => onGameUrlInputChange(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && onAddGameFromUrl()}
+            sx={{
+              flex: 1,
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 0,
+                '& fieldset': { border: 'none' },
+              },
+            }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <LinkIcon fontSize="small" />
+                </InputAdornment>
+              ),
+            }}
+          />
+          <Button
+            variant="contained"
+            onClick={onAddGameFromUrl}
+            disabled={isLoading}
+            sx={{
+              borderRadius: 0,
+              minWidth: isMobile ? 56 : 88,
+              px: isMobile ? 1.5 : 2.75,
+              boxShadow: 'none',
+            }}
+          >
+            {isLoading ? (
+              <CircularProgress size={16} color="inherit" />
+            ) : isMobile ? (
+              '+'
+            ) : (
+              '+ Add'
+            )}
+          </Button>
+        </Box>
 
         {onOpenManualGameDialog ? (
           <Box sx={{ mt: 1 }}>

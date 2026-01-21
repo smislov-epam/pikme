@@ -4,6 +4,7 @@ import {
   Badge,
   Box,
   Chip,
+  Container,
   IconButton,
   Menu,
   MenuItem,
@@ -22,6 +23,7 @@ import LogoutIcon from '@mui/icons-material/Logout'
 import EventNoteIcon from '@mui/icons-material/EventNote'
 import { colors } from '../../theme/theme'
 import { useAuth } from '../../hooks/useAuth'
+import { useNavigate } from 'react-router-dom'
 
 export function WizardHeader(props: {
   onOpenClearDialog: () => void
@@ -37,6 +39,7 @@ export function WizardHeader(props: {
 }) {
   const { onOpenClearDialog, onOpenBackup, onOpenSettings, onOpenHelp, variant = 'auto', activeSessionCount = 0, onOpenSessions } = props
   const { user, firebaseReady, signOut } = useAuth()
+  const navigate = useNavigate()
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
 
   // Show user is authenticated
@@ -60,7 +63,7 @@ export function WizardHeader(props: {
 
   const handleSignIn = () => {
     // Navigate to a simple sign-in flow
-    window.location.href = '/login'
+    navigate('/login')
   }
 
   const iconButtonSx = {
@@ -83,8 +86,9 @@ export function WizardHeader(props: {
         transition: 'background-color 0.3s ease',
       }}
     >
-      <Toolbar>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+      <Container maxWidth="md" sx={{ maxWidth: { lg: 1120 }, px: { xs: 2, sm: 3 } }}>
+        <Toolbar disableGutters>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
           <Box
             sx={{
               width: 36,
@@ -209,7 +213,8 @@ export function WizardHeader(props: {
             </IconButton>
           </Tooltip>
         ) : null}
-      </Toolbar>
+        </Toolbar>
+      </Container>
     </AppBar>
   )
 }

@@ -1,5 +1,6 @@
-import { StrictMode } from 'react'
+import { StrictMode, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
+import { BrowserRouter, useLocation } from 'react-router-dom'
 import './index.css'
 import App from './App.tsx'
 import { initializeGoogleAnalytics, trackPageView } from './services/analytics/googleAnalytics'
@@ -59,10 +60,24 @@ if (
 }
 
 initializeGoogleAnalytics()
-trackPageView('Pikme - Board Game Selector')
+
+// Route change tracker for analytics
+// eslint-disable-next-line react-refresh/only-export-components
+function RouteChangeTracker() {
+  const location = useLocation()
+
+  useEffect(() => {
+    trackPageView('Pikme - Board Game Selector')
+  }, [location.pathname, location.search, location.hash])
+
+  return null
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <BrowserRouter>
+      <RouteChangeTracker />
+      <App />
+    </BrowserRouter>
   </StrictMode>,
 )

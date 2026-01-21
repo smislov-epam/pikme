@@ -7,6 +7,7 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 import { colors } from '../../../theme/theme';
 import { SessionPreviewCard } from '../SessionPreviewCard';
 import { GuestPreferencesView } from '../GuestPreferencesView';
@@ -39,6 +40,7 @@ export function SessionJoinView({
   handlePreferenceSourceSelect,
   handleJoin,
 }: SessionJoinViewProps) {
+  const navigate = useNavigate();
   const effectiveSessionId =
     sessionId ?? localStorage.getItem('guestSessionId');
 
@@ -65,7 +67,7 @@ export function SessionJoinView({
               Unable to Join Session
             </Typography>
             <Alert severity="error">{error}</Alert>
-            <Button variant="outlined" onClick={() => (window.location.href = '/')}>
+            <Button variant="outlined" onClick={() => navigate('/')}>
               Go to Home
             </Button>
           </Stack>

@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import type { UserRecord } from '../../db/types';
 import type { NamedSlotInfo, SessionPreview, SharedGamePreference } from '../../services/session/types';
 import { getSessionGames, getSessionPreview, hydrateSessionGames } from '../../services/session';
 import { getLocalOwner } from '../../services/db/localOwnerService';
 import { hasExistingPreferences } from '../../services/db/userPreferencesService';
 import { isFirebaseAvailable, initializeFirebase } from '../../services/firebase';
-import { getSessionIdFromPath } from '../../services/session/joinUtils';
 import type { GuestMode } from '../../components/session/GuestModeSelection';
 
 export type JoinPageState =
@@ -44,11 +44,14 @@ export interface SessionJoinData {
   setClaimedNamedSlot: (value: boolean) => void;
   localOwner: UserRecord | null;
   hasLocalPreferences: boolean;
-  sessionId: string | null;
+  sessionId: string | undefined;
   callerRole: 'host' | 'member' | 'guest' | null;
 }
 
 export function useSessionJoinData(): SessionJoinData {
+  const navigate = useNavigate();
+  const { sessionId } = useParams<{ sessionId: string }>();
+
   const [state, setState] = useState<JoinPageState>('loading');
   const [preview, setPreview] = useState<SessionPreview | null>(null);
   const [displayName, setDisplayName] = useState('');
@@ -63,11 +66,6 @@ export function useSessionJoinData(): SessionJoinData {
   const [localOwner, setLocalOwner] = useState<UserRecord | null>(null);
   const [hasLocalPreferences, setHasLocalPreferences] = useState(false);
   const [callerRole, setCallerRole] = useState<'host' | 'member' | 'guest' | null>(null);
-
-  const sessionId = useMemo(
-    () => getSessionIdFromPath(window.location.pathname).sessionId,
-    []
-  );
 
   useEffect(() => {
     async function loadPreview() {
@@ -111,6 +109,7 @@ export function useSessionJoinData(): SessionJoinData {
               .map((g) => parseInt(g.gameId, 10))
               .filter((id) => !Number.isNaN(id));
             localStorage.setItem('guestSessionGameIds', JSON.stringify(ids));
+            localStorage.setItem(`guestSessionGameIds:${sessionId}`, JSON.stringify(ids))
           } catch {
             // ignore
           }
@@ -144,7 +143,7 @@ export function useSessionJoinData(): SessionJoinData {
         // Route based on caller's role in the session
         if (data.callerRole === 'host') {
           // Host should go to wizard with this session active
-          window.location.href = `/?session=${sessionId}`;
+          navigate(`/?session=${sessionId}`, { replace: true });
           return;
         }
 
@@ -165,6 +164,7 @@ export function useSessionJoinData(): SessionJoinData {
               .map((g) => parseInt(g.gameId, 10))
               .filter((id) => !Number.isNaN(id));
             localStorage.setItem('guestSessionGameIds', JSON.stringify(ids));
+            localStorage.setItem(`guestSessionGameIds:${sessionId}`, JSON.stringify(ids))
             await hydrateSessionGames(games, false);
             
             // Check if member marked as ready (waiting for results)
@@ -191,7 +191,7 @@ export function useSessionJoinData(): SessionJoinData {
     }
 
     loadPreview();
-  }, [sessionId]);
+  }, [navigate, sessionId]);
 
   return {
     state,

@@ -27,6 +27,7 @@ export function useWizardSessionSwitching(opts: {
   } = opts
 
   const loadRequestIdRef = useRef(0)
+  const loadingSessionIdRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (!activeSessionId || activeSessionId === lastLoadedSessionId) return
@@ -34,8 +35,12 @@ export function useWizardSessionSwitching(opts: {
     // snapshot switching. Guest flows are handled via the dedicated session page.
     if (sessionGuestMode) return
 
+    // Prevent re-entrancy for the same target session to avoid noisy logs and duplicate loads
+    if (loadingSessionIdRef.current === activeSessionId) return
+
     const requestId = ++loadRequestIdRef.current
     const targetSessionId = activeSessionId
+    loadingSessionIdRef.current = targetSessionId
 
     if (lastLoadedSessionId && wizard.users.length > 0) {
       const currentState = buildSessionWizardStateSnapshot({
@@ -53,7 +58,10 @@ export function useWizardSessionSwitching(opts: {
         const savedState = await loadSessionWizardState(targetSessionId)
 
         // If another session switch started while we were loading, ignore.
-        if (loadRequestIdRef.current !== requestId) return
+        if (loadRequestIdRef.current !== requestId) {
+          loadingSessionIdRef.current = null
+          return
+        }
 
         if (!savedState) {
           // No snapshot for this session yet. Reset session-scoped state but
@@ -69,6 +77,7 @@ export function useWizardSessionSwitching(opts: {
           
           setActiveStep(0)
           setLastLoadedSessionId(targetSessionId)
+          loadingSessionIdRef.current = null
           return
         }
 
@@ -86,6 +95,7 @@ export function useWizardSessionSwitching(opts: {
         // When switching sessions from the banner/list, always land on Preferences.
         setActiveStep(2)
         setLastLoadedSessionId(targetSessionId)
+        loadingSessionIdRef.current = null
     })()
   }, [
     activeSessionId,

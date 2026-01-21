@@ -17,8 +17,10 @@ export function useNewGameIds(params: {
   const [newGameIds, setNewGameIds] = useState<Set<number>>(() => new Set())
   const [isLoading, setIsLoading] = useState(false)
 
-  const gameIdSet = useMemo(() => new Set(gameIds), [gameIds])
+  // Stable key so we don't refire on every render when parent passes a new array instance
+  const gameIdsKey = useMemo(() => gameIds.join(','), [gameIds])
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- gameIdsKey is a stable derivative of gameIds
   useEffect(() => {
     let cancelled = false
 
@@ -34,6 +36,7 @@ export function useNewGameIds(params: {
         const userGames = await db.userGames.where('username').equals(username).toArray()
 
         const next = new Set<number>()
+        const gameIdSet = new Set(gameIds)
         for (const ug of userGames) {
           if (!gameIdSet.has(ug.bggId)) continue
 
@@ -59,7 +62,7 @@ export function useNewGameIds(params: {
     return () => {
       cancelled = true
     }
-  }, [gameIdSet, gameIds.length, lastPreferencesReviewedAt, username])
+  }, [gameIdsKey, lastPreferencesReviewedAt, username])
 
   return { newGameIds, isLoading }
 }

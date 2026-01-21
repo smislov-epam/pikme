@@ -86,16 +86,17 @@ export function WizardStepperNav(props: {
       sx={{
         mb: 3,
         py: 0.75,
-        px: 1.5,
+        px: { xs: 1.5, sm: 2, md: 3 },
         borderRadius: 999,
         bgcolor: colors.warmWhite,
         border: '1px solid',
         borderColor: alpha(colors.oceanBlue, 0.12),
         boxShadow: `0 6px 20px ${alpha(colors.navyBlue, 0.1)}`,
         overflow: 'visible',
+        width: '100%',
       }}
     >
-      <Stack direction="row" alignItems="center">
+      <Stack direction="row" alignItems="center" sx={{ width: '100%' }}>
         {wizardSteps.map((label, index) => {
           const isActive = activeStep === index
           const isCompleted = index < activeStep
@@ -111,7 +112,8 @@ export function WizardStepperNav(props: {
               sx={{
                 display: 'flex',
                 alignItems: 'center',
-                flex: 1,
+                flex: isLast ? 0 : 1,
+                flexShrink: 0,
               }}
             >
               {/* Step pill with gradient border */}

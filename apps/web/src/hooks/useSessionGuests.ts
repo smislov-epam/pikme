@@ -77,7 +77,7 @@ export function useSessionGuests(
   _pollInterval = 10000
 ): UseSessionGuestsResult {
   void _pollInterval
-  const { guestData, isLoading, error: listenerError, connected } = 
+  const { guestData, isLoading, error: listenerError } = 
     useSessionMembersListener(sessionId);
   const [guests, setGuests] = useState<SessionGuest[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -105,13 +105,6 @@ export function useSessionGuests(
       setError(err instanceof Error ? err.message : 'Failed to fetch guests');
     }
   }, [sessionId]);
-
-  // Log connection status for debugging
-  useEffect(() => {
-    if (sessionId && connected) {
-      console.debug('[useSessionGuests] Real-time listener connected for session:', sessionId);
-    }
-  }, [sessionId, connected]);
 
   return {
     guests,

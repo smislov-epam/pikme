@@ -2,6 +2,7 @@ import { CssBaseline } from '@mui/material'
 import { ThemeProvider } from '@mui/material/styles'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
+import { Navigate, Route, Routes } from 'react-router-dom'
 import WizardPage from './pages/WizardPage'
 import { RegistrationPage } from './pages/RegistrationPage'
 import { LoginPage } from './pages/LoginPage'
@@ -14,68 +15,59 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import { theme } from './theme/theme'
 import { ToastProvider } from './services/toast'
 
-/**
- * Simple path-based routing (no react-router needed for a few pages).
- */
-function getPage(): 'wizard' | 'register' | 'login' | 'session' | 'session-guest' | 'sessions' {
-  const path = window.location.pathname;
-  if (path === '/register' || path === '/register/') {
-    return 'register';
-  }
-  if (path === '/login' || path === '/login/') {
-    return 'login';
-  }
-  if (path === '/sessions' || path === '/sessions/') {
-    return 'sessions';
-  }
-  // Check for session guest preferences page first (more specific path)
-  if (path.match(/^\/session\/[^/]+\/preferences\/?$/)) {
-    return 'session-guest';
-  }
-  if (path.startsWith('/session/')) {
-    return 'session';
-  }
-  return 'wizard';
-}
-
 export default function App() {
-  const page = getPage();
-
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <LocalizationProvider dateAdapter={AdapterDateFns}>
         <ToastProvider>
           <ErrorBoundary>
-            {page === 'register' ? (
-              <RegistrationPage />
-            ) : page === 'login' ? (
-              <LoginPage />
-            ) : page === 'sessions' ? (
-              // Sessions management page
-              <DbGate>
-                <SessionsPage />
-              </DbGate>
-            ) : page === 'session-guest' ? (
-              // Session guest preferences page for returning users
-              <DbGate>
-                <LocalOwnerGate>
-                  <SessionGuestPage />
-                </LocalOwnerGate>
-              </DbGate>
-            ) : page === 'session' ? (
-              // Session join handles identity via invite flow (bypass local owner check)
-              <DbGate>
-                <SessionJoinPage />
-              </DbGate>
-            ) : (
-              // Main wizard requires local owner setup
-              <DbGate>
-                <LocalOwnerGate>
-                  <WizardPage />
-                </LocalOwnerGate>
-              </DbGate>
-            )}
+            <Routes>
+              <Route path="/register" element={<RegistrationPage />} />
+              <Route path="/login" element={<LoginPage />} />
+
+              <Route
+                path="/sessions"
+                element={
+                  <DbGate>
+                    <SessionsPage />
+                  </DbGate>
+                }
+              />
+
+              <Route
+                path="/session/:sessionId/preferences"
+                element={
+                  <DbGate>
+                    <LocalOwnerGate>
+                      <SessionGuestPage />
+                    </LocalOwnerGate>
+                  </DbGate>
+                }
+              />
+
+              <Route
+                path="/session/:sessionId"
+                element={
+                  <DbGate>
+                    <SessionJoinPage />
+                  </DbGate>
+                }
+              />
+
+              <Route
+                path="/"
+                element={
+                  <DbGate>
+                    <LocalOwnerGate>
+                      <WizardPage />
+                    </LocalOwnerGate>
+                  </DbGate>
+                }
+              />
+
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
           </ErrorBoundary>
         </ToastProvider>
       </LocalizationProvider>

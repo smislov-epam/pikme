@@ -203,11 +203,14 @@ export function useWizardStateComposed() {
         isDisliked: boolean
       }>>
     }) => {
-      // Load users from DB
+      // Load users from DB, materializing missing locals so we don't drop participants
       const loadedUsers: UserRecord[] = []
       for (const username of state.usernames) {
-        const user = await dbService.getUser(username)
-        if (user) loadedUsers.push(user)
+        let user = await dbService.getUser(username)
+        if (!user) {
+          user = await dbService.createLocalUser(username, username, false)
+        }
+        loadedUsers.push(user)
       }
       playersState.setUsers(loadedUsers)
       gamesState.setSessionGameIds(state.sessionGameIds)
@@ -322,6 +325,7 @@ export function useWizardStateComposed() {
 
     // Recommendation state
     recommendation: recommendationState.recommendation,
+    promotedPickBggId: recommendationState.promotedPickBggId,
     computeRecommendation: recommendationState.computeRecommendation,
     promoteAlternativeToTopPick: recommendationState.promoteAlternativeToTopPick,
 

@@ -77,7 +77,7 @@ export function WizardPageView(props: WizardPageViewProps) {
       <HelpWalkthroughDialog open={props.showHelpDialog} onClose={props.onCloseHelpDialog} />
       <BackupRestoreDialog open={props.showBackupDialog} onClose={props.onCloseBackupDialog} />
 
-      <Container maxWidth="md" sx={{ pb: 12, pt: 3, maxWidth: { lg: 1120 } }}>
+      <Container maxWidth="md" sx={{ pb: 12, pt: 3, maxWidth: { lg: 1120 }, px: { xs: 2, sm: 3 } }}>
         {props.sessionGuestMode && (
           <Alert
             severity="info"
@@ -101,6 +101,7 @@ export function WizardPageView(props: WizardPageViewProps) {
             zIndex: 5,
             mt: { xs: -1.25, sm: -1.75 },
             mb: 3,
+            width: '100%',
           }}
         >
           <WizardStepperNav

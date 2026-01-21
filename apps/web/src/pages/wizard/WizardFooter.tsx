@@ -55,7 +55,7 @@ export function WizardFooter(props: {
         backdropFilter: 'blur(8px)',
       }}
     >
-      <Container maxWidth="sm" sx={{ py: 2 }}>
+      <Container maxWidth="md" sx={{ py: 2, maxWidth: { lg: 1120 }, px: { xs: 2, sm: 3 } }}>
         <Box
           sx={{
             display: 'flex',

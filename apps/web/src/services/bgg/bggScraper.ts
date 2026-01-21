@@ -92,29 +92,23 @@ export async function fetchPartialGameInfo(url: string): Promise<PartialGameInfo
     throw new Error('Invalid BGG URL. Expected format: boardgamegeek.com/boardgame/12345/game-name')
   }
 
-  console.log(`[BGG] Fetching game info for ID: ${bggId}`)
-
   // Strategy 1: Try BGG XML API (most reliable, but requires API key in some environments).
   // If no API key is configured, skip XML entirely and go straight to HTML scraping.
   if (hasBggApiKey()) {
     try {
       const xmlData = await fetchFromXmlApi(bggId)
       if (xmlData && xmlData.name) {
-        console.log('[BGG] Successfully fetched from XML API:', xmlData)
         return xmlData
       }
     } catch (error) {
       console.warn('[BGG] XML API failed:', error)
     }
-  } else {
-    console.log('[BGG] No API key configured; skipping XML API and using HTML scraping')
   }
 
   // Strategy 2: Try HTML page scraping
   try {
     const htmlData = await fetchFromHtmlPage(bggId)
     if (htmlData && (htmlData.name || htmlData.thumbnail)) {
-      console.log('[BGG] Successfully scraped from HTML:', htmlData)
       return htmlData
     }
   } catch (error) {
@@ -122,7 +116,6 @@ export async function fetchPartialGameInfo(url: string): Promise<PartialGameInfo
   }
 
   // Return just the ID if all else fails
-  console.log('[BGG] All strategies failed, returning only bggId')
   return { bggId }
 }
 
@@ -188,8 +181,6 @@ async function fetchFromHtmlPage(bggId: number): Promise<PartialGameInfo> {
       { timeoutMs: HTML_FETCH_TIMEOUT_MS, maxAttempts: HTML_FETCH_MAX_ATTEMPTS, retryDelayMs: 500 },
     )
 
-    console.log(`[BGG] HTML page response status: ${response.status}`)
-
     if (response.ok) {
       const html = await response.text()
       const data = extractFromHtml(html, bggId)
@@ -204,7 +195,6 @@ async function fetchFromHtmlPage(bggId: number): Promise<PartialGameInfo> {
     const bggUrl = `https://boardgamegeek.com/boardgame/${bggId}`
     const corsProxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(bggUrl)}`
     
-    console.log('[BGG] Trying public CORS proxy...')
     const response = await fetchWithRetry(
       corsProxyUrl,
       { headers: { 'Accept': 'text/html' } },
@@ -215,7 +205,6 @@ async function fetchFromHtmlPage(bggId: number): Promise<PartialGameInfo> {
       const html = await response.text()
       const data = extractFromHtml(html, bggId)
       if (data.name) {
-        console.log('[BGG] Public CORS proxy succeeded')
         return data
       }
     }

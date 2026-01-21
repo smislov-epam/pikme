@@ -175,8 +175,6 @@ export function useSessionContext(): UseSessionContextResult {
           const preview = await getSessionPreview(sessionId)
           if (preview.status === 'open') {
             validIds.push(sessionId)
-          } else {
-            console.log(`[useSessionContext] Session ${sessionId} is ${preview.status}, removing`)
           }
         } catch (err) {
           console.warn(`[useSessionContext] Session ${sessionId} not found, removing:`, err)

@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { GuestMode } from '../../components/session/GuestModeSelection';
 import type { PreferenceSource } from '../../components/session/PreferenceSourceSelection';
 import type { SessionJoinData } from './useSessionJoinData';
@@ -19,6 +20,7 @@ export interface SessionJoinActions {
 }
 
 export function useSessionJoinActions(data: SessionJoinData): SessionJoinActions {
+  const navigate = useNavigate()
   const {
     displayName,
     preview,
@@ -53,8 +55,23 @@ export function useSessionJoinActions(data: SessionJoinData): SessionJoinActions
 
       try {
         const { signInAnonymously } = await import('firebase/auth');
-        const { getAuthInstance } = await import('../../services/firebase');
+        const { initializeFirebase, getAuthInstance } = await import('../../services/firebase');
+
+        const ready = await initializeFirebase();
+        if (!ready) {
+          setError('Firebase is unavailable. Please try again.');
+          setIsJoining(false);
+          setState('preview');
+          return;
+        }
+
         const auth = getAuthInstance();
+        if (!auth) {
+          setError('Firebase is unavailable. Please try again.');
+          setIsJoining(false);
+          setState('preview');
+          return;
+        }
         // Only sign in anonymously if not already authenticated
         // This prevents overwriting existing registered user auth or creating orphaned accounts
         if (auth && !auth.currentUser) {
@@ -91,6 +108,7 @@ export function useSessionJoinActions(data: SessionJoinData): SessionJoinActions
             .map((g) => parseInt(g.gameId, 10))
             .filter((id) => !Number.isNaN(id));
           localStorage.setItem('guestSessionGameIds', JSON.stringify(ids));
+          localStorage.setItem(`guestSessionGameIds:${sessionId}`, JSON.stringify(ids))
         } catch {
           // ignore
         }
@@ -218,7 +236,6 @@ export function useSessionJoinActions(data: SessionJoinData): SessionJoinActions
               for (const bggId of sessionGameIds) {
                 await addGameToUser(localOwner.username, bggId);
               }
-              console.log(`[SessionJoinPage] Synced ${sessionGameIds.length} session games to ${localOwner.username}`);
             }
           } catch (syncErr) {
             console.warn('[SessionJoinPage] Failed to sync session games into local collection:', syncErr);
@@ -242,7 +259,9 @@ export function useSessionJoinActions(data: SessionJoinData): SessionJoinActions
           }
           
           // Redirect to dedicated session guest page
-          window.location.href = `/session/${effectiveSessionId}/preferences`;
+          if (effectiveSessionId) {
+            navigate(`/session/${effectiveSessionId}/preferences`, { replace: true })
+          }
           return; // Don't call setIsSelectingSource since we're redirecting
         }
       } catch (err) {
@@ -253,7 +272,7 @@ export function useSessionJoinActions(data: SessionJoinData): SessionJoinActions
         setIsSelectingSource(false);
       }
     },
-    [hasSharedPreferences, localOwner, sessionId, sharedPreferences, setError, setIsSelectingSource, setState]
+    [hasSharedPreferences, localOwner, navigate, sessionId, sharedPreferences, setError, setIsSelectingSource, setState]
   );
 
   const handleSomeoneElse = useCallback(() => {

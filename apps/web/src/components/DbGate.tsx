@@ -100,9 +100,7 @@ export function DbGate({ children }: PropsWithChildren) {
             <Button
               variant="outlined"
               onClick={() => {
-                const url = new URL(window.location.href)
-                url.hash = 'storage-help'
-                window.location.assign(url.toString())
+                window.location.hash = 'storage-help'
               }}
             >
               Storage help

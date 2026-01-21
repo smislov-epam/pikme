@@ -28,12 +28,23 @@ function cleanupCache(): void {
   }
 }
 
-let cleanupTimer: ReturnType<typeof setInterval> | null = setInterval(cleanupCache, 30000);
+let cleanupTimer: ReturnType<typeof setTimeout> | null = null;
 
-/** Stop the background cache cleanup interval (useful for tests or teardown) */
+function scheduleCleanup(): void {
+  if (cleanupTimer) return;
+  cleanupTimer = setTimeout(() => {
+    cleanupTimer = null;
+    cleanupCache();
+    if (sessionPreviewCache.size > 0) {
+      scheduleCleanup();
+    }
+  }, CACHE_TTL_MS);
+}
+
+/** Stop the background cache cleanup timer (useful for tests or teardown) */
 export function stopPreviewCacheCleanup(): void {
   if (cleanupTimer) {
-    clearInterval(cleanupTimer);
+    clearTimeout(cleanupTimer);
     cleanupTimer = null;
   }
 }
@@ -46,6 +57,11 @@ export function getCachedPreview(sessionId: string): SessionPreview | null {
   if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
     return cached.data;
   }
+  if (cached) {
+    // Expired; remove stale entry and allow timer to stop naturally
+    sessionPreviewCache.delete(sessionId);
+    if (sessionPreviewCache.size === 0) stopPreviewCacheCleanup();
+  }
   return null;
 }
 
@@ -54,6 +70,7 @@ export function getCachedPreview(sessionId: string): SessionPreview | null {
  */
 export function setCachedPreview(sessionId: string, preview: SessionPreview): void {
   sessionPreviewCache.set(sessionId, { data: preview, timestamp: Date.now() });
+  scheduleCleanup();
 }
 
 /**

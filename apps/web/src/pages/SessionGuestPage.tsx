@@ -6,27 +6,23 @@
  */
 
 import { useEffect, useMemo } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Box, Button, Container, Stack } from '@mui/material';
 
 import { SessionGuestView } from '../components/session/SessionGuestView';
 import { useActiveSessions } from '../hooks/useActiveSessions';
 import { colors } from '../theme/theme';
 
-/** Extract session ID from URL path /session/:id/preferences */
-function getSessionIdFromPath(): string | null {
-  const match = window.location.pathname.match(/^\/session\/([^/]+)\/preferences/);
-  return match ? match[1] : null;
-}
-
 export function SessionGuestPage() {
-  const sessionId = getSessionIdFromPath();
+  const navigate = useNavigate();
+  const { sessionId } = useParams<{ sessionId: string }>();
 
   // Redirect to wizard if sessionId is missing (defensive)
   useEffect(() => {
     if (!sessionId) {
-      window.location.href = '/';
+      navigate('/', { replace: true });
     }
-  }, [sessionId]);
+  }, [navigate, sessionId]);
 
   // Active sessions for banner
   const {
@@ -59,7 +55,7 @@ export function SessionGuestPage() {
         <Stack spacing={2}>
           <Button
             variant="text"
-            onClick={() => (window.location.href = `/session/${sessionId}`)}
+            onClick={() => navigate(`/session/${sessionId}`)}
             sx={{ alignSelf: 'flex-start' }}
           >
             Back

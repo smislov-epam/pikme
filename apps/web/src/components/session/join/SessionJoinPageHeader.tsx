@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { WizardHeader } from '../../../pages/wizard/WizardHeader'
 import { BggApiKeyDialog } from '../../BggApiKeyDialog'
 import { HelpWalkthroughDialog } from '../../HelpWalkthroughDialog'
@@ -9,6 +10,7 @@ import { useActiveSessions } from '../../../hooks/useActiveSessions'
 
 export function SessionJoinPageHeader() {
   const { sessions } = useActiveSessions()
+  const navigate = useNavigate()
 
   const [showApiKeyDialog, setShowApiKeyDialog] = useState(false)
   const [showHelpDialog, setShowHelpDialog] = useState(false)
@@ -31,7 +33,7 @@ export function SessionJoinPageHeader() {
         onOpenHelp={() => setShowHelpDialog(true)}
         activeSessionCount={sessions.length}
         onOpenSessions={() => {
-          window.location.href = '/sessions'
+          navigate('/sessions')
         }}
       />
 

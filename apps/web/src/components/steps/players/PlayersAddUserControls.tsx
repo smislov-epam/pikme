@@ -1,4 +1,3 @@
-import AddIcon from '@mui/icons-material/Add'
 import PersonIcon from '@mui/icons-material/Person'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import {
@@ -6,12 +5,12 @@ import {
   Box,
   Button,
   CircularProgress,
-  InputAdornment,
   Stack,
   TextField,
   ToggleButton,
   ToggleButtonGroup,
   Typography,
+  useMediaQuery,
 } from '@mui/material'
 
 export type UserMode = 'bgg' | 'local'
@@ -37,6 +36,7 @@ export function PlayersAddUserControls({
   isLoading,
   onAdd,
 }: PlayersAddUserControlsProps) {
+  const isMobile = useMediaQuery('(max-width:600px)')
   return (
     <>
       <ToggleButtonGroup
@@ -61,106 +61,161 @@ export function PlayersAddUserControls({
       </ToggleButtonGroup>
 
       {mode === 'bgg' ? (
-        <TextField
-          fullWidth
-          size="small"
-          placeholder="Enter BGG username"
-          value={inputValue}
-          onChange={(e) => onInputValueChange(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') onAdd()
+        <Box
+          sx={{
+            display: 'flex',
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: 2,
+            overflow: 'hidden',
           }}
-          disabled={isLoading}
-          InputProps={{
-            endAdornment: (
-              <InputAdornment position="end">
-                <Button
-                  variant="contained"
-                  size="small"
-                  onClick={onAdd}
-                  disabled={!inputValue.trim() || isLoading}
-                  startIcon={isLoading ? <CircularProgress size={16} /> : <AddIcon />}
-                  sx={{ height: 32 }}
-                >
-                  Add
-                </Button>
-              </InputAdornment>
-            ),
-          }}
-        />
+        >
+          <TextField
+            fullWidth
+            size="small"
+            placeholder="Enter BGG username"
+            value={inputValue}
+            onChange={(e) => onInputValueChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') onAdd()
+            }}
+            disabled={isLoading}
+            sx={{
+              flex: 1,
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 0,
+                '& fieldset': { border: 'none' },
+              },
+            }}
+          />
+          <Button
+            variant="contained"
+            onClick={onAdd}
+            disabled={isLoading}
+            sx={{
+              borderRadius: 0,
+              minWidth: isMobile ? 56 : 88,
+              px: isMobile ? 1.5 : 2.75,
+              boxShadow: 'none',
+            }}
+          >
+            {isLoading ? (
+              <CircularProgress size={16} color="inherit" />
+            ) : isMobile ? (
+              '+'
+            ) : (
+              '+ Add'
+            )}
+          </Button>
+        </Box>
       ) : (
-        <Autocomplete
-          freeSolo
-          disableClearable
-          options={autocompleteOptions}
-          getOptionLabel={(opt) => (typeof opt === 'string' ? opt : opt.label)}
-          inputValue={inputValue}
-          onInputChange={(_, v) => onInputValueChange(v)}
-          onChange={(_, v) => {
-            if (v && typeof v !== 'string') {
-              // Selected an existing user - keep display name in the field (avoid stuffing internalId)
-              onInputValueChange(v.label)
-            } else if (typeof v === 'string') {
-              onInputValueChange(v)
-            }
+        <Box
+          sx={{
+            display: 'flex',
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: 2,
+            overflow: 'hidden',
           }}
-          disabled={isLoading}
-          renderOption={(props, option) => (
-            <Box component="li" {...props} key={option.username}>
-              <Stack direction="row" spacing={1} alignItems="center">
-                <PersonIcon fontSize="small" color="action" />
-                <Typography
-                  variant="body2"
-                  sx={{ display: 'flex', gap: 0.5, alignItems: 'center', '& .suffix': { color: 'text.secondary', fontWeight: 600 } }}
-                >
-                  <span>{option.label}</span>
-                  {option.suffix && <span className="suffix">{option.suffix}</span>}
-                </Typography>
-              </Stack>
-            </Box>
-          )}
-          renderInput={(params) => (
-            <TextField
-              {...params}
-              fullWidth
-              size="small"
-              placeholder={
-                autocompleteOptions.length > 0 ? 'Enter name or select existing player' : 'Enter player name'
+        >
+          <Autocomplete
+            freeSolo
+            disableClearable
+            options={autocompleteOptions}
+            getOptionLabel={(opt) => (typeof opt === 'string' ? opt : opt.label)}
+            inputValue={inputValue}
+            onInputChange={(_, v) => onInputValueChange(v)}
+            onChange={(_, v) => {
+              if (v && typeof v !== 'string') {
+                onInputValueChange(v.label)
+              } else if (typeof v === 'string') {
+                onInputValueChange(v)
               }
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && inputValue.trim()) {
-                  e.preventDefault()
-                  onAdd()
+            }}
+            disabled={isLoading}
+            sx={{
+              flex: 1,
+              bgcolor: 'white',
+              '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
+              '& .MuiAutocomplete-inputRoot': { 
+                borderRadius: 0,
+                '&::before, &::after': { display: 'none' },
+              },
+              '& .MuiAutocomplete-endAdornment': {
+                borderLeft: 'none',
+              },
+              '& .MuiInputBase-root': {
+                border: 'none',
+                boxShadow: 'none',
+                bgcolor: 'white',
+              },
+            }}
+            renderOption={(props, option) => (
+              <Box component="li" {...props} key={option.username}>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <PersonIcon fontSize="small" color="action" />
+                  <Typography
+                    variant="body2"
+                    sx={{ display: 'flex', gap: 0.5, alignItems: 'center', '& .suffix': { color: 'text.secondary', fontWeight: 600 } }}
+                  >
+                    <span>{option.label}</span>
+                    {option.suffix && <span className="suffix">{option.suffix}</span>}
+                  </Typography>
+                </Stack>
+              </Box>
+            )}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                fullWidth
+                size="small"
+                variant="standard"
+                placeholder={
+                  autocompleteOptions.length > 0 ? 'Enter name or select existing player' : 'Enter player name'
                 }
-              }}
-              sx={{
-                // Ensure text doesn't overlap the inline Add button + Autocomplete popup icon.
-                '& .MuiOutlinedInput-input': { pr: 14 },
-              }}
-              InputProps={{
-                ...params.InputProps,
-                endAdornment: (
-                  <>
-                    {params.InputProps.endAdornment}
-                    <InputAdornment position="end">
-                      <Button
-                        variant="contained"
-                        size="small"
-                        onClick={onAdd}
-                        disabled={!inputValue.trim() || isLoading}
-                        startIcon={isLoading ? <CircularProgress size={16} /> : <AddIcon />}
-                        // Leave room for the Autocomplete popup indicator on the far right.
-                        sx={{ height: 32, mr: 4.5 }}
-                      >
-                        Add
-                      </Button>
-                    </InputAdornment>
-                  </>
-                ),
-              }}
-            />
-          )}
-        />
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && inputValue.trim()) {
+                    e.preventDefault()
+                    onAdd()
+                  }
+                }}
+                sx={{
+                  '& .MuiInput-root': {
+                    '&::before, &::after': { display: 'none' },
+                    px: 1.5,
+                    py: 1,
+                  },
+                  '& .MuiInputBase-root': {
+                    '&::before, &::after': { display: 'none' },
+                  },
+                }}
+                InputProps={{
+                  ...params.InputProps,
+                  disableUnderline: true,
+                }}
+              />
+            )}
+          />
+          <Button
+            variant="contained"
+            onClick={onAdd}
+            disabled={isLoading}
+            sx={{
+              borderRadius: 0,
+              minWidth: isMobile ? 56 : 88,
+              px: isMobile ? 1.5 : 2.75,
+              boxShadow: 'none',
+            }}
+          >
+            {isLoading ? (
+              <CircularProgress size={16} color="inherit" />
+            ) : isMobile ? (
+              '+'
+            ) : (
+              '+ Add'
+            )}
+          </Button>
+        </Box>
       )}
     </>
   )

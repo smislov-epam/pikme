@@ -48,7 +48,6 @@ export function LocalOwnerGate({ children, bypass = false }: LocalOwnerGateProps
     setAutoCreating(true)
     ;(async () => {
       try {
-        console.debug('[LocalOwnerGate] Auto-creating local owner for authenticated user:', user.uid)
         await createLocalOwner({
           displayName: user.displayName || user.email?.split('@')[0] || 'User',
         })
@@ -78,7 +77,6 @@ export function LocalOwnerGate({ children, bypass = false }: LocalOwnerGateProps
     // to the currently authenticated account.
     ;(async () => {
       try {
-        console.debug('[LocalOwnerGate] Linking existing local owner to authenticated user:', user.uid)
         await linkLocalOwnerToFirebase(user.uid)
         setSetupComplete(true)
       } catch (err) {

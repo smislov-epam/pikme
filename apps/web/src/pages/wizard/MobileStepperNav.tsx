@@ -82,7 +82,7 @@ export function MobileStepperNav({ activeStep, compactBadgeCount = 0, lockedStep
       elevation={10}
       sx={{
         mb: 2,
-        px: 1.5,
+        px: { xs: 1.5, sm: 2 },
         py: 1,
         borderRadius: 999,
         bgcolor: alpha(colors.warmWhite, 0.95),
@@ -90,6 +90,7 @@ export function MobileStepperNav({ activeStep, compactBadgeCount = 0, lockedStep
         borderColor: alpha(colors.oceanBlue, 0.15),
         backdropFilter: 'blur(10px)',
         boxShadow: `0 8px 24px ${alpha(colors.navyBlue, 0.12)}`,
+        width: '100%',
       }}
     >
       <Stack direction="row" alignItems="center" justifyContent="space-between">

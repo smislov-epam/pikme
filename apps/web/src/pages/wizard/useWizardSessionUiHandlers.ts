@@ -93,7 +93,6 @@ export function useWizardSessionUiHandlers(args: {
       // Also save to the new session (it inherits the current configuration)
       void saveSessionWizardState(sessionId, sessionState)
 
-      console.debug('[handleSessionCreated] Setting activeSessionId:', sessionId)
       setLastLoadedSessionId(sessionId)
       session.setActiveSessionId(sessionId)
       setWizardActiveSessionId(sessionId)

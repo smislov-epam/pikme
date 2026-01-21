@@ -137,7 +137,6 @@ export function useSessionMembersListener(
         if (!auth?.currentUser) {
           // Not authenticated yet - silently skip listener setup
           // The listener will be retried when auth state changes
-          console.debug('[useSessionMembersListener] No auth user, skipping listener');
           setIsLoading(false);
           return;
         }
@@ -145,7 +144,6 @@ export function useSessionMembersListener(
         // Anonymous auth is used for guest/session flows.
         // Guest preferences are host-only, so anonymous users should never subscribe here.
         if (auth.currentUser.isAnonymous) {
-          console.debug('[useSessionMembersListener] Anonymous user, skipping host-only listener');
           setIsLoading(false);
           return;
         }
@@ -167,32 +165,21 @@ export function useSessionMembersListener(
           const sessionRef = doc(firestore, 'sessions', currentSessionId);
           const sessionSnap = await getDoc(sessionRef);
           if (!sessionSnap.exists()) {
-            console.debug('[useSessionMembersListener] Session does not exist, skipping listener');
             setIsLoading(false);
             return;
           }
           sessionCreatedByUid = (sessionSnap.data() as { createdByUid?: unknown })?.createdByUid as string | undefined;
           isHost = typeof sessionCreatedByUid === 'string' && sessionCreatedByUid === auth.currentUser.uid;
-          console.debug('[useSessionMembersListener] Host check:', {
-            sessionId: currentSessionId,
-            createdByUid: sessionCreatedByUid,
-            currentUid: auth.currentUser.uid,
-            isHost,
-          });
-        } catch (err) {
+        } catch {
           // Any error reading session means we can't verify host status → skip listener
-          console.debug('[useSessionMembersListener] Could not verify host role, skipping listener:', err);
           setIsLoading(false);
           return;
         }
 
         if (!isHost) {
-          console.debug('[useSessionMembersListener] Not session host, skipping guestPreferences listener');
           setIsLoading(false);
           return;
         }
-
-        console.debug('[useSessionMembersListener] Host verified, currentUser.uid:', auth.currentUser.uid);
 
         // Listen to guestPreferences subcollection
         const guestPrefsRef = collection(
@@ -203,19 +190,14 @@ export function useSessionMembersListener(
         );
         const guestPrefsQuery = query(guestPrefsRef, orderBy('updatedAt', 'desc'));
 
-        console.debug('[useSessionMembersListener] Setting up listener for session:', currentSessionId);
-
         unsubscribeRef.current = onSnapshot(
           guestPrefsQuery,
           (snapshot) => {
             if (cancelled) return;
 
-            console.debug('[useSessionMembersListener] Snapshot received, docs:', snapshot.docs.length);
-
             const guests: GuestPreferencesData[] = snapshot.docs
               .map((doc) => {
                 const data = doc.data();
-                console.debug('[useSessionMembersListener] Doc:', doc.id, 'participantId:', data.participantId, 'isLocalUser:', data.isLocalUser);
                 return {
                   uid: data.uid || doc.id,
                   displayName: data.displayName || 'Guest',
@@ -243,7 +225,6 @@ export function useSessionMembersListener(
                 return rest;
               });
 
-            console.debug('[useSessionMembersListener] Filtered guests:', guests.length);
             setGuestData(guests);
             setConnected(true);
             setIsLoading(false);

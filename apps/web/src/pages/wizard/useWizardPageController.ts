@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { WizardPageViewProps } from './WizardPageView'
 import { buildWizardPageViewProps } from './buildWizardPageViewProps'
 import { useWizardState } from '../../hooks/useWizardState'
@@ -16,8 +17,10 @@ import { useWizardSaveNightAction } from './useWizardSaveNightAction'
 import { useEnsureLocalOwnerSelected } from './useEnsureLocalOwnerSelected'
 import { useWizardPageEffects } from './useWizardPageEffects'
 import { wizardSteps } from './wizardSteps'
+import { getWizardViewForSession } from './getWizardViewForSession'
 
 export function useWizardPageController(): WizardPageViewProps {
+  const navigate = useNavigate()
   const { activeStep, setActiveStep, completedSteps, setCompletedSteps } = useWizardActiveStepState()
   const dialogs = useWizardDialogsState()
   const [lastLoadedSessionId, setLastLoadedSessionId] = useState<string | null>(null)
@@ -112,6 +115,13 @@ export function useWizardPageController(): WizardPageViewProps {
   const lockedSteps = isSessionFrozen ? [0, 1] : session.lockedSteps
   const disabledSteps = isSessionFrozen ? [] : session.disabledSteps
 
+  const wizardForView = getWizardViewForSession({
+    wizard,
+    activeSessionId: session.activeSessionId,
+    mergedUsers: session.mergedUsers,
+    mergedPreferences: session.mergedPreferences,
+  })
+
   return buildWizardPageViewProps({
     activeStep,
     setActiveStep,
@@ -121,7 +131,7 @@ export function useWizardPageController(): WizardPageViewProps {
     stepSubtitles,
     compactBadgeCount: nav.compactBadgeCount,
     canJumpTo: nav.canJumpTo,
-    wizard,
+    wizard: wizardForView,
     user,
     activeSessions: activeSessionsState.sessions,
     activeSessionsCurrentId: activeSessionsState.currentSessionId,
@@ -143,7 +153,7 @@ export function useWizardPageController(): WizardPageViewProps {
     onNext: nav.onNext,
     onStartOver: nav.onStartOver,
     onOpenSessions: () => {
-      window.location.assign('/sessions')
+      navigate('/sessions')
     },
     showClearDialog: dialogs.showClearDialog,
     onOpenClearDialog: () => dialogs.setShowClearDialog(true),

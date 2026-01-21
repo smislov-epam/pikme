@@ -31,7 +31,8 @@ export function PreferenceRowCard({
   isTopPick,
   isDisliked,
   rank,
-  userRating,
+  // userRating reserved for future display of BGG rating badge
+  userRating: _userRating = undefined,
   onOpenDetails,
   onToggleTopPick,
   onToggleDisliked,
@@ -39,6 +40,7 @@ export function PreferenceRowCard({
   nextRank,
   dragHandleProps,
 }: PreferenceRowCardProps) {
+  void _userRating // suppress unused warning
   const {
     onPointerDown: dragOnPointerDown,
     onMouseDown: dragOnMouseDown,
@@ -65,8 +67,8 @@ export function PreferenceRowCard({
       sx={{
         display: 'flex',
         alignItems: 'center',
-        gap: 1,
-        p: 1,
+        gap: 0.75,
+        p: 0.75,
         bgcolor: 'background.default',
         borderRadius: '6px',
         border: '1px solid',
@@ -117,11 +119,6 @@ export function PreferenceRowCard({
         <Typography variant="body2" fontWeight={600} noWrap>
           {game.name}
         </Typography>
-        {userRating ? (
-          <Typography variant="caption" color="text.secondary">
-            You ★ {userRating.toFixed(1)}
-          </Typography>
-        ) : null}
       </Box>
 
       {rank !== undefined ? (
@@ -136,31 +133,33 @@ export function PreferenceRowCard({
             e.stopPropagation()
             onRank(nextRank)
           }}
-          sx={{ minWidth: 'auto', height: 44, px: 1 }}
+          sx={{ minWidth: 'auto', height: 36, px: 0.5 }}
         >
           #{nextRank}
         </Button>
       ) : null}
 
       <IconButton
+        size="small"
         onClick={(e) => {
           e.stopPropagation()
           onToggleTopPick()
         }}
         aria-label={isTopPick ? 'Unstar top pick' : 'Star as top pick'}
-        sx={{ width: 44, height: 44, color: isTopPick ? colors.sand : 'text.disabled', '&:hover': { color: colors.sand } }}
+        sx={{ width: 36, height: 36, color: isTopPick ? colors.sand : 'text.disabled', '&:hover': { color: colors.sand } }}
       >
         {isTopPick ? <StarIcon fontSize="small" /> : <StarBorderIcon fontSize="small" />}
       </IconButton>
 
       {onToggleDisliked ? (
         <IconButton
+          size="small"
           onClick={(e) => {
             e.stopPropagation()
             onToggleDisliked()
           }}
           aria-label={isDisliked ? 'Remove dislike' : 'Mark disliked'}
-          sx={{ width: 44, height: 44, color: isDisliked ? 'error.main' : 'text.disabled', '&:hover': { color: 'error.main' } }}
+          sx={{ width: 36, height: 36, color: isDisliked ? 'error.main' : 'text.disabled', '&:hover': { color: 'error.main' } }}
         >
           {isDisliked ? <ThumbDownAltIcon fontSize="small" /> : <ThumbDownOffAltIcon fontSize="small" />}
         </IconButton>

@@ -1,10 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   Box,
   Button,
   CircularProgress,
   IconButton,
-  InputAdornment,
   Stack,
   TextField,
   Typography,
@@ -12,7 +11,6 @@ import {
 import { useTheme } from '@mui/material/styles'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
-import AddIcon from '@mui/icons-material/Add'
 import { colors } from '../../theme/theme'
 import type { GameNoteRecord } from '../../db/types'
 import * as notesService from '../../services/db/gameNotesService'
@@ -31,13 +29,12 @@ export function GameNotesPanel(props: {
 
   const theme = useTheme()
   const isPhone = useMediaQuery(theme.breakpoints.down('sm'))
+  const isMobile = useMediaQuery('(max-width:600px)')
 
   const [notes, setNotes] = useState<GameNoteRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [draft, setDraft] = useState('')
-
-  const canAdd = useMemo(() => draft.trim().length > 0 && !saving, [draft, saving])
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -106,38 +103,64 @@ export function GameNotesPanel(props: {
         </Box>
       </Stack>
 
-      <TextField
-        size="small"
-        placeholder="Add a note…"
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-            e.preventDefault()
-            void handleAdd()
-          }
-        }}
-        multiline
-        minRows={2}
-        fullWidth
-        helperText={isPhone ? undefined : 'Tip: Ctrl+Enter to add quickly.'}
-        InputProps={{
-          endAdornment: (
-            <InputAdornment position="end" sx={{ alignSelf: 'flex-start', mt: 0.5 }}>
-              <Button
-                variant="contained"
-                size="small"
-                startIcon={saving ? <CircularProgress size={16} /> : <AddIcon />}
-                onClick={() => void handleAdd()}
-                disabled={!canAdd}
-                sx={{ height: 32, whiteSpace: 'nowrap' }}
-              >
-                Add
-              </Button>
-            </InputAdornment>
-          ),
-        }}
-      />
+      <Box>
+        <Box
+          sx={{
+            display: 'flex',
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: 2,
+            overflow: 'hidden',
+          }}
+        >
+          <TextField
+            size="small"
+            placeholder="Add a note…"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault()
+                void handleAdd()
+              }
+            }}
+            multiline
+            minRows={2}
+            sx={{
+              flex: 1,
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 0,
+                '& fieldset': { border: 'none' },
+              },
+            }}
+          />
+          <Button
+            variant="contained"
+            onClick={() => void handleAdd()}
+            disabled={saving}
+            sx={{
+              borderRadius: 0,
+              minWidth: isMobile ? 56 : 88,
+              px: isMobile ? 1.5 : 2.75,
+              boxShadow: 'none',
+              alignSelf: 'stretch',
+            }}
+          >
+            {saving ? (
+              <CircularProgress size={16} color="inherit" />
+            ) : isMobile ? (
+              '+'
+            ) : (
+              '+ Add'
+            )}
+          </Button>
+        </Box>
+        {!isPhone && (
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+            Tip: Ctrl+Enter to add quickly.
+          </Typography>
+        )}
+      </Box>
 
       <Box sx={{ flex: 1, overflow: 'auto', pr: 0.5 }}>
         {loading ? (

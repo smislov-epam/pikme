@@ -10,7 +10,7 @@ import {
   alpha,
 } from '@mui/material'
 import type { ReactElement } from 'react'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty'
 import HourglassTopIcon from '@mui/icons-material/HourglassTop'
 import CelebrationIcon from '@mui/icons-material/Celebration'
@@ -21,6 +21,8 @@ import DeleteForeverIcon from '@mui/icons-material/DeleteForever'
 import type { ActiveSessionInfo } from '../../hooks/useActiveSessions'
 import { colors } from '../../theme/theme'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
+
+const softDanger = '#e05b75'
 
 type StatusDisplay = {
   label: string
@@ -108,6 +110,17 @@ export function SessionCard(props: {
   const statusInfo = getStatusDisplay(session)
   const scheduledTime = formatScheduledTime(session.scheduledFor)
 
+  const actionButtonSx = useMemo(
+    () => ({
+      bgcolor: colors.warmWhite,
+      border: '1px solid',
+      borderColor: 'divider',
+      boxShadow: 'none',
+      '&:hover': { bgcolor: alpha(colors.warmWhite, 0.9) },
+    }),
+    []
+  )
+
   return (
     <Card
       elevation={1}
@@ -120,73 +133,59 @@ export function SessionCard(props: {
     >
       <CardActionArea onClick={() => onViewSession(session.sessionId)}>
         <CardContent>
-          <Stack spacing={1}>
-            <Stack direction="row" alignItems="center" spacing={1}>
-              <Typography variant="h6" sx={{ fontWeight: 600, flex: 1 }}>
-                🎲 {session.title}
-              </Typography>
+            <Stack spacing={1.25}>
+              <Stack direction="row" alignItems="flex-start" spacing={1}>
+                <Typography variant="h6" sx={{ fontWeight: 600, flex: 1 }}>
+                  🎲 {session.title}
+                </Typography>
 
-              {session.role === 'host' && session.status !== 'closed' && (
-                <Tooltip title="View & Share Invite">
-                  <IconButton
-                    size="small"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onViewInvite(session.sessionId)
-                    }}
-                    sx={{
-                      bgcolor: alpha(colors.oceanBlue, 0.1),
-                      '&:hover': { bgcolor: alpha(colors.oceanBlue, 0.2) },
-                    }}
-                  >
-                    <ShareIcon fontSize="small" sx={{ color: colors.oceanBlue }} />
-                  </IconButton>
-                </Tooltip>
-              )}
+                <Stack direction="row" alignItems="center" spacing={0.75}>
+                  {session.role === 'host' && session.status !== 'closed' && (
+                    <Tooltip title="View & Share Invite">
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onViewInvite(session.sessionId)
+                        }}
+                        sx={actionButtonSx}
+                      >
+                        <ShareIcon fontSize="small" sx={{ color: colors.oceanBlue }} />
+                      </IconButton>
+                    </Tooltip>
+                  )}
 
-              {session.role === 'host' && session.status !== 'closed' && onTerminateSession && (
-                <Tooltip title="Close online session (Terminate)">
-                  <IconButton
-                    size="small"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setShowTerminateConfirm(true)
-                    }}
-                    sx={{
-                      bgcolor: alpha('#d32f2f', 0.08),
-                      '&:hover': { bgcolor: alpha('#d32f2f', 0.16) },
-                    }}
-                  >
-                    <StopCircleIcon fontSize="small" sx={{ color: '#d32f2f' }} />
-                  </IconButton>
-                </Tooltip>
-              )}
+                  {session.role === 'host' && session.status !== 'closed' && onTerminateSession && (
+                    <Tooltip title="Close online session (Terminate)">
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setShowTerminateConfirm(true)
+                        }}
+                        sx={actionButtonSx}
+                      >
+                        <StopCircleIcon fontSize="small" sx={{ color: softDanger }} />
+                      </IconButton>
+                    </Tooltip>
+                  )}
 
-              {session.role === 'host' && onDeleteSession && (
-                <Tooltip title="Delete session from Firebase">
-                  <IconButton
-                    size="small"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setShowDeleteConfirm(true)
-                    }}
-                    sx={{
-                      bgcolor: alpha('#d32f2f', 0.08),
-                      '&:hover': { bgcolor: alpha('#d32f2f', 0.16) },
-                    }}
-                  >
-                    <DeleteForeverIcon fontSize="small" sx={{ color: '#d32f2f' }} />
-                  </IconButton>
-                </Tooltip>
-              )}
-
-              <Chip
-                size="small"
-                label={session.role === 'host' ? 'Host' : 'Guest'}
-                color={session.role === 'host' ? 'primary' : 'default'}
-                sx={{ fontWeight: 600 }}
-              />
-            </Stack>
+                  {session.role === 'host' && onDeleteSession && (
+                    <Tooltip title="Delete session from Firebase">
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setShowDeleteConfirm(true)
+                        }}
+                        sx={actionButtonSx}
+                      >
+                        <DeleteForeverIcon fontSize="small" sx={{ color: softDanger }} />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                </Stack>
+              </Stack>
 
             <Typography variant="body2" color="text.secondary">
               {session.role === 'host'
@@ -195,7 +194,7 @@ export function SessionCard(props: {
               {scheduledTime && ` • ${scheduledTime}`}
             </Typography>
 
-            <Stack direction="row" alignItems="center" spacing={0.5}>
+            <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
               <Chip
                 size="small"
                 icon={statusInfo.icon}
@@ -203,6 +202,13 @@ export function SessionCard(props: {
                 color={statusInfo.color}
                 variant="outlined"
                 sx={{ fontWeight: 500, ...(statusInfo.chipSx ?? {}) }}
+              />
+
+              <Chip
+                size="small"
+                label={session.role === 'host' ? 'Host' : 'Guest'}
+                color={session.role === 'host' ? 'primary' : 'default'}
+                sx={{ fontWeight: 600 }}
               />
             </Stack>
           </Stack>

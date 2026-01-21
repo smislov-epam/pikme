@@ -5,6 +5,7 @@
  */
 
 import { useState } from 'react';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import {
   Box,
   Card,
@@ -21,6 +22,7 @@ import { getLocalOwner } from '../services/db/localOwnerService';
 
 export function LoginPage() {
   const { signIn, firebaseReady } = useAuth();
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +57,7 @@ export function LoginPage() {
       }
 
       // Redirect to home on success
-      window.location.href = '/';
+      navigate('/', { replace: true });
     } catch (err) {
       if (err instanceof Error) {
         if (err.message.includes('user-not-found') || err.message.includes('wrong-password')) {
@@ -80,7 +82,7 @@ export function LoginPage() {
           Firebase is not available. Sign-in requires Firebase to be enabled.
         </Alert>
         <Typography sx={{ mt: 2 }}>
-          <Link href="/">Go to app</Link>
+          <Link component={RouterLink} to="/">Go to app</Link>
         </Typography>
       </LoginLayout>
     );
@@ -134,7 +136,7 @@ export function LoginPage() {
       </Box>
 
       <Typography sx={{ mt: 3, textAlign: 'center' }} color="text.secondary">
-        <Link href="/">← Back to app</Link>
+        <Link component={RouterLink} to="/">← Back to app</Link>
       </Typography>
     </LoginLayout>
   );

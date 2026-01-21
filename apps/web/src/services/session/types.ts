@@ -236,3 +236,6 @@ export interface ParticipantPreferencesInfo {
   role: 'host' | 'guest';
   preferences: SharedGamePreference[];
 }
+
+// Alias used when closing sessions (host-selected pick payload)
+export type CloseSessionResult = SessionResultInfo;

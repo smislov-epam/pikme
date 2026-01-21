@@ -5,6 +5,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { ErrorBoundary } from './ErrorBoundary'
+import { RouterTestWrapper } from '../test/routerTestUtils'
+
+function renderWithRouter(ui: React.ReactElement) {
+  return render(<RouterTestWrapper>{ui}</RouterTestWrapper>)
+}
 
 // Component that throws an error
 function ThrowError({ shouldThrow }: { shouldThrow: boolean }) {
@@ -26,7 +31,7 @@ afterEach(() => {
 
 describe('ErrorBoundary', () => {
   it('renders children when no error occurs', () => {
-    render(
+    renderWithRouter(
       <ErrorBoundary>
         <div>Child content</div>
       </ErrorBoundary>
@@ -36,7 +41,7 @@ describe('ErrorBoundary', () => {
   })
 
   it('renders fallback UI when error occurs', () => {
-    render(
+    renderWithRouter(
       <ErrorBoundary>
         <ThrowError shouldThrow={true} />
       </ErrorBoundary>
@@ -50,7 +55,7 @@ describe('ErrorBoundary', () => {
   it('calls onError callback when error is caught', () => {
     const onError = vi.fn()
 
-    render(
+    renderWithRouter(
       <ErrorBoundary onError={onError}>
         <ThrowError shouldThrow={true} />
       </ErrorBoundary>
@@ -76,7 +81,7 @@ describe('ErrorBoundary', () => {
       return <div>No error</div>
     }
 
-    render(
+    renderWithRouter(
       <ErrorBoundary onReset={onReset}>
         <ThrowOnDemand />
       </ErrorBoundary>
@@ -98,7 +103,7 @@ describe('ErrorBoundary', () => {
   })
 
   it('shows technical details when expanded', () => {
-    render(
+    renderWithRouter(
       <ErrorBoundary>
         <ThrowError shouldThrow={true} />
       </ErrorBoundary>
@@ -115,23 +120,23 @@ describe('ErrorBoundary', () => {
   })
 
   it('shows Go Home button by default', () => {
-    render(
+    renderWithRouter(
       <ErrorBoundary>
         <ThrowError shouldThrow={true} />
       </ErrorBoundary>
     )
 
-    expect(screen.getByRole('button', { name: /Go Home/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Go Home/i })).toBeInTheDocument()
   })
 
   it('hides Go Home button when showHomeButton is false', () => {
-    render(
+    renderWithRouter(
       <ErrorBoundary showHomeButton={false}>
         <ThrowError shouldThrow={true} />
       </ErrorBoundary>
     )
 
-    expect(screen.queryByRole('button', { name: /Go Home/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Go Home/i })).not.toBeInTheDocument()
   })
 
   it('uses custom fallback component when provided', () => {
@@ -142,7 +147,7 @@ describe('ErrorBoundary', () => {
       </div>
     )
 
-    render(
+    renderWithRouter(
       <ErrorBoundary fallback={CustomFallback}>
         <ThrowError shouldThrow={true} />
       </ErrorBoundary>
@@ -153,7 +158,7 @@ describe('ErrorBoundary', () => {
   })
 
   it('logs error to console', () => {
-    render(
+    renderWithRouter(
       <ErrorBoundary>
         <ThrowError shouldThrow={true} />
       </ErrorBoundary>

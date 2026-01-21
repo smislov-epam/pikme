@@ -5,6 +5,7 @@
  */
 
 import { useCallback, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Box, Container, IconButton, Stack, Typography } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import { colors } from '../theme/theme'
@@ -18,6 +19,7 @@ import { closeSession, deleteSession } from '../services/session'
 export function SessionsPage() {
   const { sessions, isLoading, refreshSessions, setCurrentSession } = useActiveSessions();
   const { user, firebaseReady } = useAuth();
+  const navigate = useNavigate()
   
   // State for viewing session invite dialog
   const [viewInviteSessionId, setViewInviteSessionId] = useState<string | null>(null);
@@ -29,19 +31,19 @@ export function SessionsPage() {
 
   const handleViewSession = useCallback((sessionId: string) => {
     setCurrentSession(sessionId);
-    window.location.href = `/session/${sessionId}`;
-  }, [setCurrentSession]);
+    navigate(`/session/${sessionId}`)
+  }, [navigate, setCurrentSession]);
 
   const handleBack = useCallback(() => {
-    window.location.href = '/';
-  }, []);
+    navigate('/')
+  }, [navigate]);
 
   const handleCreateSession = useCallback(() => {
     // Navigate to wizard step 1 to start new session flow
     // Clear wizard's session context only and signal wizard to reset for new session
     setWizardActiveSessionId(null);
-    window.location.href = '/?newSession=true';
-  }, []);
+    navigate('/?newSession=true')
+  }, [navigate]);
 
   const handleViewInvite = useCallback((sessionId: string) => {
     setViewInviteSessionId(sessionId)

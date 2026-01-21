@@ -71,9 +71,6 @@ export async function fetchQueuedXml(url: string, options: FetchQueuedXmlOptions
   // Only add auth header if we have a valid API key - BGG public API works without it
   if (token && token.length > 0) {
     headers['Authorization'] = `Bearer ${token}`
-    console.log('[BGG] Using API key for authentication')
-  } else {
-    console.log('[BGG] No API key - using public API')
   }
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
