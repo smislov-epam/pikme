@@ -20,7 +20,6 @@ export function useNewGameIds(params: {
   // Stable key so we don't refire on every render when parent passes a new array instance
   const gameIdsKey = useMemo(() => gameIds.join(','), [gameIds])
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- gameIdsKey is a stable derivative of gameIds
   useEffect(() => {
     let cancelled = false
 
@@ -62,6 +61,8 @@ export function useNewGameIds(params: {
     return () => {
       cancelled = true
     }
+    // gameIds is accessed but gameIdsKey (derived from it) is the stable trigger
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameIdsKey, lastPreferencesReviewedAt, username])
 
   return { newGameIds, isLoading }
