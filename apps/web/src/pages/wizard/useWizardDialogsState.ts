@@ -9,6 +9,8 @@ export function useWizardDialogsState() {
   const [showSessionDialog, setShowSessionDialog] = useState(false)
   const [showSessionInviteDialog, setShowSessionInviteDialog] = useState(false)
   const [forceCreateNewSession, setForceCreateNewSession] = useState(false)
+  const [showPhotoRecognitionDialog, setShowPhotoRecognitionDialog] = useState(false)
+  const [showOpenAiApiKeyDialog, setShowOpenAiApiKeyDialog] = useState(false)
 
   return {
     showApiKeyDialog,
@@ -27,5 +29,9 @@ export function useWizardDialogsState() {
     setShowSessionInviteDialog,
     forceCreateNewSession,
     setForceCreateNewSession,
+    showPhotoRecognitionDialog,
+    setShowPhotoRecognitionDialog,
+    showOpenAiApiKeyDialog,
+    setShowOpenAiApiKeyDialog,
   }
 }

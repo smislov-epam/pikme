@@ -18,6 +18,7 @@ import { useEnsureLocalOwnerSelected } from './useEnsureLocalOwnerSelected'
 import { useWizardPageEffects } from './useWizardPageEffects'
 import { wizardSteps } from './wizardSteps'
 import { getWizardViewForSession } from './getWizardViewForSession'
+import type { RecognizedGameTile } from '../../services/openai/photoRecognition'
 
 export function useWizardPageController(): WizardPageViewProps {
   const navigate = useNavigate()
@@ -110,6 +111,28 @@ export function useWizardPageController(): WizardPageViewProps {
     onSaved: handleAfterSaveNight,
   })
 
+  // Photo Recognition (REQ-109) - Add recognized game to wizard
+  const handleAddRecognizedGame = useCallback(
+    async (game: RecognizedGameTile) => {
+      if (!game.bggMatch) {
+        throw new Error('No BGG match available for this game')
+      }
+      // Get current organizer/owner to add the game to their collection
+      const owner = wizard.users.find((u) => u.isOrganizer) || wizard.users[0]
+      if (!owner) {
+        throw new Error('No user available to add game to')
+      }
+      // Add the BGG matched game to the wizard's games using addGameManually
+      await wizard.addGameManually([owner.username], {
+        bggId: game.bggMatch.bggId,
+        name: game.bggMatch.name,
+        thumbnail: game.bggMatch.thumbnail,
+      })
+      toast.success(`Added "${game.bggMatch.name}" to your collection`)
+    },
+    [wizard, toast]
+  )
+
   const stepSubtitles = nav.stepSubtitles
   const isSessionFrozen = Boolean(session.activeSessionId && !session.sessionGuestMode)
   const lockedSteps = isSessionFrozen ? [0, 1] : session.lockedSteps
@@ -186,5 +209,16 @@ export function useWizardPageController(): WizardPageViewProps {
     showSessionInviteDialog: dialogs.showSessionInviteDialog,
     onCloseSessionInviteDialog: () => dialogs.setShowSessionInviteDialog(false),
     onShareClick,
+    // Photo Recognition (REQ-109)
+    showPhotoRecognitionDialog: dialogs.showPhotoRecognitionDialog,
+    onOpenPhotoRecognition: () => dialogs.setShowPhotoRecognitionDialog(true),
+    onClosePhotoRecognition: () => dialogs.setShowPhotoRecognitionDialog(false),
+    showOpenAiApiKeyDialog: dialogs.showOpenAiApiKeyDialog,
+    onOpenOpenAiApiKeyDialog: () => {
+      dialogs.setShowPhotoRecognitionDialog(false)
+      dialogs.setShowOpenAiApiKeyDialog(true)
+    },
+    onCloseOpenAiApiKeyDialog: () => dialogs.setShowOpenAiApiKeyDialog(false),
+    onAddRecognizedGame: handleAddRecognizedGame,
   })
 }

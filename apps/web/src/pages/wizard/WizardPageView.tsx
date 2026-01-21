@@ -4,6 +4,8 @@ import { ActiveSessionBanner, CreateSessionDialog, SessionInviteDialog } from '.
 import { BackupRestoreDialog } from '../../components/BackupRestoreDialog'
 import { BggApiKeyDialog } from '../../components/BggApiKeyDialog'
 import { HelpWalkthroughDialog } from '../../components/HelpWalkthroughDialog'
+import { OpenAiApiKeyDialog } from '../../components/OpenAiApiKeyDialog'
+import { PhotoRecognitionDialog } from '../../components/photoRecognition'
 import { SaveNightDialog } from '../../components/SaveNightDialog'
 import type { ActiveSessionInfo } from '../../hooks/useActiveSessions'
 import type { WizardActions, WizardState } from '../../hooks/useWizardState'
@@ -13,6 +15,7 @@ import { WizardFooter } from '../wizard/WizardFooter'
 import { WizardHeader } from '../wizard/WizardHeader'
 import { WizardStepperNav } from '../wizard/WizardStepperNav'
 import { WizardStepContent } from '../wizard/WizardStepContent'
+import type { RecognizedGameTile } from '../../services/openai/photoRecognition'
 
 export type WizardPageViewProps = {
   activeStep: number; setActiveStep: (step: number | ((prev: number) => number)) => void; completedSteps: boolean[]; lockedSteps: number[]; disabledSteps: number[]; stepSubtitles: string[]; compactBadgeCount: number; canJumpTo: (stepIndex: number) => boolean
@@ -28,6 +31,10 @@ export type WizardPageViewProps = {
   showSaveDialog: boolean; onOpenSaveDialog: () => void; onCloseSaveDialog: () => void; onSaveNight: (name: string, description?: string, includeGuestUsernames?: string[]) => Promise<void>
   showSessionDialog: boolean; forceCreateNewSession: boolean; onCloseSessionDialog: () => void; onSessionCreated: (sessionId: string) => void; onSessionCancelled: () => void
   showSessionInviteDialog: boolean; onCloseSessionInviteDialog: () => void; onShareClick: () => void
+  // Photo Recognition (REQ-109)
+  showPhotoRecognitionDialog: boolean; onOpenPhotoRecognition: () => void; onClosePhotoRecognition: () => void
+  showOpenAiApiKeyDialog: boolean; onOpenOpenAiApiKeyDialog: () => void; onCloseOpenAiApiKeyDialog: () => void
+  onAddRecognizedGame: (game: RecognizedGameTile) => Promise<void>
 }
 
 export function WizardPageView(props: WizardPageViewProps) {
@@ -46,6 +53,7 @@ export function WizardPageView(props: WizardPageViewProps) {
         onOpenBackup={props.onOpenBackupDialog}
         onOpenSettings={props.onOpenApiDialog}
         onOpenHelp={props.onOpenHelpDialog}
+        onOpenPhotoRecognition={props.onOpenPhotoRecognition}
         activeSessionCount={props.activeSessions.length}
         onOpenSessions={props.onOpenSessions}
       />
@@ -76,6 +84,19 @@ export function WizardPageView(props: WizardPageViewProps) {
 
       <HelpWalkthroughDialog open={props.showHelpDialog} onClose={props.onCloseHelpDialog} />
       <BackupRestoreDialog open={props.showBackupDialog} onClose={props.onCloseBackupDialog} />
+
+      {/* Photo Recognition (REQ-109) */}
+      <OpenAiApiKeyDialog
+        open={props.showOpenAiApiKeyDialog}
+        onClose={props.onCloseOpenAiApiKeyDialog}
+        onKeySaved={props.onCloseOpenAiApiKeyDialog}
+      />
+      <PhotoRecognitionDialog
+        open={props.showPhotoRecognitionDialog}
+        onClose={props.onClosePhotoRecognition}
+        onAddGame={props.onAddRecognizedGame}
+        onOpenApiKeyDialog={props.onOpenOpenAiApiKeyDialog}
+      />
 
       <Container maxWidth="md" sx={{ pb: 12, pt: 3, maxWidth: { lg: 1120 }, px: { xs: 2, sm: 3 } }}>
         {props.sessionGuestMode && (

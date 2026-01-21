@@ -21,6 +21,7 @@ import PersonIcon from '@mui/icons-material/Person'
 import LoginIcon from '@mui/icons-material/Login'
 import LogoutIcon from '@mui/icons-material/Logout'
 import EventNoteIcon from '@mui/icons-material/EventNote'
+import CameraAltIcon from '@mui/icons-material/CameraAlt'
 import { colors } from '../../theme/theme'
 import { useAuth } from '../../hooks/useAuth'
 import { useNavigate } from 'react-router-dom'
@@ -30,6 +31,7 @@ export function WizardHeader(props: {
   onOpenBackup: () => void
   onOpenSettings: () => void
   onOpenHelp: () => void
+  onOpenPhotoRecognition?: () => void
   /** Force blue header chrome even when not authenticated */
   variant?: 'auto' | 'blue'
   /** Number of active sessions for badge */
@@ -37,7 +39,7 @@ export function WizardHeader(props: {
   /** Callback when sessions icon is clicked */
   onOpenSessions?: () => void
 }) {
-  const { onOpenClearDialog, onOpenBackup, onOpenSettings, onOpenHelp, variant = 'auto', activeSessionCount = 0, onOpenSessions } = props
+  const { onOpenClearDialog, onOpenBackup, onOpenSettings, onOpenHelp, onOpenPhotoRecognition, variant = 'auto', activeSessionCount = 0, onOpenSessions } = props
   const { user, firebaseReady, signOut } = useAuth()
   const navigate = useNavigate()
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
@@ -145,6 +147,19 @@ export function WizardHeader(props: {
             </Badge>
           </IconButton>
         </Tooltip>
+
+        {/* Photo Recognition - AI-powered game detection */}
+        {onOpenPhotoRecognition && (
+          <Tooltip title="Photo Recognition">
+            <IconButton
+              aria-label="Photo Recognition"
+              onClick={onOpenPhotoRecognition}
+              sx={{ ...iconButtonSx, color: isLoggedIn ? '#ce93d8' : '#9c27b0' }}
+            >
+              <CameraAltIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )}
 
         <Tooltip title="Clear all data">
           <IconButton onClick={onOpenClearDialog} sx={{ ...iconButtonSx, color: isLoggedIn ? '#ffcdd2' : '#d32f2f' }}>

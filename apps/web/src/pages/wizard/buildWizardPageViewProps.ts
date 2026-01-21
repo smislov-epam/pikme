@@ -59,6 +59,14 @@ export function buildWizardPageViewProps(args: {
   showSessionInviteDialog: boolean
   onCloseSessionInviteDialog: () => void
   onShareClick: () => void
+  // Photo Recognition (REQ-109)
+  showPhotoRecognitionDialog: boolean
+  onOpenPhotoRecognition: () => void
+  onClosePhotoRecognition: () => void
+  showOpenAiApiKeyDialog: boolean
+  onOpenOpenAiApiKeyDialog: () => void
+  onCloseOpenAiApiKeyDialog: () => void
+  onAddRecognizedGame: WizardPageViewProps['onAddRecognizedGame']
 }): WizardPageViewProps {
   return {
     activeStep: args.activeStep,
@@ -130,5 +138,14 @@ export function buildWizardPageViewProps(args: {
     showSessionInviteDialog: args.showSessionInviteDialog,
     onCloseSessionInviteDialog: args.onCloseSessionInviteDialog,
     onShareClick: args.onShareClick,
+
+    // Photo Recognition (REQ-109)
+    showPhotoRecognitionDialog: args.showPhotoRecognitionDialog,
+    onOpenPhotoRecognition: args.onOpenPhotoRecognition,
+    onClosePhotoRecognition: args.onClosePhotoRecognition,
+    showOpenAiApiKeyDialog: args.showOpenAiApiKeyDialog,
+    onOpenOpenAiApiKeyDialog: args.onOpenOpenAiApiKeyDialog,
+    onCloseOpenAiApiKeyDialog: args.onCloseOpenAiApiKeyDialog,
+    onAddRecognizedGame: args.onAddRecognizedGame,
   }
 }
