@@ -1,8 +1,16 @@
 import type { BggThingId } from './types'
 
+/**
+ * Determines if we're in development mode (Vite dev server).
+ * In dev, we use Vite's proxy; in production, we use Firebase Function proxy.
+ */
+export function isDevelopment(): boolean {
+  return import.meta.env.DEV === true
+}
+
 // Use Vite proxy in development to avoid CORS issues
-// In production, use the direct BGG API URL from environment or default to proxy path
-const DEFAULT_BGG_BASE = import.meta.env.VITE_BGG_BASE_URL || '/bgg-api/xmlapi2'
+// In production, we'll use Firebase Functions proxy (see fetchQueuedXml)
+const DEFAULT_BGG_BASE = '/bgg-api/xmlapi2'
 
 export function getBggBaseUrl(baseUrl?: string): string {
   return (baseUrl ?? DEFAULT_BGG_BASE).replace(/\/$/, '')
