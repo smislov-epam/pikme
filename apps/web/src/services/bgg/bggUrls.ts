@@ -1,8 +1,8 @@
 import type { BggThingId } from './types'
 
 // Use Vite proxy in development to avoid CORS issues
-// In production, you would need a serverless proxy or CORS-enabled endpoint
-const DEFAULT_BGG_BASE = '/bgg-api/xmlapi2'
+// In production, use the direct BGG API URL from environment or default to proxy path
+const DEFAULT_BGG_BASE = import.meta.env.VITE_BGG_BASE_URL || '/bgg-api/xmlapi2'
 
 export function getBggBaseUrl(baseUrl?: string): string {
   return (baseUrl ?? DEFAULT_BGG_BASE).replace(/\/$/, '')

@@ -39,6 +39,8 @@ jobs:
           VITE_BASE_PATH: /
           # IndexedDB is per-origin. Keep a single canonical hostname to avoid users "losing" data.
           VITE_CANONICAL_HOST: pikme.online
+          # BGG API base URL for production (direct access without proxy)
+          VITE_BGG_BASE_URL: https://api.geekdo.com/xmlapi2
           # Optional: enables GA instrumentation in production build.
           # Set this in GitHub: Repo Settings -> Secrets and variables -> Actions -> New repository secret
           # Name: VITE_GA_MEASUREMENT_ID (value like: G-XXXXXXXXXX)
