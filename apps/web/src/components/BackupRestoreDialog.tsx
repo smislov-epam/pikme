@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   Box,
   Button,
@@ -15,11 +15,16 @@ import {
 import ArchiveIcon from '@mui/icons-material/Archive'
 import UploadIcon from '@mui/icons-material/Upload'
 import DownloadIcon from '@mui/icons-material/Download'
-import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile'
-import { exportBackupZip, importBackup } from '../services/backup'
+import { exportBackupZip, importBackup, previewBackup } from '../services/backup'
+import type { BackupUserInfo, UserMapping } from '../services/backup'
 import { useToast } from '../services/toast'
 import { colors } from '../theme/theme'
 import { BggCollectionCsvImportPanel } from './bggCsv/BggCollectionCsvImportPanel'
+import { ImportOptionsPanel } from './backup/ImportOptionsPanel'
+import { formatBytes } from './backup/backupUtils'
+import { db } from '../db'
+import type { UserRecord } from '../db/types'
+import { useLocalOwner } from '../hooks/useLocalOwner'
 
 export function BackupRestoreDialog(props: { open: boolean; onClose: () => void }) {
   const { open, onClose } = props
@@ -29,8 +34,36 @@ export function BackupRestoreDialog(props: { open: boolean; onClose: () => void 
   const [error, setError] = useState<string>('')
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const toast = useToast()
+  const { localOwner } = useLocalOwner()
 
   const [pendingFile, setPendingFile] = useState<File | null>(null)
+  const [backupUsers, setBackupUsers] = useState<BackupUserInfo[]>([])
+  const [localUsers, setLocalUsers] = useState<UserRecord[]>([])
+
+  // Load local users when dialog opens
+  useEffect(() => {
+    if (open) {
+      db.users.toArray().then(setLocalUsers).catch(console.error)
+    }
+  }, [open])
+
+  // Preview backup when file is selected
+  useEffect(() => {
+    if (!pendingFile) return
+    
+    let cancelled = false
+    previewBackup(pendingFile)
+      .then((preview) => {
+        if (cancelled) return
+        setBackupUsers(preview.users)
+      })
+      .catch((err) => {
+        if (cancelled) return
+        setError(err instanceof Error ? err.message : 'Failed to preview backup')
+      })
+    
+    return () => { cancelled = true }
+  }, [pendingFile])
 
   const reset = () => {
     setStatus('idle')
@@ -38,6 +71,7 @@ export function BackupRestoreDialog(props: { open: boolean; onClose: () => void 
     setSummary('')
     setError('')
     setPendingFile(null)
+    setBackupUsers([])
   }
 
   const handleClose = () => {
@@ -75,18 +109,29 @@ export function BackupRestoreDialog(props: { open: boolean; onClose: () => void 
   }
 
 
-  const runImport = (mode: 'replace' | 'merge') => {
+  const runImport = (mode: 'replace' | 'merge', mapping: UserMapping) => {
     if (!pendingFile) return
     setStatus('busy'); setError(''); setSummary('')
+    
+    // For replace mode with mapping, the target username should become the local owner
+    const localOwnerUsername = mode === 'replace' && Object.keys(mapping).length > 0
+      ? Object.values(mapping)[0]  // The target username (current user)
+      : undefined
+    
     void importBackup({
       files: pendingFile,
       mode,
+      userMapping: Object.keys(mapping).length > 0 ? mapping : undefined,
+      localOwnerUsername,
       onProgress: (p) => setProgress(`${p.message}${p.table ? ` (${p.table})` : ''}`),
     })
       .then((res) => {
         setStatus('done')
         setProgress('')
-        setSummary(`Import ${res.mode} complete at ${new Date().toLocaleString()}`)
+        const mappingInfo = Object.keys(mapping).length > 0 
+          ? ` (${Object.keys(mapping).length} user mapping applied)` 
+          : ''
+        setSummary(`Import ${res.mode} complete${mappingInfo} at ${new Date().toLocaleString()}`)
         toast.success('Backup imported')
         setTimeout(() => window.location.reload(), 400)
       })
@@ -96,6 +141,8 @@ export function BackupRestoreDialog(props: { open: boolean; onClose: () => void 
         toast.error('Import failed')
       })
   }
+
+  const currentUsername = localOwner?.username
 
   return (
     <Dialog
@@ -155,59 +202,16 @@ export function BackupRestoreDialog(props: { open: boolean; onClose: () => void 
           />
         </Stack>
 
-        {pendingFile ? (
-          <>
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                border: '1px solid',
-                borderColor: 'divider',
-                borderRadius: 2,
-                px: 1.25,
-                py: 1,
-                bgcolor: 'background.default',
-              }}
-            >
-              <InsertDriveFileIcon fontSize="small" color="action" />
-              <Box sx={{ minWidth: 0 }}>
-                <Typography variant="body2" fontWeight={600} noWrap>
-                  {pendingFile.name}
-                </Typography>
-                <Typography variant="caption" color="text.secondary" noWrap>
-                  {backupDateLabelFromFileName(pendingFile.name)} • {formatBytes(pendingFile.size)}
-                </Typography>
-              </Box>
-            </Box>
-
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-              <Box sx={{ flex: 1, border: '1px solid', borderColor: 'divider', borderRadius: 2, p: 1.5 }}>
-                <Button
-                  fullWidth
-                  variant="contained"
-                  color="warning"
-                  disabled={status === 'busy'}
-                  onClick={() => runImport('replace')}
-                >
-                  Replace
-                </Button>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75 }}>
-                  Clears local data, then imports from the backup.
-                </Typography>
-              </Box>
-
-              <Box sx={{ flex: 1, border: '1px solid', borderColor: 'divider', borderRadius: 2, p: 1.5 }}>
-                <Button fullWidth variant="contained" disabled={status === 'busy'} onClick={() => runImport('merge')}>
-                  Merge
-                </Button>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75 }}>
-                  Keeps existing data; updates/creates records using latest timestamps.
-                </Typography>
-              </Box>
-            </Stack>
-          </>
-        ) : null}
+        {pendingFile && (
+          <ImportOptionsPanel
+            file={pendingFile}
+            backupUsers={backupUsers}
+            localUsers={localUsers}
+            currentUsername={currentUsername}
+            disabled={status === 'busy'}
+            onImport={runImport}
+          />
+        )}
 
         <Divider />
 
@@ -236,35 +240,4 @@ export function BackupRestoreDialog(props: { open: boolean; onClose: () => void 
       </DialogActions>
     </Dialog>
   )
-}
-
-function backupDateLabelFromFileName(fileName: string): string {
-  const stamp = extractBackupStamp(fileName)
-  if (!stamp) return 'Selected backup'
-  return `Backup date: ${formatStampAsDateTime(stamp)}`
-}
-
-function extractBackupStamp(fileName: string): string | null {
-  const m = fileName.match(/(\d{12})/)
-  return m ? m[1] : null
-}
-
-function formatStampAsDateTime(stamp: string): string {
-  const yyyy = stamp.slice(0, 4)
-  const mm = stamp.slice(4, 6)
-  const dd = stamp.slice(6, 8)
-  const hh = stamp.slice(8, 10)
-  const min = stamp.slice(10, 12)
-  return `${yyyy}-${mm}-${dd} ${hh}:${min}`
-}
-
-function formatBytes(bytes: number): string {
-  if (!Number.isFinite(bytes) || bytes < 0) return ''
-  if (bytes < 1024) return `${bytes} B`
-  const kb = bytes / 1024
-  if (kb < 1024) return `${kb.toFixed(1)} KB`
-  const mb = kb / 1024
-  if (mb < 1024) return `${mb.toFixed(1)} MB`
-  const gb = mb / 1024
-  return `${gb.toFixed(1)} GB`
 }

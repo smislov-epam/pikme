@@ -280,6 +280,7 @@ export function useWizardStateComposed() {
     removeUser: playersState.removeUser,
     deleteUserPermanently: playersState.deleteUserPermanently,
     setOrganizer: playersState.setOrganizer,
+    setExistingLocalUsers: playersState.setExistingLocalUsers,
     clearUserError: playersState.clearUserError,
     clearNeedsApiKey: playersState.clearNeedsApiKey,
 

@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import {
   Box,
   Card,
@@ -14,12 +14,13 @@ import { GamePreviewGrid } from './GamePreviewGrid'
 import { PlayersListCard } from './PlayersListCard'
 import { LocalAddGamesPanel } from './players/LocalAddGamesPanel'
 import { SavedNightPicker } from './players/SavedNightPicker'
-import { PlayersStepDialogs, type PendingDuplicateUser } from './players/PlayersStepDialogs'
+import { PlayersStepDialogs } from './players/PlayersStepDialogs'
 import { PlayersAddUserControls, type UserMode } from './players/PlayersAddUserControls.tsx'
-import { normalizePlayTime } from '../../services/bgg/normalizePlayTime'
+import { BggUserMappingDialog } from './players/BggUserMappingDialog'
 import { useToast } from '../../services/toast'
 import type { LayoutMode } from '../../services/storage/uiPreferences'
 import { findUsersWithSameName, extractSuffixFromId } from '../../services/db/userIdService'
+import { usePlayersStepHandlers } from '../../hooks/wizard/usePlayersStepHandlers'
 
 export type { ManualGameData }
 
@@ -30,7 +31,8 @@ export interface PlayersStepProps {
   gameOwners: Record<number, string[]>
   layoutMode: LayoutMode
   onLayoutModeChange: (mode: LayoutMode) => void
-  existingLocalUsers: UserRecord[]  // All local users from DB for autocomplete
+  existingLocalUsers: UserRecord[]
+  onSetExistingLocalUsers: React.Dispatch<React.SetStateAction<UserRecord[]>>
   savedNights: SavedNightRecord[]
   pendingBggUserNotFoundUsername: string | null
   onConfirmAddBggUserAnyway: () => Promise<void>
@@ -45,8 +47,6 @@ export interface PlayersStepProps {
   onRemoveGameFromUser: (username: string, bggId: number) => Promise<void>
   onAddGameToSession: (bggId: number) => void
   onRemoveGameFromSession: (bggId: number) => void
-  onExcludeGameFromSession: (bggId: number) => void
-  onUndoExcludeGameFromSession: (bggId: number) => void
   onAddOwnerToGame: (username: string, bggId: number) => Promise<void>
   onLoadSavedNight: (id: number, options?: { includeGames?: boolean }) => Promise<void>
   onFetchGameInfo: (url: string) => Promise<Partial<ManualGameData> & { bggId: number }>
@@ -54,214 +54,47 @@ export interface PlayersStepProps {
   onEditGame: (game: GameRecord) => Promise<void>
   onRefreshGameFromBgg: (bggId: number, options: { keepNotes: boolean }) => Promise<GameRecord>
   isLoading: boolean
-  error: string | null
 }
 
 export function PlayersStep({
-  users, games, sessionGames, gameOwners, existingLocalUsers, savedNights,
-  layoutMode,
-  onLayoutModeChange,
-  pendingBggUserNotFoundUsername,
-  onConfirmAddBggUserAnyway,
-  onCancelAddBggUserAnyway,
+  users, games, sessionGames, gameOwners, existingLocalUsers, onSetExistingLocalUsers, savedNights,
+  layoutMode, onLayoutModeChange,
+  pendingBggUserNotFoundUsername, onConfirmAddBggUserAnyway, onCancelAddBggUserAnyway,
   onAddBggUser, onAddLocalUser, onRemoveUser, onDeleteUser, onSetOrganizer, onSearchGame,
   onAddGameToUser, onRemoveGameFromUser, onAddGameToSession, onRemoveGameFromSession,
   onAddOwnerToGame, onLoadSavedNight, onFetchGameInfo, onAddGameManually, onEditGame,
-  onRefreshGameFromBgg,
-  isLoading,
+  onRefreshGameFromBgg, isLoading,
 }: PlayersStepProps) {
   const toast = useToast()
   const [mode, setMode] = useState<UserMode>('local')
   const [inputValue, setInputValue] = useState('')
-  const [selectedLocalUsers, setSelectedLocalUsers] = useState<string[]>([])
-  const [searchQuery, setSearchQuery] = useState('')
-  const [gameUrlInput, setGameUrlInput] = useState('')
-  const [searchResults, setSearchResults] = useState<Array<{ bggId: number; name: string; yearPublished?: number }>>([])
-  const [isSearching, setIsSearching] = useState(false)
   const [deleteDialogUser, setDeleteDialogUser] = useState<string | null>(null)
-  const [showManualEntry, setShowManualEntry] = useState(false)
-  const [manualDialogMode, setManualDialogMode] = useState<'bgg' | 'manual'>('bgg')
   const [showAddGamesPanel, setShowAddGamesPanel] = useState(false)
-  const [isFetchingGame, setIsFetchingGame] = useState(false)
-  const [manualGame, setManualGame] = useState<ManualGameData>({ name: '', bggId: 0 })
-  const [pendingDuplicateUser, setPendingDuplicateUser] = useState<PendingDuplicateUser | null>(null)
 
-  const showNotice = useCallback((message: string, severity: 'success' | 'info' | 'warning' = 'info') => {
-    if (severity === 'success') toast.success(message)
-    else if (severity === 'warning') toast.warning(message)
-    else toast.info(message)
-  }, [toast])
+  const handlers = usePlayersStepHandlers({
+    users, games, gameOwners, existingLocalUsers, onSetExistingLocalUsers,
+    onAddBggUser, onAddLocalUser, onAddGameToUser, onAddGameToSession, onRemoveGameFromSession,
+    onFetchGameInfo, onAddGameManually, onSearchGame,
+  })
 
-  const sortedUsers = useMemo(() => [...users].sort((a, b) => (a.isOrganizer && !b.isOrganizer ? -1 : b.isOrganizer && !a.isOrganizer ? 1 : 0)), [users])
-  // Autocomplete options: all local users (including ones already in session for duplicate warning)
-  // Include disambiguation with internal ID so the user can tell them apart
+  const sortedUsers = useMemo(() => [...users].sort((a, b) => (
+    a.isOrganizer && !b.isOrganizer ? -1 : b.isOrganizer && !a.isOrganizer ? 1 : 0
+  )), [users])
+
   const autocompleteOptions = useMemo(() => {
     return existingLocalUsers.map(u => {
       const baseName = u.displayName || u.username
       const duplicates = findUsersWithSameName(baseName, existingLocalUsers)
-
       const suffixRaw = u.internalId ? extractSuffixFromId(u.internalId) : ''
       const suffix = duplicates.length > 1 && suffixRaw ? `#${suffixRaw}` : undefined
-
       return { label: baseName, username: u.username, internalId: u.internalId, suffix }
     })
   }, [existingLocalUsers])
 
   const handleAddUser = async () => {
     if (!inputValue.trim()) return
-    if (mode === 'bgg') {
-      await onAddBggUser(inputValue.trim())
-    } else {
-      const trimmedName = inputValue.trim()
-      
-      // Check for existing users with the same name
-      const duplicates = findUsersWithSameName(trimmedName, existingLocalUsers)
-      
-      if (duplicates.length > 0) {
-        // Show confirmation dialog
-        setPendingDuplicateUser({ name: trimmedName, existingUsers: duplicates })
-        return
-      }
-      
-      // No duplicates - proceed to add new user
-      const isOrganizer = users.length === 0
-      await onAddLocalUser(trimmedName, isOrganizer)
-    }
-    setInputValue('')
-  }
-
-  const handleSelectExistingUser = async (user: UserRecord) => {
-    const isOrganizer = users.length === 0
-    await onAddLocalUser(user.username, isOrganizer)
-    setSelectedLocalUsers((prev) => [...prev, user.username])
-    setPendingDuplicateUser(null)
-    setInputValue('')
-  }
-
-  const handleCreateNewDuplicateUser = async () => {
-    if (!pendingDuplicateUser) return
-    const isOrganizer = users.length === 0
-    // Create a new user with the same display name (will get unique internalId/username)
-    await onAddLocalUser(pendingDuplicateUser.name, isOrganizer, { forceNew: true })
-    setPendingDuplicateUser(null)
-    setInputValue('')
-  }
-
-  const handleCancelDuplicateUser = () => {
-    setPendingDuplicateUser(null)
-  }
-
-  const toggleUserSelection = (username: string) => setSelectedLocalUsers((prev) => prev.includes(username) ? prev.filter((u) => u !== username) : [...prev, username])
-
-  const handleAddGameFromUrl = async () => {
-    if (!gameUrlInput.trim() || selectedLocalUsers.length === 0) return
-    const match = gameUrlInput.match(/boardgamegeek\.com\/boardgame\/(\d+)/i)
-    if (!match) return
-
-    const bggId = parseInt(match[1], 10)
-
-    // Simple duplicate validator:
-    // If the game is already in our local DB, avoid re-fetching and avoid opening the manual dialog.
-    // Instead, either add the existing game to missing selected users, or just notify it's already added.
-    const existingGame = games.find((g) => g.bggId === bggId)
-    if (existingGame) {
-      const owners = new Set(gameOwners[bggId] ?? [])
-      const missingUsers = selectedLocalUsers.filter((u) => !owners.has(u))
-
-      if (missingUsers.length === 0) {
-        showNotice(`“${existingGame.name}” is already added for the selected players.`, 'info')
-        return
-      }
-
-      for (const username of missingUsers) {
-        await onAddGameToUser(username, bggId)
-      }
-
-      showNotice(`Added existing game “${existingGame.name}” to: ${missingUsers.join(', ')}`, 'success')
-      setGameUrlInput('')
-      return
-    }
-
-    // Always show dialog - fetch what we can and let user complete
-    setIsFetchingGame(true)
-    setManualDialogMode('bgg')
-    setShowManualEntry(true)
-    setManualGame({ name: '', bggId })
-
-    try {
-      const gameInfo = await onFetchGameInfo(gameUrlInput.trim())
-
-      // The dialog edits min/max playtime, but extraction may only provide an average playingTimeMinutes.
-      // Populate min/max from average when missing so fields show up for the user.
-      const normalizedTime = normalizePlayTime({ playingTimeMinutes: gameInfo.playingTimeMinutes, minPlayTimeMinutes: gameInfo.minPlayTimeMinutes, maxPlayTimeMinutes: gameInfo.maxPlayTimeMinutes })
-
-      setManualGame({
-        bggId: gameInfo.bggId,
-        name: gameInfo.name || '',
-        thumbnail: gameInfo.thumbnail,
-        minPlayers: gameInfo.minPlayers, maxPlayers: gameInfo.maxPlayers, bestWith: gameInfo.bestWith,
-        playingTimeMinutes: normalizedTime.playingTimeMinutes,
-        minPlayTimeMinutes: normalizedTime.minPlayTimeMinutes, maxPlayTimeMinutes: normalizedTime.maxPlayTimeMinutes,
-        minAge: gameInfo.minAge, averageRating: gameInfo.averageRating, weight: gameInfo.weight,
-        categories: gameInfo.categories, mechanics: gameInfo.mechanics,
-        description: gameInfo.description,
-      })
-    } catch {
-      // Keep dialog open with just the ID
-    } finally {
-      setIsFetchingGame(false)
-    }
-  }
-
-  const openManualAddDialog = () => {
-    if (selectedLocalUsers.length === 0) return
-    setIsFetchingGame(false)
-    setManualDialogMode('manual')
-    setShowManualEntry(true)
-    setManualGame({ name: '', bggId: 0 })
-  }
-
-  const handleManualGameSubmit = async () => {
-    if (!manualGame.name.trim() || manualGame.bggId <= 0 || selectedLocalUsers.length === 0) return
-
-    // If game already exists locally, do not overwrite it from manual entry.
-    // Instead, add ownership for selected players.
-    const existingGame = games.find((g) => g.bggId === manualGame.bggId)
-    if (existingGame) {
-      const owners = new Set(gameOwners[manualGame.bggId] ?? [])
-      const missingUsers = selectedLocalUsers.filter((u) => !owners.has(u))
-
-      if (missingUsers.length === 0) {
-        showNotice(`“${existingGame.name}” is already added for the selected players.`, 'info')
-      } else {
-        for (const username of missingUsers) {
-          await onAddGameToUser(username, manualGame.bggId)
-        }
-        showNotice(`Added existing game “${existingGame.name}” to: ${missingUsers.join(', ')}`, 'success')
-      }
-
-      setShowManualEntry(false)
-      setManualGame({ name: '', bggId: 0 })
-      return
-    }
-
-    await onAddGameManually(selectedLocalUsers, manualGame)
-    setShowManualEntry(false)
-    setGameUrlInput('')
-    setManualGame({ name: '', bggId: 0 })
-  }
-
-  const handleSearch = useCallback(async () => {
-    if (!searchQuery.trim()) return
-    setIsSearching(true)
-    try { const results = await onSearchGame(searchQuery.trim()); setSearchResults(results.slice(0, 10)) }
-    finally { setIsSearching(false) }
-  }, [searchQuery, onSearchGame])
-
-  const handleAddGame = async (bggId: number) => {
-    if (selectedLocalUsers.length === 0) return
-    for (const username of selectedLocalUsers) await onAddGameToUser(username, bggId)
-    setSearchResults((prev) => prev.filter((r) => r.bggId !== bggId))
+    const cleared = await handlers.handleAddUser(mode, inputValue.trim())
+    if (cleared) setInputValue('')
   }
 
   return (
@@ -270,15 +103,27 @@ export function PlayersStep({
         pendingBggUserNotFoundUsername={pendingBggUserNotFoundUsername}
         onConfirmAddBggUserAnyway={() => void onConfirmAddBggUserAnyway()}
         onCancelAddBggUserAnyway={onCancelAddBggUserAnyway}
-        pendingDuplicateUser={pendingDuplicateUser}
-        onSelectExistingUser={(user) => void handleSelectExistingUser(user)}
-        onCreateNewDuplicateUser={() => void handleCreateNewDuplicateUser()}
-        onCancelDuplicateUser={handleCancelDuplicateUser}
+        pendingDuplicateUser={handlers.pendingDuplicateUser}
+        onSelectExistingUser={(user) => void handlers.handleSelectExistingUser(user)}
+        onCreateNewDuplicateUser={() => void handlers.handleCreateNewDuplicateUser()}
+        onCancelDuplicateUser={handlers.handleCancelDuplicateUser}
         isLoading={isLoading}
       />
 
+      <BggUserMappingDialog
+        open={handlers.pendingBggMapping !== null}
+        bggUsername={handlers.pendingBggMapping ?? ''}
+        existingLocalUsers={existingLocalUsers}
+        isLoading={isLoading}
+        onCancel={handlers.handleCancelBggMapping}
+        onLinkToExisting={handlers.handleLinkBggToExisting}
+        onCreateNew={handlers.handleCreateBggUser}
+      />
+
       <Box>
-        <Typography variant="h5" gutterBottom sx={{ color: 'primary.dark' }}>Who's playing tonight?</Typography>
+        <Typography variant="h5" gutterBottom sx={{ color: 'primary.dark' }}>
+          Who's playing tonight?
+        </Typography>
         <Typography color="text.secondary">
           {savedNights.length > 0
             ? 'Start from a previous game night, or add players to begin'
@@ -286,9 +131,6 @@ export function PlayersStep({
         </Typography>
       </Box>
 
-      {/* Errors are surfaced via global toast in WizardPage; keep step UI clean. */}
-
-      {/* Load previous night */}
       <SavedNightPicker
         savedNights={savedNights}
         onLoadSavedNight={onLoadSavedNight}
@@ -305,20 +147,61 @@ export function PlayersStep({
         onAdd={() => void handleAddUser()}
       />
 
+      <Collapse in={isLoading}>
+        <Card sx={{ bgcolor: 'secondary.light', border: 'none' }}>
+          <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <CircularProgress size={24} />
+            <Box>
+              <Typography fontWeight={500}>BGG is preparing data…</Typography>
+              <Typography variant="body2" color="text.secondary">
+                This may take a moment for large collections
+              </Typography>
+            </Box>
+          </CardContent>
+        </Card>
+      </Collapse>
 
-      <Collapse in={isLoading}><Card sx={{ bgcolor: 'secondary.light', border: 'none' }}><CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2 }}><CircularProgress size={24} /><Box><Typography fontWeight={500}>BGG is preparing data…</Typography><Typography variant="body2" color="text.secondary">This may take a moment for large collections</Typography></Box></CardContent></Card></Collapse>
+      <DeleteUserDialog
+        open={!!deleteDialogUser}
+        username={deleteDialogUser}
+        onClose={() => setDeleteDialogUser(null)}
+        onRemoveFromSession={() => {
+          if (deleteDialogUser) {
+            onRemoveUser(deleteDialogUser)
+            handlers.setSelectedLocalUsers((prev) => prev.filter((u) => u !== deleteDialogUser))
+          }
+          setDeleteDialogUser(null)
+        }}
+        onDeletePermanently={async () => {
+          if (deleteDialogUser) {
+            await onDeleteUser(deleteDialogUser)
+            handlers.setSelectedLocalUsers((prev) => prev.filter((u) => u !== deleteDialogUser))
+          }
+          setDeleteDialogUser(null)
+        }}
+      />
 
-      <DeleteUserDialog open={!!deleteDialogUser} username={deleteDialogUser} onClose={() => setDeleteDialogUser(null)} onRemoveFromSession={() => { if (deleteDialogUser) { onRemoveUser(deleteDialogUser); setSelectedLocalUsers((prev) => prev.filter((u) => u !== deleteDialogUser)) } setDeleteDialogUser(null) }} onDeletePermanently={async () => { if (deleteDialogUser) { await onDeleteUser(deleteDialogUser); setSelectedLocalUsers((prev) => prev.filter((u) => u !== deleteDialogUser)) } setDeleteDialogUser(null) }} />
-      <ManualGameDialog open={showManualEntry} mode={manualDialogMode} game={manualGame} isLoading={isFetchingGame} onGameChange={setManualGame} onClose={() => { setShowManualEntry(false); setIsFetchingGame(false) }} onSubmit={handleManualGameSubmit} />
+      <ManualGameDialog
+        open={handlers.showManualEntry}
+        mode={handlers.manualDialogMode}
+        game={handlers.manualGame}
+        isLoading={handlers.isFetchingGame}
+        onGameChange={handlers.setManualGame}
+        onClose={() => { handlers.setShowManualEntry(false); handlers.setIsFetchingGame(false) }}
+        onSubmit={handlers.handleManualGameSubmit}
+      />
 
-      {users.length > 0 ? (
+      {users.length > 0 && (
         <PlayersListCard
           users={sortedUsers}
           gameOwners={gameOwners}
+          excludedUserGames={handlers.excludedUserGames}
           onSetOrganizer={onSetOrganizer}
           onRequestDelete={(username) => setDeleteDialogUser(username)}
+          onAddUserGamesToSession={handlers.handleAddUserGamesToSession}
+          onRemoveUserGamesFromSession={handlers.handleRemoveUserGamesFromSession}
         />
-      ) : null}
+      )}
 
       <GamePreviewGrid
         games={games}
@@ -333,7 +216,7 @@ export function PlayersStep({
         onAddToSession={onAddGameToSession}
         onExcludeFromSession={(game) => {
           onRemoveGameFromSession(game.bggId)
-          toast.info(`Removed “${game.name}” from this session`, {
+          toast.info(`Removed "${game.name}" from this session`, {
             autoHideMs: 5500,
             actionLabel: 'Undo',
             onAction: () => onAddGameToSession(game.bggId),
@@ -341,29 +224,36 @@ export function PlayersStep({
         }}
         onEditGame={onEditGame}
         onRefreshGameFromBgg={onRefreshGameFromBgg}
-
         showAddNewGamesAction={users.length > 0}
         addNewGamesPanelOpen={showAddGamesPanel}
-        onToggleAddNewGamesPanel={() => setShowAddGamesPanel((v) => !v)}
-
+        onToggleAddNewGamesPanel={() => {
+          setShowAddGamesPanel((v) => {
+            if (!v && handlers.selectedLocalUsers.length === 0 && users.length > 0) {
+              const organizer = users.find((u) => u.isOrganizer)
+              handlers.setSelectedLocalUsers([organizer?.username ?? users[0].username])
+            }
+            return !v
+          })
+        }}
         addNewGamesPanel={(
           <LocalAddGamesPanel
             open={users.length > 0 && showAddGamesPanel}
             localUsers={users}
-            selectedLocalUsers={selectedLocalUsers}
-            onToggleUser={toggleUserSelection}
-            onSelectAll={() => setSelectedLocalUsers(users.map((u) => u.username))}
-            gameUrlInput={gameUrlInput}
-            onGameUrlInputChange={setGameUrlInput}
-            onAddGameFromUrl={handleAddGameFromUrl}
-            onOpenManualGameDialog={openManualAddDialog}
+            selectedLocalUsers={handlers.selectedLocalUsers}
+            onToggleUser={handlers.toggleUserSelection}
+            onSelectAll={() => handlers.setSelectedLocalUsers(users.map((u) => u.username))}
+            gameUrlInput={handlers.gameUrlInput}
+            onGameUrlInputChange={handlers.setGameUrlInput}
+            onAddGameFromUrl={handlers.handleAddGameFromUrl}
+            onOpenManualGameDialog={handlers.openManualAddDialog}
             isLoading={isLoading}
-            searchQuery={searchQuery}
-            onSearchQueryChange={setSearchQuery}
-            onSearch={handleSearch}
-            isSearching={isSearching}
-            searchResults={searchResults}
-            onAddGame={handleAddGame}
+            searchQuery={handlers.searchQuery}
+            onSearchQueryChange={handlers.setSearchQuery}
+            onSearch={handlers.handleSearch}
+            isSearching={handlers.isSearching}
+            searchResults={handlers.searchResults}
+            onAddGame={handlers.handleAddGame}
+            addingGameId={handlers.addingGameId}
           />
         )}
       />

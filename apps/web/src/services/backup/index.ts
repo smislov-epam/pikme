@@ -1,4 +1,5 @@
 export { exportBackupZip } from './exportBackup'
-export { importBackup } from './importBackup'
+export { importBackup, previewBackup } from './importBackup'
+export type { BackupUserInfo, BackupPreviewInfo } from './importBackup'
 export { BACKUP_FORMAT_VERSION } from './constants'
-export type { BackupMode, BackupExportResult, ImportOptions, ImportSummary, BackupProgress } from './types'
+export type { BackupMode, BackupExportResult, ImportOptions, ImportSummary, BackupProgress, UserMapping } from './types'

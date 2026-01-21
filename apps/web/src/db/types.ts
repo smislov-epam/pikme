@@ -32,6 +32,7 @@ export interface UserRecord {
   internalId: string // Unique internal identifier (slug-based with random suffix)
   displayName?: string
   isBggUser: boolean
+  bggUsername?: string // BGG username if this user has linked BGG account
   isOrganizer?: boolean
   // Identity fields (REQ-103 user journeys)
   isLocalOwner?: boolean // "This is ME on this device" - set once, never changes

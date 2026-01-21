@@ -53,6 +53,7 @@ function createBaseWizard(args: {
     removeUser: () => {},
     deleteUserPermanently: async () => {},
     setOrganizer: async () => {},
+    setExistingLocalUsers: () => {},
     searchGame: async () => [],
     addGameToUser: async () => {},
     removeGameFromUser: async () => {},

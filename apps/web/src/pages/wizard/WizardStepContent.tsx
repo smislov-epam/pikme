@@ -204,6 +204,7 @@ export function WizardStepContent(props: {
           layoutMode={wizard.layoutMode}
           onLayoutModeChange={wizard.setLayoutMode}
           existingLocalUsers={wizard.existingLocalUsers}
+          onSetExistingLocalUsers={wizard.setExistingLocalUsers}
           savedNights={wizard.savedNights}
           pendingBggUserNotFoundUsername={wizard.pendingBggUserNotFoundUsername}
           onConfirmAddBggUserAnyway={wizard.confirmAddBggUserAnyway}
@@ -218,8 +219,6 @@ export function WizardStepContent(props: {
           onRemoveGameFromUser={wizard.removeGameFromUser}
           onAddGameToSession={wizard.addGameToSession}
           onRemoveGameFromSession={wizard.removeGameFromSession}
-          onExcludeGameFromSession={wizard.excludeGameFromSession}
-          onUndoExcludeGameFromSession={wizard.undoExcludeGameFromSession}
           onAddOwnerToGame={wizard.addOwnerToGame}
           onLoadSavedNight={wizard.loadSavedNight}
           onFetchGameInfo={wizard.fetchGameInfo}
@@ -227,7 +226,6 @@ export function WizardStepContent(props: {
           onEditGame={wizard.updateGame}
           onRefreshGameFromBgg={wizard.refreshGameFromBgg}
           isLoading={wizard.isLoadingUser}
-          error={wizard.userError}
         />
       )
     case 1:

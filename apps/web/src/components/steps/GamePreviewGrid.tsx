@@ -91,6 +91,17 @@ export function GamePreviewGrid({
     return result
   }, [sessionGames, searchQuery])
 
+  // Also filter collection games with the same search query
+  const filteredCollectionGames = useMemo(() => {
+    if (!searchQuery.trim()) return collectionOnlyGames
+    const query = searchQuery.toLowerCase()
+    return collectionOnlyGames.filter(
+      (g) => g.name.toLowerCase().includes(query) ||
+        g.categories?.some((c) => c.toLowerCase().includes(query)) ||
+        g.mechanics?.some((m) => m.toLowerCase().includes(query))
+    )
+  }, [collectionOnlyGames, searchQuery])
+
   if (totalGames === 0 && !showAddNewGamesAction) return null
 
   return (
@@ -178,26 +189,38 @@ export function GamePreviewGrid({
 
             {collectionOnlyGames.length > 0 ? (
               <Collapse in={showCollectionGames}>
+                {/* Show filter status if searching */}
+                {searchQuery.trim() && filteredCollectionGames.length !== collectionOnlyGames.length && (
+                  <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
+                    Showing {filteredCollectionGames.length} of {collectionOnlyGames.length} collection games
+                  </Typography>
+                )}
                 <Box sx={{ display: 'grid', rowGap: 0.5, maxHeight: 200, overflowY: 'auto', mt: 1 }}>
-                  {collectionOnlyGames.map((game) => (
-                    <Box key={game.bggId} sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 0.75, bgcolor: 'action.hover', borderRadius: 1, opacity: 0.7 }}>
-                      <Box
-                        component="img"
-                        src={game.thumbnail || '/vite.svg'}
-                        alt={game.name}
-                        sx={{ width: 28, height: 28, borderRadius: 0.5, objectFit: 'cover' }}
-                        onError={(e) => { (e.target as HTMLImageElement).src = '/vite.svg' }}
-                      />
-                      <Typography variant="body2" sx={{ flex: 1 }} noWrap>{game.name}</Typography>
-                      {onAddToSession && (
-                        <Tooltip title="Add to session">
-                          <IconButton size="small" onClick={() => onAddToSession(game.bggId)}>
-                            <AddIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                    </Box>
-                  ))}
+                  {filteredCollectionGames.length === 0 ? (
+                    <Typography variant="body2" color="text.secondary" sx={{ py: 1, textAlign: 'center' }}>
+                      No collection games match search
+                    </Typography>
+                  ) : (
+                    filteredCollectionGames.map((game) => (
+                      <Box key={game.bggId} sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 0.75, bgcolor: 'action.hover', borderRadius: 1, opacity: 0.7 }}>
+                        <Box
+                          component="img"
+                          src={game.thumbnail || '/vite.svg'}
+                          alt={game.name}
+                          sx={{ width: 28, height: 28, borderRadius: 0.5, objectFit: 'cover' }}
+                          onError={(e) => { (e.target as HTMLImageElement).src = '/vite.svg' }}
+                        />
+                        <Typography variant="body2" sx={{ flex: 1 }} noWrap>{game.name}</Typography>
+                        {onAddToSession && (
+                          <Tooltip title="Add to session">
+                            <IconButton size="small" onClick={() => onAddToSession(game.bggId)}>
+                              <AddIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                      </Box>
+                    ))
+                  )}
                 </Box>
               </Collapse>
             ) : null}

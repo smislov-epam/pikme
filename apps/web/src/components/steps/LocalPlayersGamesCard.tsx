@@ -1,11 +1,12 @@
+import { useState } from 'react'
 import {
+  Autocomplete,
   Box,
   Button,
   Card,
   CardContent,
   Chip,
   CircularProgress,
-  IconButton,
   InputAdornment,
   Stack,
   TextField,
@@ -17,6 +18,12 @@ import SearchIcon from '@mui/icons-material/Search'
 import StarIcon from '@mui/icons-material/Star'
 import type { UserRecord } from '../../db/types'
 import { colors } from '../../theme/theme'
+
+interface SearchResult {
+  bggId: number
+  name: string
+  yearPublished?: number
+}
 
 export function LocalPlayersGamesCard(props: {
   localUsers: UserRecord[]
@@ -32,8 +39,9 @@ export function LocalPlayersGamesCard(props: {
   onSearchQueryChange: (value: string) => void
   onSearch: () => void
   isSearching: boolean
-  searchResults: Array<{ bggId: number; name: string; yearPublished?: number }>
+  searchResults: SearchResult[]
   onAddGame: (bggId: number) => void
+  addingGameId?: number | null
 }) {
   const {
     localUsers,
@@ -51,13 +59,23 @@ export function LocalPlayersGamesCard(props: {
     isSearching,
     searchResults,
     onAddGame,
+    addingGameId,
   } = props
 
   const isMobile = useMediaQuery('(max-width:600px)')
+  const [autocompleteOpen, setAutocompleteOpen] = useState(false)
+
+  const handleSelectGame = (_event: React.SyntheticEvent, game: SearchResult | null) => {
+    if (game && selectedLocalUsers.length > 0) {
+      onAddGame(game.bggId)
+      onSearchQueryChange('')
+      setAutocompleteOpen(false)
+    }
+  }
 
   return (
     <Card sx={{ bgcolor: colors.sand + '20' }}>
-        <CardContent>
+      <CardContent>
         <Box sx={{ mb: 2 }}>
           <Stack direction="row" alignItems="center" gap={1} mb={1}>
             <Typography variant="caption" color="text.secondary">
@@ -162,39 +180,68 @@ export function LocalPlayersGamesCard(props: {
           — or search (requires API key) —
         </Typography>
 
-        <TextField
-          fullWidth
-          size="small"
-          placeholder="Search BoardGameGeek..."
-          value={searchQuery}
-          onChange={(e) => onSearchQueryChange(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && onSearch()}
-          InputProps={{
-            endAdornment: (
-              <InputAdornment position="end">
-                <IconButton onClick={onSearch} disabled={isSearching} size="small" sx={{ width: 36, height: 36 }}>
-                  {isSearching ? <CircularProgress size={18} /> : <SearchIcon fontSize="small" />}
-                </IconButton>
-              </InputAdornment>
-            ),
+        <Autocomplete<SearchResult>
+          open={autocompleteOpen && searchResults.length > 0}
+          onOpen={() => setAutocompleteOpen(true)}
+          onClose={() => setAutocompleteOpen(false)}
+          options={searchResults}
+          loading={isSearching}
+          getOptionLabel={(option) => option.name}
+          getOptionKey={(option) => option.bggId}
+          filterOptions={(x) => x} // Don't filter client-side, server does it
+          onChange={handleSelectGame}
+          value={null}
+          inputValue={searchQuery}
+          onInputChange={(_e, value, reason) => {
+            if (reason === 'input') {
+              onSearchQueryChange(value)
+            } else if (reason === 'clear') {
+              onSearchQueryChange('')
+            }
           }}
-        />
-
-        {searchResults.length > 0 ? (
-          <Stack spacing={1} sx={{ mt: 2 }}>
-            {searchResults.map((game) => (
+          noOptionsText="No games found"
+          loadingText="Searching..."
+          disabled={addingGameId != null}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              size="small"
+              placeholder="Search BoardGameGeek..."
+              onKeyDown={(e) => e.key === 'Enter' && onSearch()}
+              InputProps={{
+                ...params.InputProps,
+                endAdornment: (
+                  <>
+                    {isSearching ? <CircularProgress size={18} /> : null}
+                    {params.InputProps.endAdornment}
+                    <InputAdornment position="end">
+                      <SearchIcon
+                        fontSize="small"
+                        sx={{ cursor: 'pointer', color: 'action.active' }}
+                        onClick={onSearch}
+                      />
+                    </InputAdornment>
+                  </>
+                ),
+              }}
+            />
+          )}
+          renderOption={(optionProps, game) => {
+            const { key, ...rest } = optionProps
+            return (
               <Box
-                key={game.bggId}
+                component="li"
+                key={key}
+                {...rest}
                 sx={{
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  p: 1.25,
-                  bgcolor: 'background.paper',
-                  borderRadius: 1,
+                  py: 1,
+                  px: 1.5,
                 }}
               >
-                <Box sx={{ minWidth: 0 }}>
+                <Box sx={{ minWidth: 0, flex: 1 }}>
                   <Typography fontWeight={500} noWrap>
                     {game.name}
                   </Typography>
@@ -204,19 +251,15 @@ export function LocalPlayersGamesCard(props: {
                     </Typography>
                   ) : null}
                 </Box>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  onClick={() => onAddGame(game.bggId)}
-                  disabled={selectedLocalUsers.length === 0}
-                  sx={{ height: 32 }}
-                >
-                  Add
-                </Button>
+                {selectedLocalUsers.length === 0 && (
+                  <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                    Select user first
+                  </Typography>
+                )}
               </Box>
-            ))}
-          </Stack>
-        ) : null}
+            )
+          }}
+        />
       </CardContent>
     </Card>
   )

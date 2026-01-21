@@ -19,6 +19,7 @@ export function LocalAddGamesPanel(props: {
   isSearching: boolean
   searchResults: Array<{ bggId: number; name: string; yearPublished?: number }>
   onAddGame: (bggId: number) => void
+  addingGameId?: number | null
 }) {
   const {
     open,
@@ -37,6 +38,7 @@ export function LocalAddGamesPanel(props: {
     isSearching,
     searchResults,
     onAddGame,
+    addingGameId,
   } = props
 
   return (
@@ -58,6 +60,7 @@ export function LocalAddGamesPanel(props: {
           isSearching={isSearching}
           searchResults={searchResults}
           onAddGame={onAddGame}
+          addingGameId={addingGameId}
         />
       </Box>
     </Collapse>
