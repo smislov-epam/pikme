@@ -3,15 +3,18 @@ import {
   AppBar,
   Badge,
   Box,
-  Chip,
   Container,
   IconButton,
+  ListItemIcon,
+  ListItemText,
   Menu,
   MenuItem,
   Toolbar,
   Tooltip,
   Typography,
   alpha,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material'
 import SettingsIcon from '@mui/icons-material/Settings'
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever'
@@ -22,6 +25,7 @@ import LoginIcon from '@mui/icons-material/Login'
 import LogoutIcon from '@mui/icons-material/Logout'
 import EventNoteIcon from '@mui/icons-material/EventNote'
 import CameraAltIcon from '@mui/icons-material/CameraAlt'
+import AccountCircleIcon from '@mui/icons-material/AccountCircle'
 import { colors } from '../../theme/theme'
 import { useAuth } from '../../hooks/useAuth'
 import { useNavigate } from 'react-router-dom'
@@ -42,6 +46,8 @@ export function WizardHeader(props: {
   const { onOpenClearDialog, onOpenBackup, onOpenSettings, onOpenHelp, onOpenPhotoRecognition, variant = 'auto', activeSessionCount = 0, onOpenSessions } = props
   const { user, firebaseReady, signOut } = useAuth()
   const navigate = useNavigate()
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
 
   // Show user is authenticated
@@ -148,7 +154,7 @@ export function WizardHeader(props: {
           </IconButton>
         </Tooltip>
 
-        {/* Photo Recognition - AI-powered game detection */}
+        {/* Photo Recognition - always visible */}
         {onOpenPhotoRecognition && (
           <Tooltip title="Photo Recognition">
             <IconButton
@@ -161,17 +167,23 @@ export function WizardHeader(props: {
           </Tooltip>
         )}
 
-        <Tooltip title="Clear all data">
-          <IconButton onClick={onOpenClearDialog} sx={{ ...iconButtonSx, color: isLoggedIn ? '#ffcdd2' : '#d32f2f' }}>
-            <DeleteForeverIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
+        {/* Clear data - hide on mobile, show in menu */}
+        {!isMobile && (
+          <Tooltip title="Clear all data">
+            <IconButton onClick={onOpenClearDialog} sx={{ ...iconButtonSx, color: isLoggedIn ? '#ffcdd2' : '#d32f2f' }}>
+              <DeleteForeverIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )}
 
-        <Tooltip title="Backup & Restore">
-          <IconButton onClick={onOpenBackup} sx={{ ...iconButtonSx, color: isLoggedIn ? '#fff59d' : '#f9a825' }}>
-            <BackupIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
+        {/* Backup - hide on mobile, show in menu */}
+        {!isMobile && (
+          <Tooltip title="Backup & Restore">
+            <IconButton onClick={onOpenBackup} sx={{ ...iconButtonSx, color: isLoggedIn ? '#fff59d' : '#f9a825' }}>
+              <BackupIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )}
 
         <Tooltip title="Settings">
           <IconButton onClick={onOpenSettings} sx={{ ...iconButtonSx, color: isLoggedIn ? '#90caf9' : '#1976d2' }}>
@@ -189,21 +201,17 @@ export function WizardHeader(props: {
         {isLoggedIn ? (
           <>
             <Tooltip title={userEmail}>
-              <Chip
-                icon={<PersonIcon sx={{ color: 'white !important' }} />}
-                label={userName}
+              <IconButton
                 onClick={handleUserMenuOpen}
-                size="small"
                 sx={{
+                  ...iconButtonSx,
                   ml: 0.5,
                   bgcolor: alpha('#fff', 0.2),
-                  color: 'white',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  '& .MuiChip-icon': { color: 'white' },
                   '&:hover': { bgcolor: alpha('#fff', 0.3) },
                 }}
-              />
+              >
+                <AccountCircleIcon sx={{ color: 'white' }} />
+              </IconButton>
             </Tooltip>
             <Menu
               anchorEl={anchorEl}
@@ -212,12 +220,39 @@ export function WizardHeader(props: {
               anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
               transformOrigin={{ vertical: 'top', horizontal: 'right' }}
             >
-              <MenuItem disabled sx={{ opacity: 1, fontWeight: 600 }}>
-                {userEmail}
+              <MenuItem disabled sx={{ opacity: 1 }}>
+                <ListItemIcon>
+                  <PersonIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText
+                  primary={userName}
+                  secondary={userEmail}
+                  primaryTypographyProps={{ fontWeight: 600 }}
+                  secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                />
               </MenuItem>
+              {/* Backup & Clear data in menu on mobile */}
+              {isMobile && (
+                <MenuItem onClick={() => { handleUserMenuClose(); onOpenBackup(); }}>
+                  <ListItemIcon>
+                    <BackupIcon fontSize="small" sx={{ color: '#f9a825' }} />
+                  </ListItemIcon>
+                  <ListItemText primary="Backup & Restore" />
+                </MenuItem>
+              )}
+              {isMobile && (
+                <MenuItem onClick={() => { handleUserMenuClose(); onOpenClearDialog(); }}>
+                  <ListItemIcon>
+                    <DeleteForeverIcon fontSize="small" sx={{ color: '#d32f2f' }} />
+                  </ListItemIcon>
+                  <ListItemText primary="Clear All Data" />
+                </MenuItem>
+              )}
               <MenuItem onClick={handleSignOut}>
-                <LogoutIcon fontSize="small" sx={{ mr: 1 }} />
-                Sign Out
+                <ListItemIcon>
+                  <LogoutIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText primary="Sign Out" />
               </MenuItem>
             </Menu>
           </>
