@@ -1,4 +1,4 @@
-import { Box, Typography, Button, Divider, CircularProgress } from '@mui/material'
+import { Box, Typography, Button, Divider } from '@mui/material'
 import type { RecognizedGameTile as RecognizedGameTileType, BggMatchResult } from '../../services/openai/photoRecognition'
 import { RecognizedGameTile } from './RecognizedGameTile'
 
@@ -8,10 +8,7 @@ interface RecognitionResultsViewProps {
   onAdd: (game: RecognizedGameTileType) => void
   onAddAll: () => void
   onBggMatch: (recognizedName: string, match: BggMatchResult) => void
-  addingGames: Set<string>
   addedGames: Set<string>
-  addErrors: Map<string, string>
-  isBulkAdding?: boolean
 }
 
 export function RecognitionResultsView({
@@ -20,10 +17,7 @@ export function RecognitionResultsView({
   onAdd,
   onAddAll,
   onBggMatch,
-  addingGames,
   addedGames,
-  addErrors,
-  isBulkAdding = false,
 }: RecognitionResultsViewProps) {
   const gamesWithBggMatch = games.filter((g) => g.bggMatch)
   const addableGames = gamesWithBggMatch.filter((g) => !addedGames.has(g.recognizedName))
@@ -63,41 +57,27 @@ export function RecognitionResultsView({
 
       <Divider sx={{ mb: 2 }} />
 
-      {isBulkAdding ? (
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 4, gap: 2 }}>
-          <CircularProgress size={32} />
-          <Typography variant="body2" color="text.secondary">
-            Adding {addableGames.length} games to your collection...
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            {addedGames.size} of {addableGames.length + addedGames.size} added
-          </Typography>
-        </Box>
-      ) : (
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 1,
-            maxHeight: 320,
-            overflowY: 'auto',
-            pr: 0.5,
-          }}
-        >
-          {sortedGames.map((game) => (
-            <RecognizedGameTile
-              key={game.id}
-              game={game}
-              onDismiss={onDismiss}
-              onAdd={onAdd}
-              onBggMatch={onBggMatch}
-              isAdding={addingGames.has(game.recognizedName)}
-              isAdded={addedGames.has(game.recognizedName)}
-              addError={addErrors.get(game.recognizedName)}
-            />
-          ))}
-        </Box>
-      )}
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 1,
+          maxHeight: 320,
+          overflowY: 'auto',
+          pr: 0.5,
+        }}
+      >
+        {sortedGames.map((game) => (
+          <RecognizedGameTile
+            key={game.id}
+            game={game}
+            onDismiss={onDismiss}
+            onAdd={onAdd}
+            onBggMatch={onBggMatch}
+            isAdded={addedGames.has(game.recognizedName)}
+          />
+        ))}
+      </Box>
 
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2 }}>
         Dismiss tiles you don&apos;t want. Games without BGG matches can be searched manually.

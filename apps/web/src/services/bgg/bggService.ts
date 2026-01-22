@@ -383,3 +383,61 @@ export async function addGameManually(
 
   return gameRecord
 }
+
+export interface BatchAddProgress {
+  current: number
+  total: number
+  succeeded: number
+  failed: number
+  currentGameName: string
+}
+
+export interface BatchAddResult {
+  succeeded: GameRecord[]
+  failed: Array<{ bggId: number; name: string; error: string }>
+}
+
+/**
+ * Add multiple games to a user's collection with full BGG details.
+ * Fetches complete game data from BGG for each game.
+ * Reports progress via callback.
+ */
+export async function addGamesBatchWithDetails(
+  username: string,
+  games: Array<{ bggId: number; name: string; thumbnail?: string }>,
+  options: BggFetchOptions & {
+    onProgress?: (progress: BatchAddProgress) => void
+  } = {},
+): Promise<BatchAddResult> {
+  const { onProgress, ...fetchOptions } = options
+  const succeeded: GameRecord[] = []
+  const failed: Array<{ bggId: number; name: string; error: string }> = []
+
+  for (let i = 0; i < games.length; i++) {
+    const game = games[i]
+    
+    onProgress?.({
+      current: i + 1,
+      total: games.length,
+      succeeded: succeeded.length,
+      failed: failed.length,
+      currentGameName: game.name,
+    })
+
+    try {
+      // Fetch full game details from BGG and add to collection
+      const gameRecord = await addGameToUserCollection(username, game.bggId, fetchOptions)
+      succeeded.push(gameRecord)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      console.warn(`Failed to add game "${game.name}" (${game.bggId}):`, errorMessage)
+      failed.push({
+        bggId: game.bggId,
+        name: game.name,
+        error: errorMessage,
+      })
+    }
+  }
+
+  return { succeeded, failed }
+}

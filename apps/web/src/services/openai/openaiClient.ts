@@ -78,6 +78,7 @@ export async function validateOpenAiApiKey(key: string): Promise<boolean> {
 
 export interface OpenAiRequestOptions {
   signal?: AbortSignal
+  temperature?: number
 }
 
 /**
@@ -100,12 +101,16 @@ export async function openAiChatCompletion(
     throw new OpenAiAuthError('No OpenAI API key configured. Please add your key in settings.')
   }
 
-  const { signal, model = 'gpt-4o', maxTokens = 1000, responseFormat } = options
+  const { signal, model = 'gpt-4o', maxTokens = 1000, responseFormat, temperature } = options
 
   const body: Record<string, unknown> = {
     model,
     messages,
     max_tokens: maxTokens,
+  }
+
+  if (temperature !== undefined) {
+    body.temperature = temperature
   }
 
   if (responseFormat) {

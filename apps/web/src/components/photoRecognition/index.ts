@@ -1,4 +1,5 @@
-export { PhotoRecognitionDialog } from './PhotoRecognitionDialog'
+export { PhotoRecognitionDialog, type BatchAddResult } from './PhotoRecognitionDialog'
 export { RecognitionResultsView } from './RecognitionResultsView'
 export { RecognizedGameTile } from './RecognizedGameTile'
 export { ConfidenceBadge } from './ConfidenceBadge'
+export { AddingProgressView, type AddingProgress } from './AddingProgressView'

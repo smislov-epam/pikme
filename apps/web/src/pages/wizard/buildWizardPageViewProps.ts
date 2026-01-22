@@ -66,7 +66,8 @@ export function buildWizardPageViewProps(args: {
   showOpenAiApiKeyDialog: boolean
   onOpenOpenAiApiKeyDialog: () => void
   onCloseOpenAiApiKeyDialog: () => void
-  onAddRecognizedGame: WizardPageViewProps['onAddRecognizedGame']
+  onGamesAddedFromRecognition: WizardPageViewProps['onGamesAddedFromRecognition']
+  photoRecognitionOwnerUsername: string
 }): WizardPageViewProps {
   return {
     activeStep: args.activeStep,
@@ -146,6 +147,7 @@ export function buildWizardPageViewProps(args: {
     showOpenAiApiKeyDialog: args.showOpenAiApiKeyDialog,
     onOpenOpenAiApiKeyDialog: args.onOpenOpenAiApiKeyDialog,
     onCloseOpenAiApiKeyDialog: args.onCloseOpenAiApiKeyDialog,
-    onAddRecognizedGame: args.onAddRecognizedGame,
+    onGamesAddedFromRecognition: args.onGamesAddedFromRecognition,
+    photoRecognitionOwnerUsername: args.photoRecognitionOwnerUsername,
   }
 }

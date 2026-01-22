@@ -6,7 +6,6 @@ import {
   IconButton,
   TextField,
   Typography,
-  Alert,
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import AddIcon from '@mui/icons-material/Add'
@@ -26,9 +25,7 @@ interface RecognizedGameTileProps {
   onDismiss: (recognizedName: string) => void
   onAdd: (game: RecognizedGameTileType) => void
   onBggMatch?: (recognizedName: string, match: BggMatchResult) => void
-  isAdding?: boolean
   isAdded?: boolean
-  addError?: string
 }
 
 export function RecognizedGameTile({
@@ -36,9 +33,7 @@ export function RecognizedGameTile({
   onDismiss,
   onAdd,
   onBggMatch,
-  isAdding = false,
   isAdded = false,
-  addError,
 }: RecognizedGameTileProps) {
   const { recognizedName, confidence, bggMatch } = game
   const [searchQuery, setSearchQuery] = useState(recognizedName)
@@ -169,11 +164,10 @@ export function RecognizedGameTile({
         <IconButton
           size="small"
           onClick={() => onAdd(game)}
-          disabled={isAdding}
           aria-label={`Add ${recognizedName}`}
           sx={{ width: 32, height: 32, color: 'primary.main' }}
         >
-          {isAdding ? <CircularProgress size={16} /> : <AddIcon fontSize="small" />}
+          <AddIcon fontSize="small" />
         </IconButton>
       )}
 
@@ -191,12 +185,6 @@ export function RecognizedGameTile({
       >
         <CloseIcon fontSize="small" />
       </IconButton>
-
-      {addError && (
-        <Alert severity="error" sx={{ position: 'absolute', bottom: -24, left: 0, right: 0, py: 0, fontSize: '0.7rem' }}>
-          {addError}
-        </Alert>
-      )}
     </Box>
   )
 }

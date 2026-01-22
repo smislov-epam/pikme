@@ -3,17 +3,15 @@ import {
   Alert,
   Box,
   Button,
-  CircularProgress,
   Dialog,
   DialogContent,
   DialogTitle,
   IconButton,
   Stack,
-  Typography,
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import CameraAltIcon from '@mui/icons-material/CameraAlt'
-import PhotoLibraryIcon from '@mui/icons-material/PhotoLibrary'
+import { colors } from '../../theme/theme'
 import {
   recognizeGamesFromFile,
   validateImageFile,
@@ -23,31 +21,41 @@ import {
 } from '../../services/openai/photoRecognition'
 import { hasOpenAiApiKey } from '../../services/openai/openaiClient'
 import { RecognitionResultsView } from './RecognitionResultsView'
+import { AddingProgressView, type AddingProgress } from './AddingProgressView'
+import { CaptureView, AnalyzingView } from './CaptureViews'
+
+export interface BatchAddResult {
+  succeeded: Array<{ bggId: number; name: string }>
+  failed: Array<{ bggId: number; name: string; error: string }>
+}
 
 interface PhotoRecognitionDialogProps {
   open: boolean
   onClose: () => void
-  onAddGame: (game: RecognizedGameTileType) => Promise<void>
+  onGamesAdded: (result: BatchAddResult) => void
   onOpenApiKeyDialog: () => void
+  ownerUsername: string
+  /** Function to add a game to user - handles both DB and state updates */
+  addGameToUser: (username: string, bggId: number) => Promise<void>
 }
 
-type DialogState = 'capture' | 'analyzing' | 'results' | 'error'
+type DialogState = 'capture' | 'analyzing' | 'results' | 'adding' | 'error'
 
 export function PhotoRecognitionDialog({
   open,
   onClose,
-  onAddGame,
+  onGamesAdded,
   onOpenApiKeyDialog,
+  ownerUsername,
+  addGameToUser,
 }: PhotoRecognitionDialogProps) {
   const [state, setState] = useState<DialogState>('capture')
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [result, setResult] = useState<PhotoRecognitionResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [dismissedGames, setDismissedGames] = useState<Set<string>>(new Set())
-  const [addingGames, setAddingGames] = useState<Set<string>>(new Set())
   const [addedGames, setAddedGames] = useState<Set<string>>(new Set())
-  const [addErrors, setAddErrors] = useState<Map<string, string>>(new Map())
-  const [isBulkAdding, setIsBulkAdding] = useState(false)
+  const [addingProgress, setAddingProgress] = useState<AddingProgress | null>(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
@@ -58,10 +66,8 @@ export function PhotoRecognitionDialog({
     setResult(null)
     setError(null)
     setDismissedGames(new Set())
-    setAddingGames(new Set())
     setAddedGames(new Set())
-    setAddErrors(new Map())
-    setIsBulkAdding(false)
+    setAddingProgress(null)
   }, [])
 
   const handleClose = useCallback(() => {
@@ -114,44 +120,85 @@ export function PhotoRecognitionDialog({
     setDismissedGames((prev) => new Set([...prev, recognizedName]))
   }, [])
 
-  const handleAdd = useCallback(
-    async (game: RecognizedGameTileType) => {
-      setAddingGames((prev) => new Set([...prev, game.recognizedName]))
-      setAddErrors((prev) => {
-        const next = new Map(prev)
-        next.delete(game.recognizedName)
-        return next
+  const handleAddGames = useCallback(
+    async (gamesToAdd: RecognizedGameTileType[]) => {
+      if (gamesToAdd.length === 0) return
+
+      const gamesWithMatch = gamesToAdd.filter((g) => g.bggMatch)
+      if (gamesWithMatch.length === 0) return
+
+      setState('adding')
+      setAddingProgress({
+        current: 0,
+        total: gamesWithMatch.length,
+        succeeded: 0,
+        failed: 0,
+        currentGameName: gamesWithMatch[0].bggMatch!.name,
       })
 
-      try {
-        await onAddGame(game)
-        setAddedGames((prev) => new Set([...prev, game.recognizedName]))
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to add game'
-        setAddErrors((prev) => new Map(prev).set(game.recognizedName, message))
-      } finally {
-        setAddingGames((prev) => {
-          const next = new Set(prev)
-          next.delete(game.recognizedName)
-          return next
+      const succeeded: Array<{ bggId: number; name: string }> = []
+      const failed: Array<{ bggId: number; name: string; error: string }> = []
+
+      for (let i = 0; i < gamesWithMatch.length; i++) {
+        const game = gamesWithMatch[i]
+        const bggId = game.bggMatch!.bggId
+        const name = game.bggMatch!.name
+
+        setAddingProgress({
+          current: i + 1,
+          total: gamesWithMatch.length,
+          succeeded: succeeded.length,
+          failed: failed.length,
+          currentGameName: name,
         })
+
+        try {
+          // Use the passed-in addGameToUser which updates both DB and React state
+          await addGameToUser(ownerUsername, bggId)
+          succeeded.push({ bggId, name })
+        } catch (err) {
+          failed.push({
+            bggId,
+            name,
+            error: err instanceof Error ? err.message : 'Failed to add game',
+          })
+        }
       }
+
+      const result: BatchAddResult = { succeeded, failed }
+
+      // Mark added games
+      for (const game of result.succeeded) {
+        const recognized = gamesWithMatch.find((g) => g.bggMatch?.bggId === game.bggId)
+        if (recognized) {
+          setAddedGames((prev) => new Set([...prev, recognized.recognizedName]))
+        }
+      }
+
+      // Notify parent of results (for toast)
+      onGamesAdded(result)
+
+      // Return to results view
+      setState('results')
+      setAddingProgress(null)
     },
-    [onAddGame]
+    [ownerUsername, onGamesAdded, addGameToUser]
   )
 
-  const handleAddAll = useCallback(async () => {
+  const handleAdd = useCallback(
+    (game: RecognizedGameTileType) => {
+      handleAddGames([game])
+    },
+    [handleAddGames]
+  )
+
+  const handleAddAll = useCallback(() => {
     const gamesToAdd =
       result?.games.filter(
         (g) => g.bggMatch && !addedGames.has(g.recognizedName) && !dismissedGames.has(g.recognizedName)
       ) || []
-
-    setIsBulkAdding(true)
-    for (const game of gamesToAdd) {
-      await handleAdd(game)
-    }
-    setIsBulkAdding(false)
-  }, [result, addedGames, dismissedGames, handleAdd])
+    handleAddGames(gamesToAdd)
+  }, [result, addedGames, dismissedGames, handleAddGames])
 
   const handleBggMatch = useCallback((recognizedName: string, match: BggMatchResult) => {
     setResult((prev) => {
@@ -171,11 +218,23 @@ export function PhotoRecognitionDialog({
   if (open && !hasOpenAiApiKey()) {
     return (
       <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-        <DialogTitle>
+        <DialogTitle
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+            m: 0,
+            px: 2.5,
+            py: 1.75,
+            bgcolor: colors.oceanBlue,
+            color: 'white',
+          }}
+        >
+          <CameraAltIcon fontSize="small" />
           Photo Recognition
           <IconButton
             onClick={handleClose}
-            sx={{ position: 'absolute', right: 8, top: 8 }}
+            sx={{ position: 'absolute', right: 8, top: 8, color: 'white' }}
             aria-label="Close"
           >
             <CloseIcon />
@@ -197,11 +256,23 @@ export function PhotoRecognitionDialog({
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-      <DialogTitle>
+      <DialogTitle
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+          m: 0,
+          px: 2.5,
+          py: 1.75,
+          bgcolor: colors.oceanBlue,
+          color: 'white',
+        }}
+      >
+        <CameraAltIcon fontSize="small" />
         Photo Recognition
         <IconButton
           onClick={handleClose}
-          sx={{ position: 'absolute', right: 8, top: 8 }}
+          sx={{ position: 'absolute', right: 8, top: 8, color: 'white' }}
           aria-label="Close"
         >
           <CloseIcon />
@@ -229,6 +300,10 @@ export function PhotoRecognitionDialog({
 
         {state === 'analyzing' && <AnalyzingView imagePreview={imagePreview} />}
 
+        {state === 'adding' && addingProgress && (
+          <AddingProgressView progress={addingProgress} />
+        )}
+
         {state === 'results' && (
           <ResultsStateView
             imagePreview={imagePreview}
@@ -237,10 +312,7 @@ export function PhotoRecognitionDialog({
             onAdd={handleAdd}
             onAddAll={handleAddAll}
             onBggMatch={handleBggMatch}
-            addingGames={addingGames}
             addedGames={addedGames}
-            addErrors={addErrors}
-            isBulkAdding={isBulkAdding}
             onTryAnother={resetState}
           />
         )}
@@ -253,69 +325,6 @@ export function PhotoRecognitionDialog({
 
 // Sub-components for cleaner organization
 
-function CaptureView({
-  onCapture,
-  onUpload,
-}: {
-  onCapture: React.RefObject<HTMLInputElement | null>
-  onUpload: React.RefObject<HTMLInputElement | null>
-}) {
-  return (
-    <Stack spacing={2} sx={{ py: 2 }}>
-      <Typography variant="body1">
-        Take a photo of your board game shelf or upload an image to automatically identify games.
-      </Typography>
-
-      <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
-        <Button
-          variant="contained"
-          startIcon={<CameraAltIcon />}
-          onClick={() => onCapture.current?.click()}
-          sx={{ flex: 1, maxWidth: 180 }}
-        >
-          Take Photo
-        </Button>
-        <Button
-          variant="outlined"
-          startIcon={<PhotoLibraryIcon />}
-          onClick={() => onUpload.current?.click()}
-          sx={{ flex: 1, maxWidth: 180 }}
-        >
-          Upload Image
-        </Button>
-      </Box>
-
-      <Alert severity="info" sx={{ fontSize: '0.85rem' }}>
-        Best results: clear photo with visible game boxes/spines. Max 20MB.
-        <br />
-        <strong>Cost:</strong> ~$0.01-0.04 per image analyzed.
-      </Alert>
-    </Stack>
-  )
-}
-
-function AnalyzingView({ imagePreview }: { imagePreview: string | null }) {
-  return (
-    <Stack spacing={2} sx={{ py: 2, alignItems: 'center' }}>
-      {imagePreview && (
-        <Box
-          component="img"
-          src={imagePreview}
-          alt="Uploaded"
-          sx={{ maxWidth: '100%', maxHeight: 200, borderRadius: 1, objectFit: 'contain' }}
-        />
-      )}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-        <CircularProgress size={24} />
-        <Typography>Analyzing image...</Typography>
-      </Box>
-      <Typography variant="caption" color="text.secondary">
-        This may take a few seconds
-      </Typography>
-    </Stack>
-  )
-}
-
 interface ResultsStateViewProps {
   imagePreview: string | null
   visibleGames: RecognizedGameTileType[]
@@ -323,10 +332,7 @@ interface ResultsStateViewProps {
   onAdd: (game: RecognizedGameTileType) => void
   onAddAll: () => void
   onBggMatch: (recognizedName: string, match: BggMatchResult) => void
-  addingGames: Set<string>
   addedGames: Set<string>
-  addErrors: Map<string, string>
-  isBulkAdding: boolean
   onTryAnother: () => void
 }
 
@@ -337,10 +343,7 @@ function ResultsStateView({
   onAdd,
   onAddAll,
   onBggMatch,
-  addingGames,
   addedGames,
-  addErrors,
-  isBulkAdding,
   onTryAnother,
 }: ResultsStateViewProps) {
   return (
@@ -360,10 +363,7 @@ function ResultsStateView({
         onAdd={onAdd}
         onAddAll={onAddAll}
         onBggMatch={onBggMatch}
-        addingGames={addingGames}
         addedGames={addedGames}
-        addErrors={addErrors}
-        isBulkAdding={isBulkAdding}
       />
 
       <Button variant="text" onClick={onTryAnother} sx={{ alignSelf: 'center' }}>

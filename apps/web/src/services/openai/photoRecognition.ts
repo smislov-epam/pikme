@@ -50,10 +50,12 @@ STRICT Confidence Scoring Rules:
 - 0.70-0.84: Partial title visible OR recognized primarily by distinctive box art
 - 0.50-0.69: Only spine visible, or significant portion obscured, or recognized by color/shape
 - 0.30-0.49: Mostly guessing based on partial letters or vague recognition
-- Below 0.30: Very uncertain guess
+- 0.10-0.29: Very uncertain guess - you think you might recognize it but aren't sure
 
 BE CRITICAL: If you can only see a spine, edge, or partial box, confidence should be 0.7 or LOWER.
-Do NOT give high confidence (0.9+) unless you can clearly read the full title.`
+Do NOT give high confidence (0.9+) unless you can clearly read the full title.
+
+IMPORTANT: Always list games you think you recognize, even with very low confidence. The user will decide whether to add them.`
 
 const USER_PROMPT = `Identify ALL board game boxes visible in this image. For each game, provide:
 1. The exact title as it would appear on BoardGameGeek
@@ -64,8 +66,14 @@ BE STRICT with confidence:
 - Partial box/obscured? → 0.6-0.8 max  
 - Only recognized by art/colors? → 0.5-0.75 max
 - Full title clearly readable? → 0.9+
+- Uncertain guess based on shape/color? → 0.1-0.4
 
-IMPORTANT: List EVERY game you can see, even partially. Count all boxes carefully. Do not skip any.
+IMPORTANT: 
+- List EVERY game you can see or suspect, even partially
+- Include games you're uncertain about with LOW confidence scores (0.1-0.4)
+- Users will review and decide which games to add - don't filter out uncertain matches
+- It's better to include a guess with low confidence than to omit a game entirely
+- Count all boxes carefully. Do not skip any.
 
 Return JSON format only:
 {"games": [{"name": "Game Title", "confidence": 0.85}, ...]}
@@ -163,6 +171,7 @@ export async function recognizeGamesFromPhoto(
       model: 'gpt-4o',
       maxTokens: 4000, // Increased to allow many games in response
       responseFormat: { type: 'json_object' },
+      temperature: 0.2, // Low temperature for more deterministic/consistent recognition
     }
   )
 

@@ -18,7 +18,7 @@ import { useEnsureLocalOwnerSelected } from './useEnsureLocalOwnerSelected'
 import { useWizardPageEffects } from './useWizardPageEffects'
 import { wizardSteps } from './wizardSteps'
 import { getWizardViewForSession } from './getWizardViewForSession'
-import type { RecognizedGameTile } from '../../services/openai/photoRecognition'
+import type { BatchAddResult } from '../../components/photoRecognition'
 
 export function useWizardPageController(): WizardPageViewProps {
   const navigate = useNavigate()
@@ -104,46 +104,46 @@ export function useWizardPageController(): WizardPageViewProps {
     setCompletedSteps(wizardSteps.map(() => false))
   }, [session, setActiveStep, setCompletedSteps, setLastLoadedSessionId, wizard])
 
-  const onSaveNight = useWizardSaveNightAction({
-    wizard,
-    toast,
-    activeSessionId: session.activeSessionId,
-    onSaved: handleAfterSaveNight,
-  })
-
-  // Photo Recognition (REQ-109) - Add recognized game to wizard
-  const handleAddRecognizedGame = useCallback(
-    async (game: RecognizedGameTile) => {
-      if (!game.bggMatch) {
-        throw new Error('No BGG match available for this game')
-      }
-      // Get current organizer/owner to add the game to their collection
-      const owner = wizard.users.find((u) => u.isOrganizer) || wizard.users[0]
-      if (!owner) {
-        throw new Error('No user available to add game to')
-      }
-      // Add the BGG matched game to the wizard's games using addGameManually
-      await wizard.addGameManually([owner.username], {
-        bggId: game.bggMatch.bggId,
-        name: game.bggMatch.name,
-        thumbnail: game.bggMatch.thumbnail,
-      })
-      toast.success(`Added "${game.bggMatch.name}" to your collection`)
-    },
-    [wizard, toast]
-  )
-
-  const stepSubtitles = nav.stepSubtitles
-  const isSessionFrozen = Boolean(session.activeSessionId && !session.sessionGuestMode)
-  const lockedSteps = isSessionFrozen ? [0, 1] : session.lockedSteps
-  const disabledSteps = isSessionFrozen ? [] : session.disabledSteps
-
   const wizardForView = getWizardViewForSession({
     wizard,
     activeSessionId: session.activeSessionId,
     mergedUsers: session.mergedUsers,
     mergedPreferences: session.mergedPreferences,
   })
+
+  const onSaveNight = useWizardSaveNightAction({
+    // Important: use the same wizard view the Results screen renders.
+    // In session mode, this view contains merged users/preferences + a merged recommendation.
+    wizard: wizardForView,
+    toast,
+    activeSessionId: session.activeSessionId,
+    onSaved: handleAfterSaveNight,
+  })
+
+  // Photo Recognition (REQ-109) - Handle batch result from recognition dialog
+  // State updates are now handled by addGameToUser in the dialog, so this just shows the toast
+  const handleGamesAddedFromRecognition = useCallback(
+    (result: BatchAddResult) => {
+      // Show summary toast
+      const total = result.succeeded.length + result.failed.length
+      if (result.failed.length === 0) {
+        toast.success(`Added ${result.succeeded.length} game${result.succeeded.length !== 1 ? 's' : ''} to your collection`)
+      } else if (result.succeeded.length === 0) {
+        toast.error(`Failed to add ${result.failed.length} game${result.failed.length !== 1 ? 's' : ''}`)
+      } else {
+        toast.warning(`Added ${result.succeeded.length} of ${total} games (${result.failed.length} failed)`)
+      }
+    },
+    [toast]
+  )
+
+  // Get owner username for photo recognition
+  const photoRecognitionOwnerUsername = wizard.users.find((u) => u.isOrganizer)?.username || wizard.users[0]?.username || ''
+
+  const stepSubtitles = nav.stepSubtitles
+  const isSessionFrozen = Boolean(session.activeSessionId && !session.sessionGuestMode)
+  const lockedSteps = isSessionFrozen ? [0, 1] : session.lockedSteps
+  const disabledSteps = isSessionFrozen ? [] : session.disabledSteps
 
   return buildWizardPageViewProps({
     activeStep,
@@ -219,6 +219,7 @@ export function useWizardPageController(): WizardPageViewProps {
       dialogs.setShowOpenAiApiKeyDialog(true)
     },
     onCloseOpenAiApiKeyDialog: () => dialogs.setShowOpenAiApiKeyDialog(false),
-    onAddRecognizedGame: handleAddRecognizedGame,
+    onGamesAddedFromRecognition: handleGamesAddedFromRecognition,
+    photoRecognitionOwnerUsername,
   })
 }

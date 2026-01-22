@@ -5,7 +5,7 @@ import { BackupRestoreDialog } from '../../components/BackupRestoreDialog'
 import { BggApiKeyDialog } from '../../components/BggApiKeyDialog'
 import { HelpWalkthroughDialog } from '../../components/HelpWalkthroughDialog'
 import { OpenAiApiKeyDialog } from '../../components/OpenAiApiKeyDialog'
-import { PhotoRecognitionDialog } from '../../components/photoRecognition'
+import { PhotoRecognitionDialog, type BatchAddResult } from '../../components/photoRecognition'
 import { SaveNightDialog } from '../../components/SaveNightDialog'
 import type { ActiveSessionInfo } from '../../hooks/useActiveSessions'
 import type { WizardActions, WizardState } from '../../hooks/useWizardState'
@@ -15,7 +15,6 @@ import { WizardFooter } from '../wizard/WizardFooter'
 import { WizardHeader } from '../wizard/WizardHeader'
 import { WizardStepperNav } from '../wizard/WizardStepperNav'
 import { WizardStepContent } from '../wizard/WizardStepContent'
-import type { RecognizedGameTile } from '../../services/openai/photoRecognition'
 
 export type WizardPageViewProps = {
   activeStep: number; setActiveStep: (step: number | ((prev: number) => number)) => void; completedSteps: boolean[]; lockedSteps: number[]; disabledSteps: number[]; stepSubtitles: string[]; compactBadgeCount: number; canJumpTo: (stepIndex: number) => boolean
@@ -34,7 +33,8 @@ export type WizardPageViewProps = {
   // Photo Recognition (REQ-109)
   showPhotoRecognitionDialog: boolean; onOpenPhotoRecognition: () => void; onClosePhotoRecognition: () => void
   showOpenAiApiKeyDialog: boolean; onOpenOpenAiApiKeyDialog: () => void; onCloseOpenAiApiKeyDialog: () => void
-  onAddRecognizedGame: (game: RecognizedGameTile) => Promise<void>
+  onGamesAddedFromRecognition: (result: BatchAddResult) => void
+  photoRecognitionOwnerUsername: string
 }
 
 export function WizardPageView(props: WizardPageViewProps) {
@@ -94,8 +94,10 @@ export function WizardPageView(props: WizardPageViewProps) {
       <PhotoRecognitionDialog
         open={props.showPhotoRecognitionDialog}
         onClose={props.onClosePhotoRecognition}
-        onAddGame={props.onAddRecognizedGame}
+        onGamesAdded={props.onGamesAddedFromRecognition}
         onOpenApiKeyDialog={props.onOpenOpenAiApiKeyDialog}
+        ownerUsername={props.photoRecognitionOwnerUsername}
+        addGameToUser={props.wizard.addGameToUser}
       />
 
       <Container maxWidth="md" sx={{ pb: 12, pt: 3, maxWidth: { lg: 1120 }, px: { xs: 2, sm: 3 } }}>
