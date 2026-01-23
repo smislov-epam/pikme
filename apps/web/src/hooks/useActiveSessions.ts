@@ -39,8 +39,9 @@ const CURRENT_SESSION_KEY = 'activeSessionId';
 
 /**
  * Get active session IDs from localStorage.
+ * Exported for use in post-login redirect logic.
  */
-function getStoredSessionIds(): string[] {
+export function getStoredActiveSessionIds(): string[] {
   try {
     const stored = localStorage.getItem(ACTIVE_SESSIONS_KEY);
     if (!stored) {
@@ -54,6 +55,9 @@ function getStoredSessionIds(): string[] {
     return [];
   }
 }
+
+// Internal alias for backward compatibility within this file
+const getStoredSessionIds = getStoredActiveSessionIds;
 
 /**
  * Store active session IDs to localStorage.

@@ -17,6 +17,7 @@ import {
   Link,
 } from '@mui/material';
 import { useAuth } from '../hooks/useAuth';
+import { getStoredActiveSessionIds } from '../hooks/useActiveSessions';
 import { linkLocalOwnerToFirebase, createLocalOwner } from '../hooks/useLocalOwner';
 import { getLocalOwner } from '../services/db/localOwnerService';
 
@@ -56,8 +57,15 @@ export function LoginPage() {
         }
       }
 
-      // Redirect to home on success
-      navigate('/', { replace: true });
+      // Redirect based on active sessions
+      // If user has active sessions → go to Sessions page
+      // If no sessions → go to wizard Step 1 (Players)
+      const storedSessionIds = getStoredActiveSessionIds();
+      if (storedSessionIds.length > 0) {
+        navigate('/sessions', { replace: true });
+      } else {
+        navigate('/', { replace: true });
+      }
     } catch (err) {
       if (err instanceof Error) {
         if (err.message.includes('user-not-found') || err.message.includes('wrong-password')) {
