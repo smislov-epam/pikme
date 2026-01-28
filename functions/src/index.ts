@@ -15,7 +15,7 @@ initializeApp();
 export { redeemRegistrationInvite } from './registration/index.js';
 
 // REQ-109: BGG API proxy (CORS workaround)
-export { bggProxy } from './bgg/index.js';
+export { bggProxy, bggHtmlProxy } from './bgg/index.js';
 
 // REQ-102: Session creation
 export { createSession } from './session/index.js';
