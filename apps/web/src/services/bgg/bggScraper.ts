@@ -212,7 +212,7 @@ async function fetchFromHtmlPage(bggId: number): Promise<PartialGameInfo> {
         { bggId }
       )
 
-      if (response.html && response.status === 200) {
+      if (response.html) {
         const data = extractFromHtml(response.html, bggId)
         if (data.name) return data
       }
@@ -224,19 +224,16 @@ async function fetchFromHtmlPage(bggId: number): Promise<PartialGameInfo> {
   // Try alternative CORS proxy services as last resort
   // Note: These are public proxies with rate limits. May fail under heavy load.
   const corsProxies = [
-    // corsproxy.io - Reliable public proxy
-    (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-    // cors.sh - Another alternative (may require request origin header)
-    (url: string) => `https://cors.sh/${url}`,
-    // api.codetabs.com - Another reliable option
-    (url: string) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+    { name: 'corsproxy.io', fn: (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}` },
+    { name: 'cors.sh', fn: (url: string) => `https://cors.sh/${url}` },
+    { name: 'api.codetabs.com', fn: (url: string) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}` },
   ]
 
   const bggUrl = `https://boardgamegeek.com/boardgame/${bggId}`
 
-  for (const proxyFn of corsProxies) {
+  for (const proxy of corsProxies) {
     try {
-      const corsProxyUrl = proxyFn(bggUrl)
+      const corsProxyUrl = proxy.fn(bggUrl)
       
       const response = await fetchWithRetry(
         corsProxyUrl,
@@ -252,7 +249,7 @@ async function fetchFromHtmlPage(bggId: number): Promise<PartialGameInfo> {
         }
       }
     } catch (error) {
-      console.warn('[BGG] CORS proxy failed:', error)
+      console.warn(`[BGG] CORS proxy ${proxy.name} failed:`, error)
     }
   }
 

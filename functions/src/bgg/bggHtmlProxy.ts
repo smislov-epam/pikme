@@ -35,14 +35,17 @@ interface BggHtmlProxyResponse {
  *
  * This is a callable function that can be invoked from the web app.
  * It handles CORS automatically and returns the raw HTML for client-side scraping.
+ * 
+ * Note: This function is currently open to all authenticated Firebase users.
+ * Consider adding rate limiting or additional authorization checks if abuse becomes an issue.
  */
 export const bggHtmlProxy = onCall<BggHtmlProxyRequest, Promise<BggHtmlProxyResponse>>(
   async (request) => {
     const { data } = request;
 
     // Validate required fields
-    if (!data?.bggId || typeof data.bggId !== 'number') {
-      throw new HttpsError('invalid-argument', 'Missing or invalid required field: bggId');
+    if (!data?.bggId || typeof data.bggId !== 'number' || !Number.isInteger(data.bggId) || data.bggId <= 0) {
+      throw new HttpsError('invalid-argument', 'Missing or invalid required field: bggId (must be a positive integer)');
     }
 
     // Build URL
