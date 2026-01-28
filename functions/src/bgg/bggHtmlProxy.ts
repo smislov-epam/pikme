@@ -8,7 +8,7 @@
  * forwards the HTML page content to allow client-side extraction.
  */
 
-/* global URL, fetch */
+/* global fetch */
 
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 

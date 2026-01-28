@@ -222,11 +222,14 @@ async function fetchFromHtmlPage(bggId: number): Promise<PartialGameInfo> {
   }
 
   // Try alternative CORS proxy services as last resort
+  // Note: These are public proxies with rate limits. May fail under heavy load.
   const corsProxies = [
-    // cors.sh - Reliable, open-source CORS proxy
-    (url: string) => `https://cors.sh/${url}`,
-    // corsproxy.io - Another reliable alternative
+    // corsproxy.io - Reliable public proxy
     (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+    // cors.sh - Another alternative (may require request origin header)
+    (url: string) => `https://cors.sh/${url}`,
+    // api.codetabs.com - Another reliable option
+    (url: string) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
   ]
 
   const bggUrl = `https://boardgamegeek.com/boardgame/${bggId}`
