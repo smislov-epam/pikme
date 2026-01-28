@@ -13,11 +13,25 @@ import { fetchQueuedXml, hasBggApiKey } from './bggClient'
 import type { PartialGameInfo } from './partialGameInfo'
 import { extractFromHtml } from './bggHtmlExtractors'
 import { sleep } from '../http/sleep'
+import { isFirebaseAvailable } from '../firebase/config'
+import { callFunction } from '../firebase/callFunction'
 
 const BGG_URL_REGEX = /boardgamegeek\.com\/boardgame\/(\d+)/i
 
 const HTML_FETCH_TIMEOUT_MS = 30_000
 const HTML_FETCH_MAX_ATTEMPTS = 2
+
+/**
+ * BGG HTML Proxy request/response types (must match Firebase Function)
+ */
+interface BggHtmlProxyRequest {
+  bggId: number
+}
+
+interface BggHtmlProxyResponse {
+  html: string
+  status: number
+}
 
 function isRetriableStatus(status: number): boolean {
   return status === 408 || status === 429 || status === 502 || status === 503 || status === 504
@@ -172,7 +186,7 @@ function gameToPartialInfo(game: BggThingDetails): PartialGameInfo {
  * Strategy 2: Fetch and scrape HTML page
  */
 async function fetchFromHtmlPage(bggId: number): Promise<PartialGameInfo> {
-  // Try our proxy first
+  // Try our development proxy first (only works in dev via Vite)
   try {
     const proxyUrl = `/bgg-api/boardgame/${bggId}`
     const response = await fetchWithRetry(
@@ -190,26 +204,53 @@ async function fetchFromHtmlPage(bggId: number): Promise<PartialGameInfo> {
     console.warn('[BGG] Local proxy failed:', error)
   }
 
-  // Try public CORS proxy as fallback
-  try {
-    const bggUrl = `https://boardgamegeek.com/boardgame/${bggId}`
-    const corsProxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(bggUrl)}`
-    
-    const response = await fetchWithRetry(
-      corsProxyUrl,
-      { headers: { 'Accept': 'text/html' } },
-      { timeoutMs: HTML_FETCH_TIMEOUT_MS, maxAttempts: HTML_FETCH_MAX_ATTEMPTS, retryDelayMs: 750 },
-    )
+  // Try Firebase Cloud Function proxy (works in production when Firebase is enabled)
+  if (isFirebaseAvailable()) {
+    try {
+      const response = await callFunction<BggHtmlProxyRequest, BggHtmlProxyResponse>(
+        'bggHtmlProxy',
+        { bggId }
+      )
 
-    if (response.ok) {
-      const html = await response.text()
-      const data = extractFromHtml(html, bggId)
-      if (data.name) {
-        return data
+      if (response.html && response.status === 200) {
+        const data = extractFromHtml(response.html, bggId)
+        if (data.name) return data
       }
+    } catch (error) {
+      console.warn('[BGG] Firebase HTML proxy failed:', error)
     }
-  } catch (error) {
-    console.warn('[BGG] Public CORS proxy failed:', error)
+  }
+
+  // Try alternative CORS proxy services as last resort
+  const corsProxies = [
+    // cors.sh - Reliable, open-source CORS proxy
+    (url: string) => `https://cors.sh/${url}`,
+    // corsproxy.io - Another reliable alternative
+    (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+  ]
+
+  const bggUrl = `https://boardgamegeek.com/boardgame/${bggId}`
+
+  for (const proxyFn of corsProxies) {
+    try {
+      const corsProxyUrl = proxyFn(bggUrl)
+      
+      const response = await fetchWithRetry(
+        corsProxyUrl,
+        { headers: { 'Accept': 'text/html' } },
+        { timeoutMs: HTML_FETCH_TIMEOUT_MS, maxAttempts: HTML_FETCH_MAX_ATTEMPTS, retryDelayMs: 750 },
+      )
+
+      if (response.ok) {
+        const html = await response.text()
+        const data = extractFromHtml(html, bggId)
+        if (data.name) {
+          return data
+        }
+      }
+    } catch (error) {
+      console.warn('[BGG] CORS proxy failed:', error)
+    }
   }
 
   return { bggId }
