@@ -14,6 +14,21 @@ initializeApp();
 // REQ-101: Registration invites
 export { redeemRegistrationInvite } from './registration/index.js';
 
+// REQ-111: Registration requests and admin management
+export {
+  requestRegistrationInvite,
+  checkAdminStatus,
+  listInviteRequests,
+  approveInviteRequest,
+  rejectInviteRequest,
+  listRegistrationInvites,
+  createRegistrationInvite,
+  revokeRegistrationInvite,
+  listUsers,
+  revokeUserAccess,
+  restoreUserAccess,
+} from './registration/index.js';
+
 // REQ-109: BGG API proxy (CORS workaround)
 export { bggProxy, bggHtmlProxy } from './bgg/index.js';
 
@@ -40,6 +55,9 @@ export {
   setSessionSelectedGame,
   getReadyParticipantPreferences,
 } from './session/index.js';
+
+// Scheduled: Session cleanup (runs hourly)
+export { cleanupExpiredSessions } from './session/index.js';
 
 /**
  * Health check endpoint for testing emulator connectivity.

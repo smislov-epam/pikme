@@ -7,6 +7,8 @@
 
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
+import { randomBytes } from 'crypto';
+import { logAudit, AuditAction } from '../utils/auditLog.js';
 import type {
   CreateSessionRequest,
   CreateSessionResponse,
@@ -36,15 +38,12 @@ const DEFAULT_CAPACITY = 6;
 const MAX_GAMES_PER_SESSION = 50;
 
 /**
- * Generate a random session ID (URL-safe).
+ * Generate a cryptographically secure session ID (URL-safe).
+ * Uses crypto.randomBytes instead of Math.random for security.
  */
 function generateSessionId(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let result = '';
-  for (let i = 0; i < 12; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
+  // 9 random bytes = 72 bits of entropy, base64url encoded = 12 chars
+  return randomBytes(9).toString('base64url');
 }
 
 /**
@@ -65,6 +64,23 @@ export const createSession = onCall(async (request) => {
   const userDoc = await db.collection('users').doc(uid).get();
   const userData = userDoc.data();
   
+  // REQ-111: Check if user access has been revoked
+  if (userDoc.exists && userData?.disabled === true) {
+    throw new HttpsError(
+      'permission-denied',
+      'Your access has been revoked. Contact admin for assistance.'
+    );
+  }
+
+  // REQ-111: Check if email is verified (soft enforcement - still allow in dev/testing)
+  const emailVerified = auth.token.email_verified;
+  if (userDoc.exists && emailVerified === false) {
+    throw new HttpsError(
+      'permission-denied',
+      'Please verify your email before creating sessions.'
+    );
+  }
+
   // Allow if: user has invited=true, OR user document doesn't exist yet (first-time user)
   // This enables testing without requiring full registration flow
   if (userDoc.exists && userData?.invited === false) {
@@ -74,12 +90,19 @@ export const createSession = onCall(async (request) => {
     );
   }
 
-  // If user doc doesn't exist, create a basic one
+  // SECURITY: If user doc doesn't exist, create one with invited=false
+  // User must request access through proper registration flow
   if (!userDoc.exists) {
     await db.collection('users').doc(uid).set({
-      invited: true,
+      invited: false,
+      disabled: false,
       createdAt: Timestamp.now(),
+      email: auth.token.email || null,
     });
+    throw new HttpsError(
+      'permission-denied',
+      'You are not authorized to create sessions. Please request an invite.'
+    );
   }
 
   // 3. Validate request
@@ -326,6 +349,18 @@ export const createSession = onCall(async (request) => {
 
   // 15. Commit all writes
   await batch.commit();
+
+  // Audit log: session created
+  logAudit(AuditAction.SESSION_CREATED, {
+    actorUid: uid,
+    targetId: sessionId,
+    details: {
+      gameCount: req.gameIds.length,
+      gamesUploaded,
+      namedSlots: namedSlotCount,
+      capacity,
+    },
+  });
 
   console.log(
     `[createSession] Session ${sessionId} created by ${uid} with ${req.gameIds.length} games (${gamesUploaded} uploaded), ${namedSlotCount} named slots`

@@ -30,6 +30,7 @@ export {
   createAccountWithEmail,
   signOut,
   onAuthStateChange,
+  sendVerificationEmail,
   type AuthUser,
 } from './auth';
 

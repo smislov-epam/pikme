@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useSessionGuests } from './useSessionGuests'
 import { useAuth } from './useAuth'
+import { useUserPermissions } from './useUserPermissions'
 import { clearAllSessionStorage, getWizardActiveSessionId, setWizardActiveSessionId } from '../services/storage/wizardStateStorage'
 import {
   computeHiddenLocalUsernames,
@@ -46,6 +47,7 @@ export function useSessionGuestMode({
   )
 
   const { user, firebaseReady } = useAuth()
+  const { canCreateSession: userCanCreate } = useUserPermissions()
   const { guests: sessionGuests } = useSessionGuests(activeSessionId)
 
   // If the user is authenticated, we are in host (or signed-in) context.
@@ -156,9 +158,9 @@ export function useSessionGuestMode({
     }))
   }, [activeSessionId, sessionGuests])
 
-  // Whether user can create sessions
+  // Whether user can create sessions (REQ-111: respects email verification and disabled status)
   const canCreateSession =
-    firebaseReady && user !== null && wizard.games.length > 0 && activeStep >= 2
+    firebaseReady && userCanCreate && wizard.games.length > 0 && activeStep >= 2
 
   // Session guest mode restrictions
   const hasGamesInSessionMode = Boolean(sessionGuestMode && wizard.games.length > 0)

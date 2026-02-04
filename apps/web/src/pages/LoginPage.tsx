@@ -1,7 +1,8 @@
 /**
- * Login Page (REQ-101)
+ * Login Page (REQ-101, REQ-111)
  *
  * Simple sign-in page for registered users.
+ * Includes "Request Access" option for new users.
  */
 
 import { useState } from 'react';
@@ -10,16 +11,19 @@ import {
   Box,
   Card,
   CardContent,
+  Divider,
   Typography,
   TextField,
   Button,
   Alert,
   Link,
 } from '@mui/material';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import { useAuth } from '../hooks/useAuth';
 import { getStoredActiveSessionIds } from '../hooks/useActiveSessions';
 import { linkLocalOwnerToFirebase, createLocalOwner } from '../hooks/useLocalOwner';
 import { getLocalOwner } from '../services/db/localOwnerService';
+import { RequestAccessDialog } from '../components/auth/RequestAccessDialog';
 
 export function LoginPage() {
   const { signIn, firebaseReady } = useAuth();
@@ -28,6 +32,7 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [requestDialogOpen, setRequestDialogOpen] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -143,9 +148,30 @@ export function LoginPage() {
         </Button>
       </Box>
 
+      <Divider sx={{ my: 3 }}>
+        <Typography variant="caption" color="text.secondary">
+          Don't have an account?
+        </Typography>
+      </Divider>
+
+      <Button
+        variant="outlined"
+        fullWidth
+        startIcon={<PersonAddIcon />}
+        onClick={() => setRequestDialogOpen(true)}
+      >
+        Request Access
+      </Button>
+
       <Typography sx={{ mt: 3, textAlign: 'center' }} color="text.secondary">
         <Link component={RouterLink} to="/">← Back to app</Link>
       </Typography>
+
+      <RequestAccessDialog
+        open={requestDialogOpen}
+        onClose={() => setRequestDialogOpen(false)}
+        onContinueAsGuest={() => navigate('/')}
+      />
     </LoginLayout>
   );
 }

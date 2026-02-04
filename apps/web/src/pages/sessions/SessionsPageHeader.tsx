@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { WizardHeader } from '../wizard/WizardHeader'
+import { AppHeader } from '../../components/AppHeader'
 import { BggApiKeyDialog } from '../../components/BggApiKeyDialog'
 import { HelpWalkthroughDialog } from '../../components/HelpWalkthroughDialog'
 import { BackupRestoreDialog } from '../../components/BackupRestoreDialog'
@@ -29,7 +29,7 @@ export function SessionsPageHeader(props: {
 
   return (
     <>
-      <WizardHeader
+      <AppHeader
         variant={isRegisteredUser ? 'blue' : 'auto'}
         onOpenClearDialog={() => setShowClearDialog(true)}
         onOpenBackup={() => setShowBackupDialog(true)}

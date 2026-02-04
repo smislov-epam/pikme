@@ -27,6 +27,9 @@ export function buildWizardPageViewProps(args: {
   guestUsersForSave: WizardPageViewProps['guestUsersForSave']
   activeSessionId: string | null
   canCreateSession: boolean
+  // User status banners (REQ-111)
+  showEmailVerificationBanner: boolean
+  showRevokedBanner: boolean
   canGoBack: boolean
   canGoNext: boolean
   isLastStep: boolean
@@ -98,6 +101,10 @@ export function buildWizardPageViewProps(args: {
 
     activeSessionId: args.activeSessionId,
     canCreateSession: args.canCreateSession,
+
+    // User status banners (REQ-111)
+    showEmailVerificationBanner: args.showEmailVerificationBanner,
+    showRevokedBanner: args.showRevokedBanner,
 
     canGoBack: args.canGoBack,
     canGoNext: args.canGoNext,

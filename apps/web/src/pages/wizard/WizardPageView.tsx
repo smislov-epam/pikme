@@ -1,6 +1,7 @@
 import { Alert, Box, Button, Container, alpha } from '@mui/material'
 import type { User } from 'firebase/auth'
 import { ActiveSessionBanner, CreateSessionDialog, SessionInviteDialog } from '../../components/session'
+import { EmailVerificationBanner, RevokedAccessBanner } from '../../components/auth'
 import { BackupRestoreDialog } from '../../components/BackupRestoreDialog'
 import { BggApiKeyDialog } from '../../components/BggApiKeyDialog'
 import { HelpWalkthroughDialog } from '../../components/HelpWalkthroughDialog'
@@ -12,7 +13,7 @@ import type { WizardActions, WizardState } from '../../hooks/useWizardState'
 import { colors } from '../../theme/theme'
 import { ClearAllDataDialog } from '../wizard/ClearAllDataDialog'
 import { WizardFooter } from '../wizard/WizardFooter'
-import { WizardHeader } from '../wizard/WizardHeader'
+import { AppHeader } from '../../components/AppHeader'
 import { WizardStepperNav } from '../wizard/WizardStepperNav'
 import { WizardStepContent } from '../wizard/WizardStepContent'
 
@@ -23,6 +24,8 @@ export type WizardPageViewProps = {
   sessionGuestMode: string | null; hasGamesInSessionMode: boolean; onExitSessionMode: () => void
   mergedUsers: WizardState['users']; mergedPreferences: WizardState['preferences']; guestStatuses: Array<{ username: string; ready: boolean; updatedAt: number | null }>; guestUsersForSave: Array<{ username: string; displayName: string }>
   activeSessionId: string | null; canCreateSession: boolean
+  // User status banners (REQ-111)
+  showEmailVerificationBanner: boolean; showRevokedBanner: boolean
   canGoBack: boolean; canGoNext: boolean; isLastStep: boolean
   onBack: () => void; onNext: () => void; onStartOver: () => void; onOpenSessions: () => void
   showClearDialog: boolean; onOpenClearDialog: () => void; onCloseClearDialog: () => void; onConfirmClearAllData: () => void
@@ -48,7 +51,7 @@ export function WizardPageView(props: WizardPageViewProps) {
         background: `linear-gradient(180deg, ${alpha(colors.skyBlue, 0.1)} 0%, ${alpha(colors.sand, 0.05)} 100%)`,
       }}
     >
-      <WizardHeader
+      <AppHeader
         onOpenClearDialog={props.onOpenClearDialog}
         onOpenBackup={props.onOpenBackupDialog}
         onOpenSettings={props.onOpenApiDialog}
@@ -67,6 +70,14 @@ export function WizardPageView(props: WizardPageViewProps) {
           onExitSession={props.onExitActiveSession}
         />
       )}
+
+      {/* User Status Banners (REQ-111) */}
+      <Container maxWidth="md" sx={{ maxWidth: { lg: 1120 }, px: { xs: 2, sm: 3 } }}>
+        {props.showRevokedBanner && <RevokedAccessBanner />}
+        {props.showEmailVerificationBanner && !props.showRevokedBanner && (
+          <EmailVerificationBanner email={props.user?.email || undefined} />
+        )}
+      </Container>
 
       <ClearAllDataDialog
         open={props.showClearDialog}

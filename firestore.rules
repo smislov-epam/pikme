@@ -20,6 +20,12 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Invite requests (REQ-111): no client access (Admin SDK only)
+    // All operations handled via Cloud Functions
+    match /inviteRequests/{requestId} {
+      allow read, write: if false;
+    }
+
     // Shared games: read-only for authenticated users
     // Writes handled by Cloud Functions (write-once, no overwrites)
     match /games/{gameId} {

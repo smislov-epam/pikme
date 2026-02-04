@@ -6,6 +6,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import WizardPage from './pages/WizardPage'
 import { RegistrationPage } from './pages/RegistrationPage'
 import { LoginPage } from './pages/LoginPage'
+import { AdminPage } from './pages/AdminPage'
 import { SessionJoinPage } from './pages/SessionJoinPage'
 import { SessionGuestPage } from './pages/SessionGuestPage'
 import { SessionsPage } from './pages/SessionsPage'
@@ -25,6 +26,7 @@ export default function App() {
             <Routes>
               <Route path="/register" element={<RegistrationPage />} />
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/admin" element={<AdminPage />} />
 
               <Route
                 path="/sessions"

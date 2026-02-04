@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { WizardHeader } from '../../../pages/wizard/WizardHeader'
+import { AppHeader } from '../../AppHeader'
 import { BggApiKeyDialog } from '../../BggApiKeyDialog'
 import { HelpWalkthroughDialog } from '../../HelpWalkthroughDialog'
 import { BackupRestoreDialog } from '../../BackupRestoreDialog'
@@ -25,7 +25,7 @@ export function SessionJoinPageHeader() {
 
   return (
     <>
-      <WizardHeader
+      <AppHeader
         variant="auto"
         onOpenClearDialog={() => setShowClearDialog(true)}
         onOpenBackup={() => setShowBackupDialog(true)}

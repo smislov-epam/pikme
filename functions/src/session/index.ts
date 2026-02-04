@@ -24,5 +24,8 @@ export { deleteSession } from './deleteSession.js';
 export { setSessionSelectedGame } from './setSessionSelectedGame.js';
 export { getReadyParticipantPreferences } from './getReadyParticipantPreferences.js';
 
+// Scheduled: Session cleanup
+export { cleanupExpiredSessions } from './cleanup.js';
+
 export * from './types.js';
 

@@ -9,6 +9,7 @@ import {
   redeemRegistrationInvite,
   getRegistrationErrorCode,
   RegistrationErrorCodes,
+  sendVerificationEmail,
 } from '../../services/firebase';
 import { linkLocalOwnerToFirebase, createLocalOwner } from '../useLocalOwner';
 import { getLocalOwner } from '../../services/db/localOwnerService';
@@ -125,6 +126,14 @@ export function useRegistrationFlow() {
           }
         } catch (linkError) {
           console.warn('Failed to link local owner:', linkError);
+        }
+
+        // Send verification email (REQ-111)
+        // Don't block on success - user can resend later if needed
+        try {
+          await sendVerificationEmail();
+        } catch (verifyError) {
+          console.warn('Failed to send verification email:', verifyError);
         }
 
         setSafeState((s) => ({ ...s, step: 'success' }));
