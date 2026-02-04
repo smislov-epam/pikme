@@ -17,6 +17,7 @@ import {
   Typography,
 } from '@mui/material';
 import { useRegistrationFlow } from '../hooks/registration/useRegistrationFlow';
+import { getFirebaseFeatureConfig } from '../services/firebase/config';
 
 export function RegistrationPage() {
   const {
@@ -28,6 +29,12 @@ export function RegistrationPage() {
     setConfirmPassword,
     handleCreateAccount,
   } = useRegistrationFlow();
+
+  const featureConfig = getFirebaseFeatureConfig();
+  const isEmulatorMode = featureConfig.useEmulators;
+  const emulatorAuthUrl = isEmulatorMode
+    ? `http://${featureConfig.emulatorHost}:${featureConfig.authPort}`
+    : null;
 
   if (state.step === 'loading' || authLoading) {
     return (
@@ -45,6 +52,19 @@ export function RegistrationPage() {
       <RegistrationLayout>
         <Alert severity="success" sx={{ mb: 2 }}>
           Registration successful! You are now a registered host.
+        </Alert>
+        <Alert severity="info" sx={{ mb: 2 }}>
+          {isEmulatorMode ? (
+            <>
+              A verification email has been triggered. In emulator mode, open the{' '}
+              <Link href={emulatorAuthUrl!} target="_blank" rel="noopener noreferrer">
+                Auth Emulator UI
+              </Link>{' '}
+              to find the verification link.
+            </>
+          ) : (
+            'A verification email has been sent to your address. Please verify your email to unlock all features.'
+          )}
         </Alert>
         <Typography>
           You can now <Link component={RouterLink} to="/">go to the app</Link> and create game sessions.

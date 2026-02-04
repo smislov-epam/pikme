@@ -56,6 +56,18 @@ export async function createAccountWithEmail(
 }
 
 /**
+ * Send verification email to the current user.
+ */
+export async function sendVerificationEmail(): Promise<void> {
+  const auth = getAuthInstance();
+  const user = auth?.currentUser;
+  if (!user) throw new Error('No user signed in');
+
+  const { sendEmailVerification } = await import('firebase/auth');
+  await sendEmailVerification(user);
+}
+
+/**
  * Sign out the current user.
  */
 export async function signOut(): Promise<void> {

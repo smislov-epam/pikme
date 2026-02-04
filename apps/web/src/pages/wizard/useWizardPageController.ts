@@ -5,6 +5,7 @@ import { buildWizardPageViewProps } from './buildWizardPageViewProps'
 import { useWizardState } from '../../hooks/useWizardState'
 import { useSessionGuestMode } from '../../hooks/useSessionGuestMode'
 import { useAuth } from '../../hooks/useAuth'
+import { useUserPermissions } from '../../hooks/useUserPermissions'
 import { clearAllData } from '../../db/db'
 import { useToast } from '../../services/toast'
 import { useWizardSessionUiHandlers } from './useWizardSessionUiHandlers'
@@ -28,6 +29,7 @@ export function useWizardPageController(): WizardPageViewProps {
 
   const wizard = useWizardState()
   const { user } = useAuth()
+  const { emailVerified, isDisabled, isAuthenticated } = useUserPermissions()
   const toast = useToast()
 
   useEnsureLocalOwnerSelected(wizard)
@@ -169,6 +171,9 @@ export function useWizardPageController(): WizardPageViewProps {
     guestUsersForSave: session.guestUsersForSave,
     activeSessionId: session.activeSessionId,
     canCreateSession: session.canCreateSession,
+    // User status banners (REQ-111)
+    showEmailVerificationBanner: isAuthenticated && !emailVerified,
+    showRevokedBanner: isAuthenticated && isDisabled,
     canGoBack: nav.canGoBack,
     canGoNext: nav.canGoNext,
     isLastStep: nav.isLastStep,
